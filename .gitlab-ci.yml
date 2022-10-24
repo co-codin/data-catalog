@@ -1,0 +1,15 @@
+stages:
+  - test
+  - regressiontest
+test-branch:
+  stage: test
+  script:
+    - echo "test"
+
+regressiontest-branch:
+  stage: regressiontest
+  only:
+    - schedules
+  script:
+     - echo "regressiontest"
+     
