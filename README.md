@@ -3,10 +3,13 @@
 
 
 ## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+```
+docker rmi -f $(docker images data* --format "{{.ID}}")
+docker-compose down
+docker-compose build --progress plain --no-cache
+docker-compose up --no-color
+docker build -f prod.dockerfile -t "data-catalog:dev" --progress plain --build-arg SERVICE_PORT=8080 .
+```
 
 ## Add your files
 
