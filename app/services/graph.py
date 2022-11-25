@@ -1,7 +1,7 @@
 import typing
 import logging
 
-from neo4j import Session
+from neo4j import AsyncSession
 from collections import deque
 
 from app.errors import NoEntityError, NoFieldError, UnknownRelationTypeError
@@ -9,7 +9,7 @@ from app.errors import NoEntityError, NoFieldError, UnknownRelationTypeError
 LOG = logging.getLogger(__name__)
 
 
-def get_attr_db_info(session: Session, attr: str):
+async def get_attr_db_info(session: AsyncSession, attr: str):
     """
     Get table and join chain for attribute
     :param attr: comma separated attributes list
@@ -22,8 +22,8 @@ def get_attr_db_info(session: Session, attr: str):
     db_field = None
     db_joins = []
 
-    result = session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
-    entity = result.single()
+    result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
+    entity = await result.single()
     if entity is None:
         raise NoEntityError(current_obj)
     current_node_id = entity['node_id']
@@ -32,8 +32,8 @@ def get_attr_db_info(session: Session, attr: str):
         field, *remainder = remainder
         LOG.debug(f'{field}{remainder}')
 
-        result = session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=int(current_node_id))
-        by_name = {node['name']: (node, rel, obj) for node, rel, obj in result}
+        result = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=int(current_node_id))
+        by_name = {node['name']: (node, rel, obj) async for node, rel, obj in result}
         if field not in by_name:
             raise NoFieldError(field)
         node, rel, obj = by_name[field]
@@ -49,8 +49,8 @@ def get_attr_db_info(session: Session, attr: str):
             db_joins.append(
                 {'table': obj['db'], 'on': tuple(rel['on'])}
             )
-            result = session.run("MATCH (o)-[r]->(n) WHERE id(o) = $node RETURN n, r, o", node=int(node.element_id))
-            node, rel, obj = result.peek()
+            result = await session.run("MATCH (o)-[r]->(n) WHERE id(o) = $node RETURN n, r, o", node=int(node.element_id))
+            node, rel, obj = await result.peek()
             db_joins.append(
                 {'table': obj['db'], 'on': tuple(rel['on'])}
             )
