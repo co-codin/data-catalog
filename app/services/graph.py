@@ -4,6 +4,7 @@ import logging
 from neo4j import Session
 from collections import deque
 
+from app.errors import NoEntityError, NoFieldError, UnknownRelationTypeError
 
 LOG = logging.getLogger(__name__)
 
@@ -22,7 +23,10 @@ def get_attr_db_info(session: Session, attr: str):
     db_joins = []
 
     result = session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
-    current_node_id = result.single()['node_id']
+    entity = result.single()
+    if entity is None:
+        raise NoEntityError(current_obj)
+    current_node_id = entity['node_id']
 
     while remainder:
         field, *remainder = remainder
@@ -31,7 +35,7 @@ def get_attr_db_info(session: Session, attr: str):
         result = session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=int(current_node_id))
         by_name = {node['name']: (node, rel, obj) for node, rel, obj in result}
         if field not in by_name:
-            raise Exception(f'Field {field} does not exist')
+            raise NoFieldError(field)
         node, rel, obj = by_name[field]
 
         if rel.type == 'ATTR':
@@ -51,7 +55,7 @@ def get_attr_db_info(session: Session, attr: str):
                 {'table': obj['db'], 'on': tuple(rel['on'])}
             )
         else:
-            raise Exception(f'Unknown relation {rel.type}')
+            raise UnknownRelationTypeError(rel.type)
 
         current_node_id = node.element_id
 
@@ -61,7 +65,7 @@ def get_attr_db_info(session: Session, attr: str):
             'relation': optimize_join_chain(db_joins, db_table),
         },
         'field': db_field,
-        'type': 'string'
+        'type': 'str'
     }
 
 
@@ -95,4 +99,4 @@ def optimize_join_chain(db_joins: typing.List[dict], db_table: str):
             'on': (optimized_line.popleft(), optimized_line.popleft())
         })
 
-    return result
+    return result, db_table
