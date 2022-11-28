@@ -39,3 +39,21 @@ class NoNeo4jConnection(APIError):
 
     def __str__(self):
         return f"No connection with {self._neo4j_conn_string}"
+
+
+class NoDBTableError(APIError):
+    def __init__(self, attribute: str):
+        self.status_code = status.HTTP_404_NOT_FOUND
+        self._attribute = attribute
+
+    def __str__(self):
+        return f"No DB table was found for attribute {self._attribute}"
+
+
+class NoDBFieldError(APIError):
+    def __init__(self, attribute: str):
+        self.status_code = status.HTTP_404_NOT_FOUND
+        self._attribute = attribute
+
+    def __str__(self):
+        return f"No DB field was found for attribute {self._attribute}"

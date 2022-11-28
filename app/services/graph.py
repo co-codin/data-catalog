@@ -4,7 +4,10 @@ import logging
 from neo4j import AsyncSession
 from collections import deque
 
-from app.errors import NoEntityError, NoFieldError, UnknownRelationTypeError
+from app.errors import (
+    NoEntityError, NoFieldError, UnknownRelationTypeError, NoDBTableError,
+    NoDBFieldError
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -58,6 +61,11 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
             raise UnknownRelationTypeError(rel.type)
 
         current_node_id = node.element_id
+
+    if db_table is None:
+        raise NoDBTableError(attr)
+    if db_field is None:
+        raise NoDBFieldError(attr)
 
     return {
         'table': {
