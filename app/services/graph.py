@@ -6,7 +6,7 @@ from collections import deque
 
 from app.errors import (
     NoEntityError, NoFieldError, UnknownRelationTypeError, NoDBTableError,
-    NoDBFieldError, CyclicPath
+    NoDBFieldError, CyclicPathError
 )
 
 LOG = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
         current_node_id = int(node.element_id)
 
         if current_node_id in visited_node_ids:
-            raise CyclicPath(attr)
+            raise CyclicPathError(attr)
         visited_node_ids.add(current_node_id)
 
     if db_table is None:

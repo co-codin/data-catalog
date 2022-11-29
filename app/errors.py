@@ -59,7 +59,7 @@ class NoDBFieldError(APIError):
         return f"No DB field was found for attribute {self._attribute}"
 
 
-class CyclicPath(APIError):
+class CyclicPathError(APIError):
     def __init__(self, path: str):
         self.status_code = status.HTTP_400_BAD_REQUEST
         self._path = path
