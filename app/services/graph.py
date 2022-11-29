@@ -6,7 +6,7 @@ from collections import deque
 
 from app.errors import (
     NoEntityError, NoFieldError, UnknownRelationTypeError, NoDBTableError,
-    NoDBFieldError
+    NoDBFieldError, CyclicPath
 )
 
 LOG = logging.getLogger(__name__)
@@ -29,13 +29,15 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
     entity = await result.single()
     if entity is None:
         raise NoEntityError(current_obj)
+
     current_node_id = entity['node_id']
+    visited_node_ids = {current_node_id}
 
     while remainder:
         field, *remainder = remainder
         LOG.debug(f'{field}{remainder}')
 
-        result = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=int(current_node_id))
+        result = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=current_node_id)
         by_name = {node['name']: (node, rel, obj) async for node, rel, obj in result}
         if field not in by_name:
             raise NoFieldError(field)
@@ -54,13 +56,18 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
             )
             result = await session.run("MATCH (o)-[r]->(n) WHERE id(o) = $node RETURN n, r, o", node=int(node.element_id))
             node, rel, obj = await result.peek()
+
             db_joins.append(
                 {'table': obj['db'], 'on': tuple(rel['on'])}
             )
         else:
             raise UnknownRelationTypeError(rel.type)
 
-        current_node_id = node.element_id
+        current_node_id = int(node.element_id)
+
+        if current_node_id in visited_node_ids:
+            raise CyclicPath(attr)
+        visited_node_ids.add(current_node_id)
 
     if db_table is None:
         raise NoDBTableError(attr)
