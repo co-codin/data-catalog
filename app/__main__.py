@@ -1,7 +1,11 @@
 from fastapi import FastAPI
+import sys
 
+print(sys.path)
+from app.logger_config import config_logger
 from app.routers import db_mappings
 
+config_logger()
 
 app = FastAPI()
 app.include_router(db_mappings.router, prefix='/mappings')
