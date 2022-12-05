@@ -1,7 +1,4 @@
 from fastapi import FastAPI
-import sys
-
-print(sys.path)
 from app.logger_config import config_logger
 from app.routers import db_mappings
 
