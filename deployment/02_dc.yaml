@@ -37,5 +37,9 @@ spec:
         - containerPort: 8080
       imagePullSecrets:
         - name: repositorycred
+      hostAliases:
+        - ip: 127.0.0.1        
+          hostnames:
+          - data-catalog.lan            
 #      restartPolicy: OnFailure
 
