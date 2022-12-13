@@ -25,9 +25,13 @@ spec:
       containers:
       - env:
         - name: NEO4J_CONNECTION_STRING
-          value: bolt://10.50.4.110:7687
+          value: bolt://neo-release:7687
+        - name: DB_USER
+          value:  neo4j
+        - name: DB_PASSWORD
+          value: password
         - name: LOG_DIR
-          value: /var/logs
+          value: /var/log/n3dwh/
         - name: SERVICE_PORT
           value: "8080"
         image: 10.50.4.110:5000/data-catalog:dev
@@ -37,9 +41,16 @@ spec:
         - containerPort: 8080
       imagePullSecrets:
         - name: repositorycred
+      volumeMounts:
+        - mountPath: /var/log/n3dwh/
+          name: volumelogs        
       hostAliases:
         - ip: 127.0.0.1        
           hostnames:
-          - data-catalog.lan            
+          - data-catalog.lan   
+      volumes:
+        - name: volumelogs
+          persistentVolume:
+            claimName: logs-pv-claim                 
 #      restartPolicy: OnFailure
 
