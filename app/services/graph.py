@@ -1,3 +1,4 @@
+import json
 import typing
 import logging
 
@@ -23,6 +24,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
 
     db_table = None
     db_field = None
+    abac_attrs = None
     db_joins = []
 
     result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
@@ -46,6 +48,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
         if rel.type == 'ATTR':
             db_table = obj['db']
             db_field = node['db']
+            abac_attrs = node.get('attrs')
         elif rel.type == 'SAT':
             db_joins.append(
                 {'table': obj['db'], 'on': tuple(rel['on'])}
@@ -74,13 +77,19 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
     if db_field is None:
         raise NoDBFieldError(attr)
 
+    if abac_attrs:
+        abac_attrs = json.loads(abac_attrs)
+    else:
+        abac_attrs = []
+
     return {
         'table': {
             'name': db_table,
             'relation': optimize_join_chain(db_joins, db_table),
         },
         'field': db_field,
-        'type': 'str'
+        'type': 'string',
+        'attributes': abac_attrs,
     }
 
 
