@@ -24,12 +24,10 @@ spec:
     spec:
       containers:
       - env:
-        - name: NEO4J_CONNECTION_STRING
-          value: bolt://10.50.4.110:7687
+        - name: dwh_data_catalog_neo4j_connection_string
+          value: neo4j://10.50.4.110:7687
         - name: LOG_DIR
           value: /var/logs
-        - name: SERVICE_PORT
-          value: "8080"
         image: 10.50.4.110:5000/data-catalog:dev
         imagePullPolicy: Always
         name: data-catalog
