@@ -1,16 +1,19 @@
 import json
-
 import typing
 import logging
 
-from neo4j import Session
+from neo4j import AsyncSession
 from collections import deque
 
+from app.errors import (
+    NoEntityError, NoFieldError, UnknownRelationTypeError, NoDBTableError,
+    NoDBFieldError, CyclicPathError
+)
 
 LOG = logging.getLogger(__name__)
 
 
-def get_attr_db_info(session: Session, attr: str):
+async def get_attr_db_info(session: AsyncSession, attr: str):
     """
     Get table and join chain for attribute
     :param attr: comma separated attributes list
@@ -24,17 +27,22 @@ def get_attr_db_info(session: Session, attr: str):
     abac_attrs = None
     db_joins = []
 
-    result = session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
-    current_node_id = result.single()['node_id']
+    result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
+    entity = await result.single()
+    if entity is None:
+        raise NoEntityError(current_obj)
+
+    current_node_id = entity['node_id']
+    visited_node_ids = {current_node_id}
 
     while remainder:
         field, *remainder = remainder
         LOG.debug(f'{field}{remainder}')
 
-        result = session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=int(current_node_id))
-        by_name = {node['name']: (node, rel, obj) for node, rel, obj in result}
+        result = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=current_node_id)
+        by_name = {node['name']: (node, rel, obj) async for node, rel, obj in result}
         if field not in by_name:
-            raise Exception(f'Field {field} does not exist')
+            raise NoFieldError(field)
         node, rel, obj = by_name[field]
 
         if rel.type == 'ATTR':
@@ -49,15 +57,25 @@ def get_attr_db_info(session: Session, attr: str):
             db_joins.append(
                 {'table': obj['db'], 'on': tuple(rel['on'])}
             )
-            result = session.run("MATCH (o)-[r]->(n) WHERE id(o) = $node RETURN n, r, o", node=int(node.element_id))
-            node, rel, obj = result.peek()
+            result = await session.run("MATCH (o)-[r]->(n) WHERE id(o) = $node RETURN n, r, o", node=int(node.element_id))
+            node, rel, obj = await result.peek()
+
             db_joins.append(
                 {'table': obj['db'], 'on': tuple(rel['on'])}
             )
         else:
-            raise Exception(f'Unknown relation {rel.type}')
+            raise UnknownRelationTypeError(rel.type)
 
-        current_node_id = node.element_id
+        current_node_id = int(node.element_id)
+
+        if current_node_id in visited_node_ids:
+            raise CyclicPathError(attr)
+        visited_node_ids.add(current_node_id)
+
+    if db_table is None:
+        raise NoDBTableError(attr)
+    if db_field is None:
+        raise NoDBFieldError(attr)
 
     if abac_attrs:
         abac_attrs = json.loads(abac_attrs)
@@ -105,4 +123,4 @@ def optimize_join_chain(db_joins: typing.List[dict], db_table: str):
             'on': (optimized_line.popleft(), optimized_line.popleft())
         })
 
-    return result
+    return result, db_table

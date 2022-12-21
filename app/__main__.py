@@ -1,11 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
 from app.logger_config import config_logger
 from app.routers import db_mappings
+from app.errors import APIError
 
 config_logger()
 
 app = FastAPI()
 app.include_router(db_mappings.router, prefix='/mappings')
+
+
+@app.exception_handler(APIError)
+def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={'message': str(exc)}
+    )
 
 
 if __name__ == '__main__':
