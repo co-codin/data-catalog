@@ -24,6 +24,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
 
     db_table = None
     db_field = None
+    db_type = 'string'
     abac_attrs = None
     db_joins = []
 
@@ -48,6 +49,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
         if rel.type == 'ATTR':
             db_table = obj['db']
             db_field = node['db']
+            db_type = node.get('dbtype', 'string')
             abac_attrs = node.get('attrs')
         elif rel.type == 'SAT':
             db_joins.append(
@@ -88,7 +90,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
             'relation': optimize_join_chain(db_joins, db_table),
         },
         'field': db_field,
-        'type': 'string',
+        'type': db_type,
         'attributes': abac_attrs,
     }
 
