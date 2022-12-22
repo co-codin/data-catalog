@@ -123,4 +123,4 @@ def optimize_join_chain(db_joins: typing.List[dict], db_table: str):
             'on': (optimized_line.popleft(), optimized_line.popleft())
         })
 
-    return result, db_table
+    return result
