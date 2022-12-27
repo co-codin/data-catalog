@@ -5,7 +5,6 @@ metadata:
     app.kubernetes.io/name: dwh-data-catalog
     app: data-catalog-web
   name: data-catalog
-#  namespace: dwh-dev
 spec:
   replicas: 2
   selector:
@@ -43,3 +42,18 @@ spec:
             name: volumelogs        
       imagePullSecrets:
         - name: repositorycred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-catalog
+  labels:
+    app: data-catalog-web
+spec:
+  clusterIP: None
+  ports:
+   - name: http
+     protocol: TCP
+     port: 8000
+  selector:
+   app: data-catalog-web
