@@ -13,6 +13,81 @@ from app.errors import (
 LOG = logging.getLogger(__name__)
 
 
+async def find_entities(session: AsyncSession, search_text: str):
+    if not search_text.endswith('~'):
+        search_text += '~'
+
+    results = await session.run(
+        """
+        CALL db.index.fulltext.queryNodes("entities", $search_text) yield node, score
+        RETURN node.name, node.desc, score
+        """,
+        search_text=search_text
+    )
+    results = await results.fetch(10)
+
+    return {
+        'results': [{
+            'path': name,
+            'desc': desc,
+        } for name, desc, _ in results]
+    }
+
+
+async def _get_sat_attrs(session: AsyncSession, path: str, sat):
+    results = await session.run("MATCH (o)-[r:ATTR]->(f) WHERE id(o) = $node RETURN f", node=int(sat.element_id))
+    return [
+        {
+            'path': f"{path}.{sat['name']}.{node['name']}",
+            'desc': node['desc'],
+        } async for node, in results
+    ]
+
+
+async def _get_link_desc(session: AsyncSession, path: str, link):
+    results = await session.run("MATCH (o)-[:LINK]->(f) WHERE id(o) = $node RETURN f", node=int(link.element_id))
+    node, = await results.single()
+    path = f"{path}.{link['name']}"
+    return {
+        'path': path,
+        'entity': node['name'],
+        'desc': node['desc'],
+        'url': f"/discover/describe/{link['name']}?path={path}"
+    }
+
+
+async def describe_entity(session: AsyncSession, name: str, path: str = None):
+    path = f'{path}' if path else name
+    result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=name)
+    entity = await result.single()
+    if entity is None:
+        raise NoEntityError(name)
+
+    results = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r", node=entity['node_id'])
+
+    attrs = []
+    links = []
+
+    async for node, rel, in results:
+        if rel.type == 'ATTR':
+            attrs.append({
+                'path': f"{path}.{node['name']}",
+                'desc': node['desc']
+            })
+
+        if rel.type == 'SAT':
+            attrs.extend(await _get_sat_attrs(session, path, node))
+
+        if rel.type == 'LINK':
+            links.append(await _get_link_desc(session, path, node))
+
+    return {
+        'path': path,
+        'attrs': attrs,
+        'rels': links,
+    }
+
+
 async def get_attr_db_info(session: AsyncSession, attr: str):
     """
     Get table and join chain for attribute
