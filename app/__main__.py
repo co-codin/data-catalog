@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.logger_config import config_logger
-from app.routers import db_mappings, discovery
+from app.routers import db_mappings, discovery, entities, sats, links
 from app.errors import APIError
 
 config_logger()
@@ -10,6 +10,9 @@ config_logger()
 app = FastAPI()
 app.include_router(db_mappings.router, prefix='/mappings')
 app.include_router(discovery.router, prefix='/discover')
+app.include_router(entities.router, prefix='/hubs')
+app.include_router(sats.router, prefix='/sats')
+app.include_router(links.router, prefix='/links')
 
 
 @app.exception_handler(APIError)
