@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class NodeIn(BaseModel):
     db: str
-    desc: Optional[str]
+    desc: str
     name: str
 
 
@@ -14,8 +14,16 @@ class Attribute(NodeIn):
     dbtype: str
 
 
+class AttributeUpdate(Attribute):
+    id: Optional[int]
+
+
 class EntityIn(NodeIn):
     attrs: List[Attribute]
+
+
+class EntityUpdateIn(EntityIn):
+    attrs: List[AttributeUpdate]
 
 
 class SatIn(EntityIn):
