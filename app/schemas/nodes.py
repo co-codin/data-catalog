@@ -32,6 +32,10 @@ class SatIn(EntityIn):
     fk: str
 
 
+class SatUpdateIn(SatIn):
+    attrs: List[AttributeUpdate]
+
+
 class OneWayLink(BaseModel):
     desc: Optional[str]
     name: str
