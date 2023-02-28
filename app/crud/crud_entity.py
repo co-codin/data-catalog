@@ -63,11 +63,24 @@ async def _remove_entity_tx(tx: AsyncManagedTransaction, hub_name: str):
     if not await entity_exists(tx, hub_name):
         raise NoEntityError(hub_name)
 
-    cql_query = "MATCH (e:Entity {name: $name}) " \
-                "OPTIONAL MATCH (e)-[r:ATTR]->(f:Field) " \
-                "DELETE e, r, f " \
-                "RETURN ID(e) as id;"
-    res = await tx.run(cql_query, name=hub_name)
+    delete_hub_sat_fields_query = "MATCH (e:Entity {name: $name}) " \
+                                  "OPTIONAL MATCH (e)-[:SAT]->(s:Sat) " \
+                                  "OPTIONAL MATCH (s)-[r:ATTR]->(f:Field) " \
+                                  "DELETE f, r;"
+
+    delete_hub_sat_query = "MATCH (e:Entity {name: $name}) " \
+                           "OPTIONAL MATCH (e)-[r:SAT]->(s:Sat) " \
+                           "DELETE s, r;"
+
+    delete_hub_query = "MATCH (e:Entity {name: $name}) " \
+                       "OPTIONAL MATCH (e)-[r:ATTR]->(f:Field) " \
+                       "DELETE f, r, e " \
+                       "RETURN ID(e) as id;"
+
+    await tx.run(delete_hub_sat_fields_query, name=hub_name)
+    await tx.run(delete_hub_sat_query, name=hub_name)
+    res = await tx.run(delete_hub_query, name=hub_name)
+
     entity_id = await res.single()
     return entity_id['id']
 
