@@ -5,31 +5,14 @@ class APIError(Exception):
     status_code: int
 
 
-class NoEntityError(APIError):
-    def __init__(self, entity: str):
+class NoNodeError(APIError):
+    def __init__(self, type_: str, name: str):
         self.status_code = status.HTTP_404_NOT_FOUND
-        self._entity = entity
+        self._type = type_
+        self._name = name
 
     def __str__(self):
-        return f"Entity {self._entity} doesn't exist"
-
-
-class NoSatError(APIError):
-    def __init__(self, sat: str):
-        self.status_code = status.HTTP_404_NOT_FOUND
-        self._sat = sat
-
-    def __str__(self):
-        return f"Sat {self._sat} doesn't exist"
-
-
-class NoFieldError(APIError):
-    def __init__(self, field: str):
-        self.status_code = status.HTTP_404_NOT_FOUND
-        self._field = field
-
-    def __str__(self):
-        return f"Field {self._field} doesn't exist"
+        return f"{self._type} {self._name} doesn't exist"
 
 
 class UnknownRelationTypeError(APIError):
@@ -77,19 +60,11 @@ class CyclicPathError(APIError):
         return f"Cyclic path was given: {self._path}"
 
 
-class EntityAlreadyExists(APIError):
-    def __init__(self, name: str):
+class NodeAlreadyExists(APIError):
+    def __init__(self, type_: str, name: str):
         self.status_code = status.HTTP_400_BAD_REQUEST
+        self._type = type_
         self._name = name
 
     def __str__(self):
-        return f"Entity {self._name} already exists"
-
-
-class SatAlreadyExists(APIError):
-    def __init__(self, name: str):
-        self.status_code = status.HTTP_400_BAD_REQUEST
-        self._name = name
-
-    def __str__(self):
-        return f"Sat {self._name} already exists"
+        return f"{self._type} {self._name} already exists"

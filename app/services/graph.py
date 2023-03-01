@@ -6,7 +6,7 @@ from neo4j import AsyncSession
 from collections import deque
 
 from app.errors import (
-    NoEntityError, NoFieldError, UnknownRelationTypeError, NoDBTableError,
+    NoNodeError, UnknownRelationTypeError, NoDBTableError,
     NoDBFieldError, CyclicPathError
 )
 
@@ -61,7 +61,7 @@ async def describe_entity(session: AsyncSession, name: str, path: str = None):
     result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=name)
     entity = await result.single()
     if entity is None:
-        raise NoEntityError(name)
+        raise NoNodeError('Entity', name)
 
     results = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r", node=entity['node_id'])
 
@@ -106,7 +106,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
     result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
     entity = await result.single()
     if entity is None:
-        raise NoEntityError(current_obj)
+        raise NoNodeError('Entity', current_obj)
 
     current_node_id = entity['node_id']
     visited_node_ids = {current_node_id}
@@ -118,7 +118,7 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
         result = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=current_node_id)
         by_name = {node['name']: (node, rel, obj) async for node, rel, obj in result}
         if field not in by_name:
-            raise NoFieldError(field)
+            raise NoNodeError('Field', field)
         node, rel, obj = by_name[field]
 
         if rel.type == 'ATTR':

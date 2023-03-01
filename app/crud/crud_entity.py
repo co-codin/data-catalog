@@ -1,11 +1,11 @@
 import logging
 
 from neo4j import AsyncSession, AsyncManagedTransaction
-from typing import List, Dict
+from typing import Dict
 
-from app.errors import EntityAlreadyExists, NoEntityError
+from app.errors import NodeAlreadyExists, NoNodeError
 from app.schemas.nodes import EntityIn, EntityUpdateIn
-from app.crud.common import get_cud_fields, entity_exists
+from app.crud.common import node_exists, edit_node_fields
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,8 @@ async def remove_entity(hub_name: str, session: AsyncSession):
 
 
 async def _add_entity_tx(tx: AsyncManagedTransaction, entity: EntityIn):
-    if await entity_exists(tx, entity.name):
-        raise EntityAlreadyExists(entity.name)
+    if await node_exists(tx, 'Entity', entity.name):
+        raise NodeAlreadyExists('Entity', entity.name)
 
     create_hub_query = "CREATE (hub:Entity {name: $name, desc: $desc, db: $db}) " \
                        "WITH $attrs as attrs_batch, hub " \
@@ -40,28 +40,17 @@ async def _add_entity_tx(tx: AsyncManagedTransaction, entity: EntityIn):
 
 
 async def _edit_entity_tx(tx: AsyncManagedTransaction, hub_name: str, entity: EntityUpdateIn):
-    if not await entity_exists(tx, hub_name):
-        raise NoEntityError(hub_name)
+    if not await node_exists(tx, 'Entity', hub_name):
+        raise NoNodeError('Entity', hub_name)
 
-    field_ids_res = await _get_hub_field_ids(tx, hub_name)
-
-    # get fields which need to be created, updated and deleted
-    fields = await get_cud_fields(entity.attrs, field_ids_res)
-
-    logger.info(f"fields to add {fields.to_create}")
-    logger.info(f"fields to update {fields.to_update}")
-    logger.info(f"fields to delete {fields.to_delete}")
-
-    await _delete_hub_fields(tx, hub_name, fields.to_delete)
-    await _add_hub_fields(tx, hub_name, fields.to_create)
-    await _edit_hub_fields(tx, hub_name, fields.to_update)
+    await edit_node_fields(tx, 'Entity', hub_name, entity.attrs)
     entity_id = await _edit_hub_info(tx, hub_name, entity.dict(exclude={'attrs'}))
     return entity_id
 
 
 async def _remove_entity_tx(tx: AsyncManagedTransaction, hub_name: str):
-    if not await entity_exists(tx, hub_name):
-        raise NoEntityError(hub_name)
+    if not await node_exists(tx, 'Entity', hub_name):
+        raise NoNodeError('Entity', hub_name)
 
     delete_hub_query = "MATCH (e:Entity {name: $name}) " \
                        "OPTIONAL MATCH (e)-[:SAT]->(s:Sat)-[:ATTR]->(sf:Field) " \
@@ -72,45 +61,6 @@ async def _remove_entity_tx(tx: AsyncManagedTransaction, hub_name: str):
     res = await tx.run(delete_hub_query, name=hub_name)
     entity_id = await res.single()
     return entity_id['id']
-
-
-async def _get_hub_field_ids(tx: AsyncManagedTransaction, hub_name: str):
-    get_hub_field_ids_query = "MATCH (hub:Entity {name: $hub_name})-[:ATTR]->(f:Field) " \
-                              "RETURN ID(f);"
-
-    field_ids_res = await tx.run(get_hub_field_ids_query, hub_name=hub_name)
-    return field_ids_res
-
-
-async def _delete_hub_fields(tx: AsyncManagedTransaction, hub_name: str, fields_to_delete: List[Dict[int, Dict]]):
-    if fields_to_delete:
-        delete_fields_hub_query = "WITH $attrs as attrs_batch " \
-                                  "UNWIND attrs_batch as attr_id " \
-                                  "MATCH (hub:Entity {name: $hub_name})-[:ATTR]->(f:Field) " \
-                                  "WHERE ID(f)=attr_id " \
-                                  "DETACH DELETE f;"
-
-        await tx.run(delete_fields_hub_query, hub_name=hub_name, attrs=fields_to_delete)
-
-
-async def _add_hub_fields(tx: AsyncManagedTransaction, hub_name: str, fields_to_create: List[Dict[int, Dict]]):
-    if fields_to_create:
-        add_fields_hub_query = "MATCH (hub:Entity {name: $hub_name}) " \
-                               "WITH $attrs as attrs_batch, hub " \
-                               "UNWIND attrs_batch as attr " \
-                               "CREATE (hub)-[:ATTR]->(f:Field {name: attr.name, desc: attr.desc, db: attr.db, attrs: attr.attrs, dbtype: attr.dbtype});"
-        await tx.run(add_fields_hub_query, hub_name=hub_name, attrs=fields_to_create)
-
-
-async def _edit_hub_fields(tx: AsyncManagedTransaction, hub_name: str, fields_to_update: List[Dict[int, Dict]]):
-    if fields_to_update:
-        edit_fields_hub_query = "MATCH (hub:Entity {name: $hub_name}) " \
-                                "WITH $attrs as attrs_batch, hub " \
-                                "UNWIND attrs_batch as attr " \
-                                "MATCH (hub)-[:ATTR]->(f:Field) " \
-                                "WHERE ID(f)=attr.id " \
-                                "SET f.name=attr.name, f.desc=attr.desc, f.db=attr.db, f.attrs=attr.attrs, f.dbtype=attr.dbtype;"
-        await tx.run(edit_fields_hub_query, hub_name=hub_name, attrs=fields_to_update)
 
 
 async def _edit_hub_info(tx: AsyncManagedTransaction, hub_name: str, hub_info: Dict[str, Dict]):
