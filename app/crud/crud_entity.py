@@ -63,24 +63,13 @@ async def _remove_entity_tx(tx: AsyncManagedTransaction, hub_name: str):
     if not await entity_exists(tx, hub_name):
         raise NoEntityError(hub_name)
 
-    delete_hub_sat_fields_query = "MATCH (e:Entity {name: $name}) " \
-                                  "OPTIONAL MATCH (e)-[:SAT]->(s:Sat) " \
-                                  "OPTIONAL MATCH (s)-[r:ATTR]->(f:Field) " \
-                                  "DELETE f, r;"
-
-    delete_hub_sat_query = "MATCH (e:Entity {name: $name}) " \
-                           "OPTIONAL MATCH (e)-[r:SAT]->(s:Sat) " \
-                           "DELETE s, r;"
-
     delete_hub_query = "MATCH (e:Entity {name: $name}) " \
-                       "OPTIONAL MATCH (e)-[r:ATTR]->(f:Field) " \
-                       "DELETE f, r, e " \
+                       "OPTIONAL MATCH (e)-[:SAT]->(s:Sat)-[:ATTR]->(sf:Field) " \
+                       "OPTIONAL MATCH (e)-[:ATTR]->(ef:Field) " \
+                       "DETACH DELETE sf, ef, s, e " \
                        "RETURN ID(e) as id;"
 
-    await tx.run(delete_hub_sat_fields_query, name=hub_name)
-    await tx.run(delete_hub_sat_query, name=hub_name)
     res = await tx.run(delete_hub_query, name=hub_name)
-
     entity_id = await res.single()
     return entity_id['id']
 
@@ -97,9 +86,9 @@ async def _delete_hub_fields(tx: AsyncManagedTransaction, hub_name: str, fields_
     if fields_to_delete:
         delete_fields_hub_query = "WITH $attrs as attrs_batch " \
                                   "UNWIND attrs_batch as attr_id " \
-                                  "MATCH (hub:Entity {name: $hub_name})-[r:ATTR]->(f:Field) " \
+                                  "MATCH (hub:Entity {name: $hub_name})-[:ATTR]->(f:Field) " \
                                   "WHERE ID(f)=attr_id " \
-                                  "DELETE r, f;"
+                                  "DETACH DELETE f;"
 
         await tx.run(delete_fields_hub_query, hub_name=hub_name, attrs=fields_to_delete)
 
@@ -114,16 +103,17 @@ async def _add_hub_fields(tx: AsyncManagedTransaction, hub_name: str, fields_to_
 
 
 async def _edit_hub_fields(tx: AsyncManagedTransaction, hub_name: str, fields_to_update: List[Dict[int, Dict]]):
-    edit_fields_hub_query = "MATCH (hub:Entity {name: $hub_name}) " \
-                            "WITH $attrs as attrs_batch, hub " \
-                            "UNWIND attrs_batch as attr " \
-                            "MATCH (hub)-[:ATTR]->(f:Field) " \
-                            "WHERE ID(f)=attr.id " \
-                            "SET f.name=attr.name, f.desc=attr.desc, f.db=attr.db, f.attrs=attr.attrs, f.dbtype=attr.dbtype;"
-    await tx.run(edit_fields_hub_query, hub_name=hub_name, attrs=fields_to_update)
+    if fields_to_update:
+        edit_fields_hub_query = "MATCH (hub:Entity {name: $hub_name}) " \
+                                "WITH $attrs as attrs_batch, hub " \
+                                "UNWIND attrs_batch as attr " \
+                                "MATCH (hub)-[:ATTR]->(f:Field) " \
+                                "WHERE ID(f)=attr.id " \
+                                "SET f.name=attr.name, f.desc=attr.desc, f.db=attr.db, f.attrs=attr.attrs, f.dbtype=attr.dbtype;"
+        await tx.run(edit_fields_hub_query, hub_name=hub_name, attrs=fields_to_update)
 
 
-async def _edit_hub_info(tx: AsyncManagedTransaction, hub_name: str, hub_info: Dict):
+async def _edit_hub_info(tx: AsyncManagedTransaction, hub_name: str, hub_info: Dict[str, Dict]):
     logger.info(f"hub_info: {hub_info}")
     edit_hub_info_query = "MATCH (hub:Entity {name: $hub_name}) " \
                           "SET hub.name=$name, hub.desc=$desc, hub.db=$db " \
