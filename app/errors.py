@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from fastapi import status
 
 
@@ -68,3 +70,34 @@ class NodeAlreadyExists(APIError):
 
     def __str__(self):
         return f"{self._type} {self._name} already exists"
+
+
+class EntitiesAlreadyLinkedError(APIError):
+    def __init__(self, entities: Tuple[str, str]):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._entities = entities
+
+    def __str__(self):
+        return f"Entities {self._entities[0]} and {self._entities[1]} are already linked"
+
+
+class NoNodesError(APIError):
+    def __init__(self, type_, *nodes):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._type = type_
+        self._nodes = nodes
+
+    def __str__(self):
+        nodes_string = ', '.join(self._nodes)
+        return f"Some of the following nodes of class {self._type} are missing: {nodes_string}"
+
+
+class AllNodesExistError(APIError):
+    def __init__(self, type_, *nodes):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._type = type_
+        self._nodes = nodes
+
+    def __str__(self):
+        nodes_string = ', '.join(self._nodes)
+        return f"All of the following nodes of class {self._type} already exist: {nodes_string}"
