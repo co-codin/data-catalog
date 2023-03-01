@@ -37,7 +37,7 @@ class SatUpdateIn(SatIn):
 
 
 class OneWayLink(BaseModel):
-    desc: Optional[str]
+    desc: str
     name: str
     entity_name: str
     entity_pk: str
@@ -48,3 +48,7 @@ class LinkIn(BaseModel):
     one_way_links: Tuple[OneWayLink, OneWayLink]
     db: str
     attrs: List[Attribute]
+
+
+class LinkUpdateIn(LinkIn):
+    attrs: List[AttributeUpdate]
