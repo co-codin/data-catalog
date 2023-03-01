@@ -67,12 +67,13 @@ async def _remove_sat_tx(tx: AsyncManagedTransaction, sat_name: str):
     if not await _sat_exists(tx, sat_name):
         raise NoSatError(sat_name)
 
-    cql_query = "MATCH (sat:Sat {name: $name}) " \
-                "OPTIONAL MATCH (sat)-[ra:ATTR]->(f:Field) " \
-                "OPTIONAL MATCH (sat)<-[rs:SAT]-(:Entity) " \
-                "DELETE sat, ra, f, rs " \
-                "RETURN ID(sat) as id;"
-    res = await tx.run(cql_query, name=sat_name)
+    delete_sat_query = "MATCH (sat:Sat {name: $name}) " \
+                       "OPTIONAL MATCH (sat)-[:ATTR]->(f:Field) " \
+                       "OPTIONAL MATCH (sat)<-[:SAT]-(:Entity) " \
+                       "DETACH DELETE sat, f " \
+                       "RETURN ID(sat) as id;"
+
+    res = await tx.run(delete_sat_query, name=sat_name)
     sat_id = await res.single()
     return sat_id['id']
 
@@ -89,9 +90,9 @@ async def _delete_sat_fields(tx: AsyncManagedTransaction, sat_name: str, fields_
     if fields_to_delete:
         delete_fields_sat_query = "WITH $attrs as attrs_batch " \
                                   "UNWIND attrs_batch as attr_id " \
-                                  "MATCH (sat:Sat {name: $sat_name})-[r:ATTR]->(f:Field) " \
+                                  "MATCH (sat:Sat {name: $sat_name})-[:ATTR]->(f:Field) " \
                                   "WHERE ID(f)=attr_id " \
-                                  "DELETE r, f;"
+                                  "DETACH DELETE f;"
 
         await tx.run(delete_fields_sat_query, sat_name=sat_name, attrs=fields_to_delete)
 
@@ -106,13 +107,14 @@ async def _add_sat_fields(tx: AsyncManagedTransaction, sat_name: str, fields_to_
 
 
 async def _edit_sat_fields(tx: AsyncManagedTransaction, sat_name: str, fields_to_update: List[Dict[int, Dict]]):
-    edit_fields_sat_query = "MATCH (sat:Sat {name: $sat_name}) " \
-                            "WITH $attrs as attrs_batch, sat " \
-                            "UNWIND attrs_batch as attr " \
-                            "MATCH (sat)-[:ATTR]->(f:Field) " \
-                            "WHERE ID(f)=attr.id " \
-                            "SET f.name=attr.name, f.desc=attr.desc, f.db=attr.db, f.attrs=attr.attrs, f.dbtype=attr.dbtype;"
-    await tx.run(edit_fields_sat_query, sat_name=sat_name, attrs=fields_to_update)
+    if fields_to_update:
+        edit_fields_sat_query = "MATCH (sat:Sat {name: $sat_name}) " \
+                                "WITH $attrs as attrs_batch, sat " \
+                                "UNWIND attrs_batch as attr " \
+                                "MATCH (sat)-[:ATTR]->(f:Field) " \
+                                "WHERE ID(f)=attr.id " \
+                                "SET f.name=attr.name, f.desc=attr.desc, f.db=attr.db, f.attrs=attr.attrs, f.dbtype=attr.dbtype;"
+        await tx.run(edit_fields_sat_query, sat_name=sat_name, attrs=fields_to_update)
 
 
 async def _edit_sat_info(tx: AsyncManagedTransaction, sat_name: str, sat_info: Dict):
