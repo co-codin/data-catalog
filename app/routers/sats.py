@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post('/')
 async def create_sat(sat_in: SatIn, session: AsyncSession = Depends(neo4j_session)):
     sat_id = await add_sat(sat_in, session)
-    return {'status': 'ok', 'message': f'entity {sat_in.name} was created', 'id': sat_id}
+    return {'status': 'ok', 'message': f'sat {sat_in.name} was created', 'id': sat_id}
 
 
 @router.put('/{sat_name}/')
