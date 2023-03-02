@@ -20,26 +20,32 @@ class AttributeUpdate(Attribute):
 
 class EntityIn(NodeIn):
     attrs: List[Attribute]
+    uuid: Optional[str]
 
 
 class EntityUpdateIn(EntityIn):
     attrs: List[AttributeUpdate]
 
 
-class SatIn(EntityIn):
-    ref_table_name: str
+class SatCommon(EntityIn):
     ref_table_pk: str
     fk: str
 
 
-class SatUpdateIn(SatIn):
+class SatIn(SatCommon):
+    ref_table_uuid: str
+
+
+class SatUpdateIn(SatCommon):
     attrs: List[AttributeUpdate]
 
 
 class OneWayLink(BaseModel):
     desc: str
     name: str
-    entity_name: str
+    uuid: Optional[str]
+
+    entity_uuid: str
     entity_pk: str
     fk: str
 

@@ -17,6 +17,16 @@ class NoNodeError(APIError):
         return f"{self._type} {self._name} doesn't exist"
 
 
+class NoNodeUUIDError(APIError):
+    def __init__(self, type_: str, uuid_: str):
+        self.status_code = status.HTTP_404_NOT_FOUND
+        self._type = type_
+        self._uuid = uuid_
+
+    def __str__(self):
+        return f"{self._type} with uuid={self._uuid} doesn't exist"
+
+
 class UnknownRelationTypeError(APIError):
     def __init__(self, relation_type: str):
         self.status_code = status.HTTP_400_BAD_REQUEST
@@ -78,7 +88,7 @@ class EntitiesAlreadyLinkedError(APIError):
         self._entities = entities
 
     def __str__(self):
-        return f"Entities {self._entities[0]} and {self._entities[1]} are already linked"
+        return f"Entities with uuids {self._entities[0]} and {self._entities[1]} are already linked"
 
 
 class NoNodesError(APIError):
