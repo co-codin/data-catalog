@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from neo4j import AsyncResult, AsyncManagedTransaction
 from typing import List, Dict
 
-from app.schemas.nodes import FieldUpdate
+from app.schemas.field import FieldUpdate
 
 logger = logging.getLogger(__name__)
 

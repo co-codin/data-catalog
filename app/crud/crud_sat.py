@@ -4,7 +4,7 @@ from typing import Dict
 from neo4j import AsyncSession, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
 
-from app.schemas.nodes import SatIn, SatUpdateIn
+from app.schemas.sat import SatIn, SatUpdateIn
 from app.errors import NoNodeUUIDError, NodeUUIDAlreadyExists
 from app.crud.common import edit_node_fields
 
@@ -75,13 +75,14 @@ async def _edit_sat_info(tx: AsyncManagedTransaction, sat_uuid: str, sat_info: D
     if not record:
         raise NoNodeUUIDError(sat_uuid)
 
-    edit_sat_info_query = "MATCH (sat:Sat {uuid: $sat_uuid})<-[r:SAT]-() " \
-                          "MATCH (node {uuid: $ref_table_uuid}) " \
-                          "CREATE (sat)<-[:SAT {on: [$ref_table_pk, $fk]}]-(node) " \
-                          "DELETE r " \
-                          "RETURN node.uuid as uuid;"
+    if sat_info['ref_table_uuid']:
+        edit_sat_info_query = "MATCH (sat:Sat {uuid: $sat_uuid})<-[r:SAT]-() " \
+                              "MATCH (node {uuid: $ref_table_uuid}) " \
+                              "CREATE (sat)<-[:SAT {on: [$ref_table_pk, $fk]}]-(node) " \
+                              "DELETE r " \
+                              "RETURN node.uuid as uuid;"
 
-    res = await tx.run(edit_sat_info_query, parameters={'sat_uuid': sat_uuid, **sat_info})
-    record = await res.single()
-    if not record:
-        raise NoNodeUUIDError(sat_info['ref_table_uuid'])
+        res = await tx.run(edit_sat_info_query, parameters={'sat_uuid': sat_uuid, **sat_info})
+        record = await res.single()
+        if not record:
+            raise NoNodeUUIDError(sat_info['ref_table_uuid'])

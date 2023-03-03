@@ -96,22 +96,22 @@ class EntitiesAlreadyLinkedError(APIError):
         self._entities = entities
 
     def __str__(self):
-        return f"Entities with uuids {self._entities[0]} and {self._entities[1]} are already linked"
+        return f"Entities {self._entities[0]} and {self._entities[1]} are already linked"
 
 
-class NoNodesError(APIError):
-    def __init__(self, type_, *nodes):
+class NoNodesUUIDError(APIError):
+    def __init__(self, type_: str, *nodes: str):
         self.status_code = status.HTTP_400_BAD_REQUEST
         self._type = type_
         self._nodes = nodes
 
     def __str__(self):
         nodes_string = ', '.join(self._nodes)
-        return f"Some of the following nodes of class {self._type} are missing: {nodes_string}"
+        return f"Some of the following nodes of class {self._type} with uuid: {nodes_string} are missing"
 
 
 class AllNodesExistError(APIError):
-    def __init__(self, type_, *nodes):
+    def __init__(self, type_: str, *nodes: str):
         self.status_code = status.HTTP_400_BAD_REQUEST
         self._type = type_
         self._nodes = nodes

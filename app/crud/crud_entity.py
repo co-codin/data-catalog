@@ -6,7 +6,7 @@ from typing import Dict
 
 from app.crud.crud_link import _remove_link_tx
 from app.errors import NodeNameAlreadyExists, NoNodeUUIDError, NodeUUIDAlreadyExists
-from app.schemas.nodes import EntityIn, EntityUpdateIn
+from app.schemas.entity import EntityIn, EntityUpdateIn
 from app.crud.common import edit_node_fields
 
 logger = logging.getLogger(__name__)

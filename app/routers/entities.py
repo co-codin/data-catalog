@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from neo4j import AsyncSession
 
-from app.schemas.nodes import EntityIn, EntityUpdateIn
+from app.schemas.entity import EntityIn, EntityUpdateIn
 from app.dependencies import neo4j_session
 from app.crud.crud_entity import add_entity, edit_entity, remove_entity
 

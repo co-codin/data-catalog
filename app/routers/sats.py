@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from neo4j import AsyncSession
 
-from app.schemas.nodes import SatIn, SatUpdateIn
+from app.schemas.sat import SatIn, SatUpdateIn
 from app.dependencies import neo4j_session
 from app.crud.crud_sat import add_sat, edit_sat, remove_sat
 
