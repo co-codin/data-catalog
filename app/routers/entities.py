@@ -16,11 +16,11 @@ async def create_entity(entity_in: EntityIn, session: AsyncSession = Depends(neo
 
 @router.put('/{hub_uuid}/')
 async def update_entity(hub_uuid: str, entity_in: EntityUpdateIn, session: AsyncSession = Depends(neo4j_session)):
-    entity_uuid = await edit_entity(hub_uuid, entity_in, session)
-    return {'status': 'ok', 'message': f'entity was updated', 'uuid': entity_uuid}
+    await edit_entity(hub_uuid, entity_in, session)
+    return {'status': 'ok', 'message': f'entity was updated'}
 
 
 @router.delete('/{hub_uuid}/')
 async def delete_entity(hub_uuid: str, session: AsyncSession = Depends(neo4j_session)):
-    entity_uuid = await remove_entity(hub_uuid, session)
-    return {'status': 'ok', 'message': f'entity was deleted', 'uuid': entity_uuid}
+    await remove_entity(hub_uuid, session)
+    return {'status': 'ok', 'message': f'entity was deleted'}

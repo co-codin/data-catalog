@@ -16,11 +16,11 @@ async def create_sat(sat_in: SatIn, session: AsyncSession = Depends(neo4j_sessio
 
 @router.put('/{sat_uuid}/')
 async def update_sat(sat_uuid: str, sat_in: SatUpdateIn, session: AsyncSession = Depends(neo4j_session)):
-    sat_uuid = await edit_sat(sat_uuid, sat_in, session)
-    return {'status': 'ok', 'message': f'sat was updated', 'uuid': sat_uuid}
+    await edit_sat(sat_uuid, sat_in, session)
+    return {'status': 'ok', 'message': f'sat was updated'}
 
 
 @router.delete('/{sat_uuid}/')
 async def delete_sat(sat_uuid: str, session: AsyncSession = Depends(neo4j_session)):
-    sat_uuid = await remove_sat(sat_uuid, session)
-    return {'status': 'ok', 'message': f'sat was deleted', 'id': sat_uuid}
+    await remove_sat(sat_uuid, session)
+    return {'status': 'ok', 'message': f'sat was deleted'}
