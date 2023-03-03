@@ -7,7 +7,7 @@ class APIError(Exception):
     status_code: int
 
 
-class NoNodeError(APIError):
+class NoNodeNameError(APIError):
     def __init__(self, type_: str, name: str):
         self.status_code = status.HTTP_404_NOT_FOUND
         self._type = type_
@@ -18,13 +18,12 @@ class NoNodeError(APIError):
 
 
 class NoNodeUUIDError(APIError):
-    def __init__(self, type_: str, uuid_: str):
+    def __init__(self, uuid_: str):
         self.status_code = status.HTTP_404_NOT_FOUND
-        self._type = type_
         self._uuid = uuid_
 
     def __str__(self):
-        return f"{self._type} with uuid={self._uuid} doesn't exist"
+        return f"Node with uuid={self._uuid} doesn't exist"
 
 
 class UnknownRelationTypeError(APIError):
@@ -72,7 +71,7 @@ class CyclicPathError(APIError):
         return f"Cyclic path was given: {self._path}"
 
 
-class NodeAlreadyExists(APIError):
+class NodeNameAlreadyExists(APIError):
     def __init__(self, type_: str, name: str):
         self.status_code = status.HTTP_400_BAD_REQUEST
         self._type = type_
@@ -80,6 +79,15 @@ class NodeAlreadyExists(APIError):
 
     def __str__(self):
         return f"{self._type} {self._name} already exists"
+
+
+class NodeUUIDAlreadyExists(APIError):
+    def __init__(self, uuid_: str):
+        self.status_code = status.HTTP_404_NOT_FOUND
+        self._uuid = uuid_
+
+    def __str__(self):
+        return f"Node with uuid={self._uuid} already exists"
 
 
 class EntitiesAlreadyLinkedError(APIError):
