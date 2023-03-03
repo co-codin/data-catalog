@@ -32,9 +32,10 @@ async def remove_sat(sat_uuid: str, session: AsyncSession):
 
 
 async def _add_sat_tx(tx: AsyncManagedTransaction, sat: SatIn) -> str:
-    create_sat_query = "MATCH (e:Entity {uuid: $ref_table_uuid}) " \
-                       "CREATE (sat:Sat {uuid: coalesce($uuid, randomUUID()), name: $name, desc: $desc, db: $db})<-[:SAT {on: [$ref_table_pk, $fk]}]-(e) " \
-                       "WITH $fields as fields_batch, e, sat " \
+    create_sat_query = "MATCH (node {uuid: $ref_table_uuid}) " \
+                       "WHERE node:Entity OR node:Link " \
+                       "CREATE (sat:Sat {uuid: coalesce($uuid, randomUUID()), name: $name, desc: $desc, db: $db})<-[:SAT {on: [$ref_table_pk, $fk]}]-(node) " \
+                       "WITH $fields as fields_batch, sat " \
                        "UNWIND fields_batch as field " \
                        "CREATE (sat)-[:ATTR]->(:Field {name: field.name, desc: field.desc, db: field.db, attrs: field.attrs, dbtype: field.dbtype}) " \
                        "RETURN sat.uuid as sat_uuid;"
@@ -53,7 +54,8 @@ async def _edit_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str, sat: SatUpdat
 async def _remove_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str):
     delete_sat_query = "MATCH (sat:Sat {uuid: $sat_uuid}) " \
                        "OPTIONAL MATCH (sat)-[:ATTR]->(f:Field) " \
-                       "OPTIONAL MATCH (sat)<-[:SAT]-(:Entity) " \
+                       "OPTIONAL MATCH (sat)<-[:SAT]-(node) " \
+                       "WHERE node:Entity OR node:Link " \
                        "WITH sat.uuid as uuid, sat, f " \
                        "DETACH DELETE sat, f " \
                        "RETURN uuid;"

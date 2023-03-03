@@ -42,12 +42,9 @@ class SatUpdateIn(NodeIn, SatRelationship):
     fields: List[FieldUpdate]
 
 
-class OneWayLink(BaseModel):
+class OneWayLink(SatRelationship):
     desc: str
     name: str
-    entity_uuid: str
-    entity_pk: str
-    fk: str
 
 
 class LinkIn(BaseModel):
