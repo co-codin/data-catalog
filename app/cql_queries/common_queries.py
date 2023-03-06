@@ -21,4 +21,3 @@ delete_fields_hub_query = "WITH $fields as fields_batch " \
                           "MATCH (node {uuid: $node_uuid})-[:ATTR]->(f:Field) " \
                           "WHERE ID(f)=field_id " \
                           "DETACH DELETE f;"
-

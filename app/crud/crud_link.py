@@ -84,7 +84,7 @@ async def _edit_link_info(tx: AsyncManagedTransaction, link_uuid: str, link: Lin
         res = await tx.run(edit_both_hubs_query, parameters=links_params)
         record = await res.single()
         if not record:
-            raise NoNodesUUIDError('Entity', link.main_link.ref_table_uuid, link.paired_link.ref_table_uuid)
+            raise NoNodesUUIDError(link.main_link.ref_table_uuid, link.paired_link.ref_table_uuid)
     elif link.main_link.ref_table_uuid:
         link_params = {
             'link_uuid': link_uuid,
@@ -110,4 +110,4 @@ async def _check_on_nodes_existence(tx: AsyncManagedTransaction, type_: str, *no
     record = await res.single()
     logger.info(f"count = {record['count']}")
     if record['count'] != len(nodes_uuids):
-        raise NoNodesUUIDError('Entity', *nodes_uuids)
+        raise NoNodesUUIDError(*nodes_uuids)

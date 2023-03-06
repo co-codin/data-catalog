@@ -1,5 +1,4 @@
 import logging
-from typing import Dict
 
 from neo4j import AsyncSession, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
@@ -22,10 +21,7 @@ async def add_sat(sat: SatIn, session: AsyncSession) -> str:
 
 
 async def edit_sat(sat_uuid: str, sat: SatUpdateIn, session: AsyncSession):
-    try:
-        await session.execute_write(_edit_sat_tx, sat_uuid, sat)
-    except ConstraintError:
-        raise NodeUUIDAlreadyExists(sat_uuid)
+    await session.execute_write(_edit_sat_tx, sat_uuid, sat)
 
 
 async def remove_sat(sat_uuid: str, session: AsyncSession):
@@ -41,7 +37,7 @@ async def _add_sat_tx(tx: AsyncManagedTransaction, sat: SatIn) -> str:
 
 
 async def _edit_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str, sat: SatUpdateIn):
-    await _edit_sat_info(tx, sat_uuid, sat.dict(exclude={'fields'}))
+    await _edit_sat_info(tx, sat_uuid, sat)
     await edit_node_fields(tx, sat_uuid, sat.fields)
 
 
@@ -52,14 +48,16 @@ async def _remove_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str):
         raise NoNodeUUIDError(sat_uuid)
 
 
-async def _edit_sat_info(tx: AsyncManagedTransaction, sat_uuid: str, sat_info: Dict):
+async def _edit_sat_info(tx: AsyncManagedTransaction, sat_uuid: str, sat: SatUpdateIn):
+    sat_info = sat.dict(exclude={'fields', 'uuid'})
     res = await tx.run(edit_sat_info_query, parameters={'sat_uuid': sat_uuid, **sat_info})
     record = await res.single()
     if not record:
         raise NoNodeUUIDError(sat_uuid)
 
-    if sat_info['ref_table_uuid']:
+    if sat.ref_table_uuid:
+        sat_info = sat.dict(include={'ref_table_uuid', 'ref_table_pk', 'fk'})
         res = await tx.run(edit_sat_link_query, parameters={'sat_uuid': sat_uuid, **sat_info})
         record = await res.single()
         if not record:
-            raise NoNodeUUIDError(sat_info['ref_table_uuid'])
+            raise NoNodeUUIDError(sat.ref_table_uuid)

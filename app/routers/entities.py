@@ -11,16 +11,16 @@ router = APIRouter()
 @router.post('/')
 async def create_entity(entity_in: EntityIn, session: AsyncSession = Depends(neo4j_session)):
     entity_uuid = await add_entity(entity_in, session)
-    return {'status': 'ok', 'message': f'entity {entity_in.name} was created', 'uuid': entity_uuid}
+    return {'message': f'entity {entity_in.name} was created', 'uuid': entity_uuid}
 
 
 @router.put('/{hub_uuid}/')
 async def update_entity(hub_uuid: str, entity_in: EntityUpdateIn, session: AsyncSession = Depends(neo4j_session)):
     await edit_entity(hub_uuid, entity_in, session)
-    return {'status': 'ok', 'message': f'entity was updated'}
+    return {'message': f'entity was updated'}
 
 
 @router.delete('/{hub_uuid}/')
 async def delete_entity(hub_uuid: str, session: AsyncSession = Depends(neo4j_session)):
     await remove_entity(hub_uuid, session)
-    return {'status': 'ok', 'message': f'entity was deleted'}
+    return {'message': f'entity was deleted'}
