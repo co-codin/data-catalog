@@ -4,6 +4,7 @@ from neo4j import AsyncResult, AsyncManagedTransaction
 from typing import List, Dict
 
 from app.schemas.field import FieldUpdate
+from app.cql_queries.common_queries import *
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,6 @@ async def edit_node_fields(tx: AsyncManagedTransaction, node_uuid: str, input_fi
 
 
 async def _get_node_field_ids(tx: AsyncManagedTransaction, node_uuid: str) -> AsyncResult:
-    get_node_field_ids_query = "MATCH (node {uuid: $node_uuid})-[:ATTR]->(f:Field) " \
-                              "RETURN ID(f);"
-
     res = await tx.run(get_node_field_ids_query, node_uuid=node_uuid)
     return res
 
@@ -60,31 +58,15 @@ async def _get_cud_fields(input_fields: List[FieldUpdate], get_node_fields_query
 
 async def _delete_node_fields(tx: AsyncManagedTransaction, node_uuid: str, fields_to_delete: List[Dict[int, Dict]]):
     if fields_to_delete:
-        delete_fields_hub_query = "WITH $fields as fields_batch " \
-                                  "UNWIND fields_batch as field_id " \
-                                  "MATCH (node {uuid: $node_uuid})-[:ATTR]->(f:Field) " \
-                                  "WHERE ID(f)=field_id " \
-                                  "DETACH DELETE f;"
-
         await tx.run(delete_fields_hub_query, node_uuid=node_uuid, fields=fields_to_delete)
 
 
 async def _add_node_fields(tx: AsyncManagedTransaction, node_uuid: str, fields_to_create: List[Dict[int, Dict]]):
     if fields_to_create:
-        add_fields_hub_query = "MATCH (node {uuid: $node_uuid}) " \
-                               "WITH $fields as fields_batch, node " \
-                               "UNWIND fields_batch as field " \
-                               "CREATE (node)-[:ATTR]->(f:Field {name: field.name, desc: field.desc, db: field.db, attrs: field.attrs, dbtype: field.dbtype});"
         await tx.run(add_fields_hub_query, node_uuid=node_uuid, fields=fields_to_create)
 
 
 async def _edit_node_fields(tx: AsyncManagedTransaction, node_uuid: str, fields_to_update: List[Dict[int, Dict]]):
     if fields_to_update:
-        edit_fields_hub_query = "MATCH (node {uuid: $node_uuid}) " \
-                                "WITH $fields as fields_batch, node " \
-                                "UNWIND fields_batch as field " \
-                                "MATCH (node)-[:ATTR]->(f:Field) " \
-                                "WHERE ID(f)=field.id " \
-                                "SET f.name=field.name, f.desc=field.desc, f.db=field.db, f.attrs=field.attrs, f.dbtype=field.dbtype;"
         await tx.run(edit_fields_hub_query, node_uuid=node_uuid, fields=fields_to_update)
 

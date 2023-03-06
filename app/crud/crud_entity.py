@@ -8,6 +8,7 @@ from app.crud.crud_link import _remove_link_tx
 from app.errors import NodeNameAlreadyExists, NoNodeUUIDError, NodeUUIDAlreadyExists
 from app.schemas.entity import EntityIn, EntityUpdateIn
 from app.crud.common import edit_node_fields
+from app.cql_queries.entity_queries import *
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +34,6 @@ async def remove_entity(hub_uuid: str, session: AsyncSession):
 
 
 async def _add_entity_tx(tx: AsyncManagedTransaction, entity: EntityIn) -> str:
-    create_hub_query = "CREATE (hub:Entity {uuid: coalesce($uuid, randomUUID()), name: $name, desc: $desc, db: $db}) " \
-                       "WITH $fields as fields_batch, hub " \
-                       "UNWIND fields_batch as field " \
-                       "CREATE (hub)-[:ATTR]->(:Field {name: field.name, desc: field.desc, db: field.db, attrs: field.attrs, dbtype: field.dbtype}) " \
-                       "RETURN hub.uuid as uuid;"
     res = await tx.run(create_hub_query, parameters=entity.dict())
     record = await res.single()
     return record['uuid']
@@ -49,21 +45,11 @@ async def _edit_entity_tx(tx: AsyncManagedTransaction, hub_uuid: str, entity: En
 
 
 async def _remove_entity_tx(tx: AsyncManagedTransaction, hub_uuid: str):
-    match_link_query = "MATCH (e:Entity {uuid: $hub_uuid}) " \
-                       "OPTIONAL MATCH (e)-[:LINK]->(l1:Link)-[:LINK]->(:Entity)-[:LINK]->(:Link)-[:LINK]->(e) " \
-                       "RETURN l1.uuid as uuid;"
     link_res = await tx.run(match_link_query, hub_uuid=hub_uuid)
     link_record = await link_res.single()
 
     if link_record['uuid']:
         await _remove_link_tx(tx, link_record['uuid'])
-
-    delete_hub_query = "MATCH (e:Entity {uuid: $hub_uuid}) " \
-                       "OPTIONAL MATCH (e)-[:SAT]->(s:Sat)-[:ATTR]->(sf:Field) " \
-                       "OPTIONAL MATCH (e)-[:ATTR]->(ef:Field) " \
-                       "WITH e.uuid as uuid, sf, s, ef, e " \
-                       "DETACH DELETE sf, s, ef, e " \
-                       "RETURN uuid;"
 
     res = await tx.run(delete_hub_query, hub_uuid=hub_uuid)
     record = await res.single()
@@ -73,9 +59,6 @@ async def _remove_entity_tx(tx: AsyncManagedTransaction, hub_uuid: str):
 
 async def _edit_hub_info(tx: AsyncManagedTransaction, hub_uuid: str, hub_info: Dict[str, Dict]):
     logger.info(f"hub_info: {hub_info}")
-    edit_hub_info_query = "MATCH (hub:Entity {uuid: $hub_uuid}) " \
-                          "SET hub.name=$name, hub.desc=$desc, hub.db=$db " \
-                          "RETURN hub.uuid as uuid;"
     res = await tx.run(edit_hub_info_query, parameters={'hub_uuid': hub_uuid, **hub_info})
     record = await res.single()
     if not record:

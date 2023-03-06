@@ -7,6 +7,7 @@ from neo4j.exceptions import ConstraintError
 from app.schemas.sat import SatIn, SatUpdateIn
 from app.errors import NoNodeUUIDError, NodeUUIDAlreadyExists
 from app.crud.common import edit_node_fields
+from app.cql_queries.sat_queries import *
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +33,6 @@ async def remove_sat(sat_uuid: str, session: AsyncSession):
 
 
 async def _add_sat_tx(tx: AsyncManagedTransaction, sat: SatIn) -> str:
-    create_sat_query = "MATCH (node {uuid: $ref_table_uuid}) " \
-                       "WHERE node:Entity OR node:Link " \
-                       "CREATE (sat:Sat {uuid: coalesce($uuid, randomUUID()), name: $name, desc: $desc, db: $db})<-[:SAT {on: [$ref_table_pk, $fk]}]-(node) " \
-                       "WITH $fields as fields_batch, sat " \
-                       "UNWIND fields_batch as field " \
-                       "CREATE (sat)-[:ATTR]->(:Field {name: field.name, desc: field.desc, db: field.db, attrs: field.attrs, dbtype: field.dbtype}) " \
-                       "RETURN sat.uuid as sat_uuid;"
     res = await tx.run(create_sat_query, parameters=sat.dict())
     record = await res.single()
     if not record:
@@ -52,14 +46,6 @@ async def _edit_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str, sat: SatUpdat
 
 
 async def _remove_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str):
-    delete_sat_query = "MATCH (sat:Sat {uuid: $sat_uuid}) " \
-                       "OPTIONAL MATCH (sat)-[:ATTR]->(f:Field) " \
-                       "OPTIONAL MATCH (sat)<-[:SAT]-(node) " \
-                       "WHERE node:Entity OR node:Link " \
-                       "WITH sat.uuid as uuid, sat, f " \
-                       "DETACH DELETE sat, f " \
-                       "RETURN uuid;"
-
     res = await tx.run(delete_sat_query, sat_uuid=sat_uuid)
     record = await res.single()
     if not record:
@@ -67,22 +53,13 @@ async def _remove_sat_tx(tx: AsyncManagedTransaction, sat_uuid: str):
 
 
 async def _edit_sat_info(tx: AsyncManagedTransaction, sat_uuid: str, sat_info: Dict):
-    edit_sat_info_query = "MATCH (sat:Sat {uuid: $sat_uuid})<-[r:SAT]-() " \
-                          "SET sat.name=$name, sat.desc=$desc, sat.db=$db, r.on=[$ref_table_pk, $fk] " \
-                          "RETURN sat.uuid as uuid;"
     res = await tx.run(edit_sat_info_query, parameters={'sat_uuid': sat_uuid, **sat_info})
     record = await res.single()
     if not record:
         raise NoNodeUUIDError(sat_uuid)
 
     if sat_info['ref_table_uuid']:
-        edit_sat_info_query = "MATCH (sat:Sat {uuid: $sat_uuid})<-[r:SAT]-() " \
-                              "MATCH (node {uuid: $ref_table_uuid}) " \
-                              "CREATE (sat)<-[:SAT {on: [$ref_table_pk, $fk]}]-(node) " \
-                              "DELETE r " \
-                              "RETURN node.uuid as uuid;"
-
-        res = await tx.run(edit_sat_info_query, parameters={'sat_uuid': sat_uuid, **sat_info})
+        res = await tx.run(edit_sat_link_query, parameters={'sat_uuid': sat_uuid, **sat_info})
         record = await res.single()
         if not record:
             raise NoNodeUUIDError(sat_info['ref_table_uuid'])
