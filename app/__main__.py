@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from app.logger_config import config_logger
 from app.routers import db_mappings, discovery, entities, sats, links
 from app.errors import APIError
+from app.config import settings
 
 config_logger()
 
@@ -55,4 +56,4 @@ def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    uvicorn.run("app.__main__.app", host='0.0.0.0', port=settings.port, reload=settings.reload)
