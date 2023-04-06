@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from fastapi import status
 
 
@@ -5,22 +7,23 @@ class APIError(Exception):
     status_code: int
 
 
-class NoEntityError(APIError):
-    def __init__(self, entity: str):
+class NoNodeNameError(APIError):
+    def __init__(self, type_: str, name: str):
         self.status_code = status.HTTP_404_NOT_FOUND
-        self._entity = entity
+        self._type = type_
+        self._name = name
 
     def __str__(self):
-        return f"Entity {self._entity} doesn't exist"
+        return f"{self._type} {self._name} doesn't exist"
 
 
-class NoFieldError(APIError):
-    def __init__(self, field: str):
+class NoNodeUUIDError(APIError):
+    def __init__(self, uuid_: str):
         self.status_code = status.HTTP_404_NOT_FOUND
-        self._field = field
+        self._uuid = uuid_
 
     def __str__(self):
-        return f"Field {self._field} doesn't exist"
+        return f"Node with uuid={self._uuid} doesn't exist"
 
 
 class UnknownRelationTypeError(APIError):
@@ -66,3 +69,41 @@ class CyclicPathError(APIError):
 
     def __str__(self):
         return f"Cyclic path was given: {self._path}"
+
+
+class NodeNameAlreadyExists(APIError):
+    def __init__(self, type_: str, name: str):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._type = type_
+        self._name = name
+
+    def __str__(self):
+        return f"{self._type} {self._name} already exists"
+
+
+class NodeUUIDAlreadyExists(APIError):
+    def __init__(self, uuid_: str):
+        self.status_code = status.HTTP_404_NOT_FOUND
+        self._uuid = uuid_
+
+    def __str__(self):
+        return f"Node with uuid={self._uuid} already exists"
+
+
+class EntitiesAlreadyLinkedError(APIError):
+    def __init__(self, entities: Tuple[str, str]):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._entities = entities
+
+    def __str__(self):
+        return f"Entities {self._entities[0]} and {self._entities[1]} are already linked"
+
+
+class NoNodesUUIDError(APIError):
+    def __init__(self, *nodes: str):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._nodes = nodes
+
+    def __str__(self):
+        nodes_string = ', '.join(self._nodes)
+        return f"Some of the following nodes with uuids: {nodes_string} are missing"
