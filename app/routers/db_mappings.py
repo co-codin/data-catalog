@@ -7,7 +7,9 @@ from neo4j import AsyncSession
 from app.dependencies import neo4j_session
 from app.services.graph import get_attr_db_info
 
-router = APIRouter()
+router = APIRouter(
+    tags=["mappings"]
+)
 
 
 class MappingsRequest(BaseModel):

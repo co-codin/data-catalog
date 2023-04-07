@@ -5,7 +5,9 @@ from app.schemas.link import LinkIn, LinkUpdateIn
 from app.dependencies import neo4j_session
 from app.crud.crud_link import add_link, edit_link, remove_link
 
-router = APIRouter()
+router = APIRouter(
+    tags=["links"]
+)
 
 
 @router.post('/')

@@ -5,7 +5,9 @@ from app.schemas.entity import EntityIn, EntityUpdateIn
 from app.dependencies import neo4j_session
 from app.crud.crud_entity import add_entity, edit_entity, remove_entity
 
-router = APIRouter()
+router = APIRouter(
+    tags=["hubs"]
+)
 
 
 @router.post('/')

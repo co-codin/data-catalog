@@ -4,7 +4,9 @@ from neo4j import AsyncSession
 from app.dependencies import neo4j_session
 from app.services.graph import find_entities, describe_entity
 
-router = APIRouter()
+router = APIRouter(
+    tags=["discovery"]
+)
 
 
 @router.get('/search/{search_text}')
