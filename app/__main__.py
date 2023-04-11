@@ -45,6 +45,11 @@ async def request_log(request: Request, call_next):
         )
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
 @app.exception_handler(APIError)
 def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
     logger.warning(exc)
