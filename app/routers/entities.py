@@ -9,6 +9,9 @@ router = APIRouter(
     tags=["hubs"]
 )
 
+@router.get('')
+async def get_entities(session: AsyncSession = Depends(neo4j_session)):
+    pass
 
 @router.post('/')
 async def create_entity(entity_in: EntityIn, session: AsyncSession = Depends(neo4j_session)):
