@@ -1,0 +1,34 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_REPO: repo.n3zdrav.ru:18444
+
+build-data_catalog:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  environment:
+    name: dev
+  before_script:
+    - echo $REGCRED | base64 -d > /kaniko/.docker/config.json
+  script:
+    - /kaniko/executor --dockerfile=.ci/dev.dockerfile --context=dir://. --destination=$DOCKER_REPO/data-catalog:$CI_ENVIRONMENT_SLUG-$CI_COMMIT_SHORT_SHA --cache=true --cache-repo=$DOCKER_REPO/kaniko-cache --cache-dir=/cache
+
+
+deploy:
+    stage: deploy
+    image:
+        name: alpine/helm:3.11.2
+        entrypoint:
+          - ""
+    environment:
+        name: dev
+    before_script:
+      - mkdir -p /root/.kube
+      - echo $KUBE_CONFIG | base64 -d > /root/.kube/config
+    script:
+        - helm upgrade --install -n smartdwh --set-string secrets.dc_neo4j_connection_string="${NEO4J_CONNECTION_STRING}" --set image.tag=$CI_ENVIRONMENT_SLUG-$CI_COMMIT_SHORT_SHA --set image.repository=$DOCKER_REPO/data-catalog data-catalog ./.ci/data-catalog
