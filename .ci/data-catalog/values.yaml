@@ -11,9 +11,9 @@ image:
   tag: ""
 
 secrets:
-  dc_neo4j_connection_string: "" # base64 encoded
-  dc_neo4j_connection_user: "neo4j" # not base64 encoded
-  dc_neo4j_connection_password: "password" # not base64 encoded
+  neo4j_connection_string: "" # base64 encoded
+  neo4j_connection_user: "neo4j" # not base64 encoded
+  neo4j_connection_password: "password" # not base64 encoded
 
 imagePullSecrets: []
 nameOverride: ""
