@@ -39,7 +39,7 @@ build-image:
       --set-string secrets.neo4j_connection_password="$NEO4J_CONNECTION_PASSWORD" 
       --set image.tag=$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA 
       --set image.repository=$DOCKER_REPO/$CI_PROJECT_NAME 
-      --set-string "podAnnotations.instrumentation.opentelemetry.io/inject-python=true"
+      --set-string 'podAnnotations.instrumentation\.opentelemetry\.io/inject-python=true'
       $CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME ./.ci/$CI_PROJECT_NAME -f .ci/$CI_PROJECT_NAME/updated-values.yaml
 
 
