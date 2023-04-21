@@ -8,7 +8,7 @@ RUN apk add --no-cache --virtual .build-deps \
         libffi-dev \
         openssl-dev \
         make \
-    && pip install --no-cache-dir -r requirements.txt \
+    && pip3 install --no-cache-dir -r requirements.txt \
     && apk del .build-deps
 
 FROM python:3.8-alpine
