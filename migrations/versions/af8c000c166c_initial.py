@@ -1,8 +1,8 @@
 """initial
 
-Revision ID: 6968e65715b0
+Revision ID: af8c000c166c
 Revises: 
-Create Date: 2023-04-21 08:52:11.829937
+Create Date: 2023-04-21 09:47:21.258623
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '6968e65715b0'
+revision = 'af8c000c166c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -45,7 +45,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.Column('source_guid', sa.String(length=36), nullable=True),
-    sa.ForeignKeyConstraint(['source_guid'], ['source_registers.guid'], ),
+    sa.ForeignKeyConstraint(['source_guid'], ['source_registers.guid'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_comments_msg'), 'comments', ['msg'], unique=False)
@@ -53,7 +53,7 @@ def upgrade() -> None:
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('source_guid', sa.String(length=36), nullable=True),
-    sa.ForeignKeyConstraint(['source_guid'], ['source_registers.guid'], ),
+    sa.ForeignKeyConstraint(['source_guid'], ['source_registers.guid'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tags_name'), 'tags', ['name'], unique=True)

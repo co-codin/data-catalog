@@ -20,7 +20,7 @@ app.include_router(discovery.router, prefix='/discover')
 app.include_router(entities.router, prefix='/hubs')
 app.include_router(sats.router, prefix='/sats')
 app.include_router(links.router, prefix='/links')
-app.include_router(source_registry.router, prefix='/source_registry')
+app.include_router(source_registry.router, prefix='/source_registries')
 
 
 @app.on_event('startup')

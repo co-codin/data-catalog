@@ -18,8 +18,8 @@ class SourceRegistryUpdateIn(BaseModel):
     conn_string: str
     working_mode: WorkingMode
     owner: str
-    desc: Optional[str]
-    synchronized_at: Optional[datetime]
+    desc: Optional[str] = None
+    synchronized_at: Optional[datetime] = None
 
 
 class SourceRegistryIn(SourceRegistryUpdateIn):
@@ -45,7 +45,7 @@ class CommentOut(CommentIn):
         orm_mode = True
 
 
-class SourceRegistryOut(SourceRegistryIn):
+class SourceRegistryOut(SourceRegistryUpdateIn):
     _id: int
     guid: str
     created_at: datetime

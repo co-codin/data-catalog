@@ -17,19 +17,17 @@ logger = logging.getLogger(__name__)
 
 async def create_source_registry(source_registry: SourceRegistryIn, user_guid: str, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
-    input_dict = source_registry.dict(exclude={'tags', 'comments'})
+    source_registry_dict = source_registry.dict(exclude={'tags', 'comments'})
 
-    source_registry_model = SourceRegister(**input_dict, guid=guid)
+    source_registry_model = SourceRegister(**source_registry_dict, guid=guid)
 
     for tag in source_registry.tags:
-        logger.info(f'tag: {tag}')
         source_registry_model.tags.append(
             Tag(name=tag)
         )
     for comment in source_registry.comments:
-        logger.info(f'comment: {comment}')
         source_registry_model.comments.append(
-            Comment(**comment.dict(exclude={'_id'}), author_guid=user_guid)
+            Comment(**comment.dict(), author_guid=user_guid)
         )
 
     session.add(source_registry_model)
@@ -42,7 +40,7 @@ async def edit_source_registry(guid: str, source_registry: SourceRegistryUpdateI
     await session.execute(
         update(SourceRegister)
         .where(SourceRegister.guid == guid)
-        .values(**source_registry.dict(exclude={'tags', 'comments'}))
+        .values(**source_registry.dict())
     )
     await session.commit()
 

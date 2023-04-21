@@ -57,7 +57,7 @@ class Tag(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String(100), index=True, unique=True, nullable=False)
 
-    source_guid = Column(String(36), ForeignKey(SourceRegister.guid))
+    source_guid = Column(String(36), ForeignKey(SourceRegister.guid, ondelete='CASCADE'))
 
 
 class Comment(Base):
@@ -71,4 +71,4 @@ class Comment(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
-    source_guid = Column(String(36), ForeignKey(SourceRegister.guid))
+    source_guid = Column(String(36), ForeignKey(SourceRegister.guid, ondelete='CASCADE'))
