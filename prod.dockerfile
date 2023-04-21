@@ -1,7 +1,8 @@
 FROM python:3.8-alpine
 
 COPY requirements.txt /tmp/
-RUN pip3 install -r /tmp/requirements.txt
+RUN apk add --no-cache --update build-base libffi-dev openssl-dev
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 COPY app/ /app/app/
 WORKDIR /app
 
