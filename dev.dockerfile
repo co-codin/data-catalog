@@ -16,6 +16,7 @@ WORKDIR /app
 COPY ./requirements.dev.txt .
 COPY ./requirements.txt .
 RUN apk add --update build-base libffi-dev openssl-dev \
+    && pip install --upgrade pip setuptools wheel --no-cache-dir \
     && pip install -r requirements.txt -r requirements.dev.txt --no-cache-dir \
     && rm -rf /var/cache/apk/*
 COPY ./app .
