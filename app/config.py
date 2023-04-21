@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     neo4j_auth: Neo4jCreds = (os.environ.get('dwh_data_catalog_neo4j_connection_user', 'neo4j'),
                               os.environ.get('dwh_data_catalog_neo4j_connection_password', 'dwh'))
 
+    db_connection_string = "postgresql+asyncpg://postgres:dwh@db.lan:5432/data_catalog"
+    db_migration_connection_string = "postgresql+psycopg2://postgres:dwh@db.lan:5432/data_catalog"
+
+    api_iam = 'http://iam.lan:8000'
+
     class Config:
         env_prefix = "dwh_data_catalog_"
         case_sensitive = False
