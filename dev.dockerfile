@@ -1,10 +1,10 @@
 FROM python:3.8-alpine
 
 WORKDIR /app
-COPY requirements.txt /tmp/
-COPY requirements.dev.txt /tmp/
+COPY requirements.dev.txt requirements.txt ./
+RUN apk add --update build-base libffi-dev openssl-dev \
+    && pip3 install --upgrade pip setuptools wheel --no-cache-dir \
+    && pip3 install --no-cache-dir -r requirements.txt -r requirements.dev.txt \
+    && rm -rf /var/cache/apk/*
 
-RUN apk add --no-cache --update build-base libffi-dev openssl-dev
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt /tmp/requirements.dev.txt
-
-CMD ["python3", "-m", "app"]
+CMD ["python", "-m", "app"]
