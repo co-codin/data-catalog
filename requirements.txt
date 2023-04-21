@@ -7,4 +7,4 @@ SQLAlchemy == 1.4.36
 asyncpg==0.25.0
 pyjwt == 2.6.0
 cryptography==38.0.3
-httpx==0.22.0
+httpx==0.24.0

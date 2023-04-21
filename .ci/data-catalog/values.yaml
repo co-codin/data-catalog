@@ -15,6 +15,9 @@ secrets:
   neo4j_connection_user: "neo4j" # not base64 encoded
   neo4j_connection_password: "password" # not base64 encoded
 
+configmap:
+  api_iam: "http://iam:8000"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""

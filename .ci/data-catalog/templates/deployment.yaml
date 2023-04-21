@@ -32,6 +32,8 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ template "data-catalog.fullname" . }}-secret
+            - configMapRef:
+                name: {{ template "data-catalog.fullname" . }}-configmap
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
