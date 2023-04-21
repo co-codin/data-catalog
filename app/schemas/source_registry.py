@@ -19,6 +19,7 @@ class SourceRegistryUpdateIn(BaseModel):
     working_mode: WorkingMode
     owner: str
     desc: Optional[str]
+    synchronized_at: Optional[datetime]
 
 
 class SourceRegistryIn(SourceRegistryUpdateIn):
@@ -49,7 +50,6 @@ class SourceRegistryOut(SourceRegistryIn):
     guid: str
     created_at: datetime
     updated_at: datetime
-    synchronized_at: Optional[datetime]
 
     tags: List[TagOut] = []
     comments: List[CommentOut] = []

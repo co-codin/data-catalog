@@ -15,7 +15,7 @@ from app.models.sources import SourceRegister, Tag, Comment
 logger = logging.getLogger(__name__)
 
 
-async def create_source_registry(source_registry: SourceRegistryIn, session: AsyncSession) -> str:
+async def create_source_registry(source_registry: SourceRegistryIn, user_guid: str, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     input_dict = source_registry.dict(exclude={'tags', 'comments'})
 
@@ -29,7 +29,7 @@ async def create_source_registry(source_registry: SourceRegistryIn, session: Asy
     for comment in source_registry.comments:
         logger.info(f'comment: {comment}')
         source_registry_model.comments.append(
-            Comment(**comment.dict(exclude={'_id'}))
+            Comment(**comment.dict(exclude={'_id'}), author_guid=user_guid)
         )
 
     session.add(source_registry_model)
@@ -84,7 +84,7 @@ async def read_by_guid(guid: str, session: AsyncSession) -> SourceRegistryOut:
     return source_registry_out
 
 
-async def create_comment(guid: str, author_guid: str, comment: CommentIn, session: AsyncSession) -> id:
+async def create_comment(guid: str, author_guid: str, comment: CommentIn, session: AsyncSession) -> int:
     comment = Comment(**comment.dict(), author_guid=author_guid, source_guid=guid)
 
     session.add(comment)
@@ -92,9 +92,7 @@ async def create_comment(guid: str, author_guid: str, comment: CommentIn, sessio
     return comment.id
 
 
-async def edit_comment(id_: int, author_guid: str, comment: CommentIn, session: AsyncSession):
-    await _verify_comment_owner(id_, author_guid, session)
-
+async def edit_comment(id_: int, comment: CommentIn, session: AsyncSession):
     await session.execute(
         update(Comment)
         .where(Comment.id == id_)
@@ -103,9 +101,7 @@ async def edit_comment(id_: int, author_guid: str, comment: CommentIn, session: 
     await session.commit()
 
 
-async def remove_comment(id_: int, author_guid: str, session: AsyncSession):
-    await _verify_comment_owner(id_, author_guid, session)
-
+async def remove_comment(id_: int, session: AsyncSession):
     await session.execute(
         delete(Comment)
         .where(Comment.id == id_)
@@ -113,7 +109,7 @@ async def remove_comment(id_: int, author_guid: str, session: AsyncSession):
     await session.commit()
 
 
-async def _verify_comment_owner(id_: int, author_guid: str, session: AsyncSession):
+async def verify_comment_owner(id_: int, author_guid: str, session: AsyncSession):
     comment_from_db = await session.execute(
         select(Comment)
         .filter(Comment.id == id_)
@@ -126,10 +122,11 @@ async def _verify_comment_owner(id_: int, author_guid: str, session: AsyncSessio
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
 
-async def create_tag(guid: str, tag: str, session: AsyncSession):
-    tag_model = Tag(name=tag, source_gid=guid)
+async def create_tag(guid: str, tag: str, session: AsyncSession) -> int:
+    tag_model = Tag(name=tag, source_guid=guid)
     session.add(tag_model)
     await session.commit()
+    return tag_model.id
 
 
 async def remove_tag(id_: int, session: AsyncSession):

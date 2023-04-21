@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.crud.crud_source_registry import (
     create_source_registry, read_all, read_by_guid, edit_source_registry, remove_source_registry,
-    create_comment, edit_comment, remove_comment,
+    create_comment, edit_comment, remove_comment, verify_comment_owner,
     create_tag, remove_tag
 )
 from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn
@@ -17,7 +17,7 @@ router = APIRouter(
 
 @router.post('/')
 async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), user=Depends(get_user)):
-    guid = await create_source_registry(source_registry, session)
+    guid = await create_source_registry(source_registry, user['identity_id'], session)
     return {'guid': guid}
 
 
@@ -45,31 +45,33 @@ async def get_by_guid(guid: str, session=Depends(db_session), user=Depends(get_u
     return await read_by_guid(guid, session)
 
 
-@router.post('/{guid}/comment')
+@router.post('/{guid}/comments')
 async def add_comment(guid: str, comment: CommentIn, session=Depends(db_session), user=Depends(get_user)):
-    comment_id = await create_comment(guid, user.guid, comment, session)
+    comment_id = await create_comment(guid, user['identity_id'], comment, session)
     return {'id': comment_id}
 
 
-@router.put('/comment/{id_}')
+@router.put('/comments/{id_}')
 async def update_comment(id_: int, comment: CommentIn, session=Depends(db_session), user=Depends(get_user)):
-    await edit_comment(id_, user.guid, comment, session)
+    await verify_comment_owner(id_, user['identity_id'], session)
+    await edit_comment(id_, comment, session)
     return {'msg': 'comment has been updated'}
 
 
-@router.delete('/comment/{id_}')
+@router.delete('/comments/{id_}')
 async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get_user)):
-    await remove_comment(id_, user.guid, session)
+    await verify_comment_owner(id_, user['identity_id'], session)
+    await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
 
 
-@router.post('/{guid}/tag')
+@router.post('/{guid}/tags')
 async def add_tag(guid: str, tag: str, session=Depends(db_session), user=Depends(get_user)):
     tag_id = await create_tag(guid, tag, session)
     return {'id': tag_id}
 
 
-@router.post('/tag/{id_}')
+@router.delete('/tags/{id_}')
 async def delete_tag(id_: int, session=Depends(db_session), user=Depends(get_user)):
     await remove_tag(id_, session)
     return {'msg': 'tag has been deleted'}
