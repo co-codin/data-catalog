@@ -34,4 +34,4 @@ async def get_user(token=Depends(bearer)) -> dict:
 
 
 async def get_token(token=Depends(bearer), _=Depends(get_user)) -> str:
-    return token
+    return token.credentials
