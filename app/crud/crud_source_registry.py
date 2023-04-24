@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
 
-from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, \
-    CommentOut
+from app.schemas.source_registry import (
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut
+)
 from app.models.sources import SourceRegister, Tag, Comment
 from app.config import settings
 
@@ -56,7 +57,7 @@ async def remove_source_registry(guid: str, session: AsyncSession):
     await session.commit()
 
 
-async def read_all(session: AsyncSession) -> List[SourceRegistryOut]:
+async def read_all(token: str, session: AsyncSession) -> List[SourceRegistryOut]:
     source_registries = await session.execute(
         select(SourceRegister)
         .options(selectinload(SourceRegister.tags))
@@ -73,14 +74,14 @@ async def read_all(session: AsyncSession) -> List[SourceRegistryOut]:
     }
 
     source_registries_out = [SourceRegistryOut.from_orm(source_registry) for source_registry in source_registries]
-    authors_data = await _get_authors_data_by_guids(author_guids)
+    authors_data = await _get_authors_data_by_guids(author_guids, token)
 
     for source_registry in source_registries_out:
         _set_author_data(source_registry.comments, authors_data)
     return source_registries_out
 
 
-async def read_by_guid(guid: str, session: AsyncSession) -> SourceRegistryOut:
+async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRegistryOut:
     source_registry = await session.execute(
         select(SourceRegister)
         .options(selectinload(SourceRegister.tags))
@@ -94,17 +95,18 @@ async def read_by_guid(guid: str, session: AsyncSession) -> SourceRegistryOut:
 
     author_guids = {comment.author_guid for comment in source_registry.comments}
     source_registry_out = SourceRegistryOut.from_orm(source_registry)
-    authors_data = await _get_authors_data_by_guids(author_guids)
+    authors_data = await _get_authors_data_by_guids(author_guids, token)
 
     _set_author_data(source_registry_out.comments, authors_data)
 
     return source_registry_out
 
 
-async def _get_authors_data_by_guids(guids: Iterable[str]) -> Dict[str, Dict[str, str]]:
+async def _get_authors_data_by_guids(guids: Iterable[str], token: str) -> Dict[str, Dict[str, str]]:
     response = requests.get(
         f'{settings.api_iam}/internal/users/',
-        json={'guids': tuple(guids)}
+        json={'guids': tuple(guids)},
+        headers={"Authorization": f"Bearer {token}"}
     )
     authors_data = response.json()
     return authors_data
