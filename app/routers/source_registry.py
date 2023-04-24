@@ -8,7 +8,7 @@ from app.crud.crud_source_registry import (
     create_tag, remove_tag
 )
 from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn
-from app.dependencies import db_session, get_user
+from app.dependencies import db_session, get_user, get_token
 
 router = APIRouter(
     tags=['source registry']
@@ -36,13 +36,13 @@ async def delete_source_registry(guid: str, session=Depends(db_session), _=Depen
 
 
 @router.get('/', response_model=List[SourceRegistryOut])
-async def get_all(session=Depends(db_session), _=Depends(get_user)) -> List[SourceRegistryOut]:
-    return await read_all(session)
+async def get_all(session=Depends(db_session), token=Depends(get_token)) -> List[SourceRegistryOut]:
+    return await read_all(token, session)
 
 
 @router.get('/{guid}', response_model=SourceRegistryOut)
-async def get_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
-    return await read_by_guid(guid, session)
+async def get_by_guid(guid: str, session=Depends(db_session), token=Depends(get_token)):
+    return await read_by_guid(guid, token, session)
 
 
 @router.post('/{guid}/comments', response_model=Dict[str, int])

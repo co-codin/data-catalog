@@ -31,3 +31,7 @@ async def get_user(token=Depends(bearer)) -> dict:
         return await decode_jwt(token.credentials)
     except Exception:
         raise HTTPException(status_code=401)
+
+
+async def get_token(token=Depends(bearer), _=Depends(get_user)) -> str:
+    return token
