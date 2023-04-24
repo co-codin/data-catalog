@@ -1,7 +1,8 @@
 import uuid
 import logging
+import requests
 
-from typing import List
+from typing import List, Dict, Iterable
 
 from fastapi import HTTPException, status
 
@@ -9,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
 
-from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn
+from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, \
+    CommentOut
 from app.models.sources import SourceRegister, Tag, Comment
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +66,18 @@ async def read_all(session: AsyncSession) -> List[SourceRegistryOut]:
     if not source_registries:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return [SourceRegistryOut.from_orm(source_registry) for source_registry in source_registries]
+    author_guids = {
+        comment.author_guid
+        for source_registry in source_registries
+        for comment in source_registry.comments
+    }
+
+    source_registries_out = [SourceRegistryOut.from_orm(source_registry) for source_registry in source_registries]
+    authors_data = await _get_authors_data_by_guids(author_guids)
+
+    for source_registry in source_registries_out:
+        _set_author_data(source_registry.comments, authors_data)
+    return source_registries_out
 
 
 async def read_by_guid(guid: str, session: AsyncSession) -> SourceRegistryOut:
@@ -78,8 +92,30 @@ async def read_by_guid(guid: str, session: AsyncSession) -> SourceRegistryOut:
     if not source_registry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    author_guids = {comment.author_guid for comment in source_registry.comments}
     source_registry_out = SourceRegistryOut.from_orm(source_registry)
+    authors_data = await _get_authors_data_by_guids(author_guids)
+
+    _set_author_data(source_registry_out.comments, authors_data)
+
     return source_registry_out
+
+
+async def _get_authors_data_by_guids(guids: Iterable[str]) -> Dict[str, Dict[str, str]]:
+    response = requests.get(
+        f'{settings.api_iam}/internal/users/',
+        json={'guids': tuple(guids)}
+    )
+    authors_data = response.json()
+    return authors_data
+
+
+def _set_author_data(comments: Iterable[CommentOut], authors_data: Dict[str, Dict[str, str]]):
+    for comment in comments:
+        comment.author_first_name = authors_data[comment.author_guid]['first_name']
+        comment.author_last_name = authors_data[comment.author_guid]['last_name']
+        comment.author_middle_name = authors_data[comment.author_guid]['middle_name']
+        comment.author_email = authors_data[comment.author_guid]['email']
 
 
 async def create_comment(guid: str, author_guid: str, comment: CommentIn, session: AsyncSession) -> int:

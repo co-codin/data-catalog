@@ -38,6 +38,12 @@ class TagOut(BaseModel):
 class CommentOut(CommentIn):
     id: int
     author_guid: str
+
+    author_first_name: Optional[str] = None
+    author_last_name: Optional[str] = None
+    author_middle_name: Optional[str] = None
+    author_email: Optional[str] = None
+
     created_at: datetime
     updated_at: datetime
 
