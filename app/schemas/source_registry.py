@@ -12,7 +12,6 @@ class CommentIn(BaseModel):
 
 class SourceRegistryCommon(BaseModel):
     name: str
-    type: str
     origin: Origin
     status: Status
     conn_string: str
@@ -27,7 +26,6 @@ class SourceRegistryUpdateIn(SourceRegistryCommon):
 
 class SourceRegistryIn(SourceRegistryCommon):
     tags: Optional[List[str]] = []
-    comments: Optional[List[CommentIn]] = []
 
 
 class TagOut(BaseModel):
@@ -57,6 +55,7 @@ class CommentOut(CommentIn):
 class SourceRegistryOut(SourceRegistryUpdateIn):
     _id: int
     guid: str
+    type: str
     created_at: datetime
     updated_at: datetime
 

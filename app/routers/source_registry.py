@@ -16,8 +16,8 @@ router = APIRouter(
 
 
 @router.post('/', response_model=Dict[str, str])
-async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), user=Depends(get_user)):
-    guid = await create_source_registry(source_registry, user['identity_id'], session)
+async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), _=Depends(get_user)):
+    guid = await create_source_registry(source_registry, session)
     return {'guid': guid}
 
 
