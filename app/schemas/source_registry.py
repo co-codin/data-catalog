@@ -10,7 +10,7 @@ class CommentIn(BaseModel):
     msg: str
 
 
-class SourceRegistryUpdateIn(BaseModel):
+class SourceRegistryCommon(BaseModel):
     name: str
     type: str
     origin: Origin
@@ -19,10 +19,13 @@ class SourceRegistryUpdateIn(BaseModel):
     working_mode: WorkingMode
     owner: str
     desc: Optional[str] = None
+
+
+class SourceRegistryUpdateIn(SourceRegistryCommon):
     synchronized_at: Optional[datetime] = None
 
 
-class SourceRegistryIn(SourceRegistryUpdateIn):
+class SourceRegistryIn(SourceRegistryCommon):
     tags: Optional[List[str]] = []
     comments: Optional[List[CommentIn]] = []
 
