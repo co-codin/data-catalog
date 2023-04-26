@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from app.models.sources import Origin, WorkingMode, Status
 
@@ -18,6 +18,13 @@ class SourceRegistryCommon(BaseModel):
     working_mode: WorkingMode
     owner: str
     desc: Optional[str] = None
+
+    @validator('conn_string')
+    def conn_string_must_be_formatted(cls, v: str):
+        driver = v.split('://', maxsplit=1)
+        if len(driver) != 2:
+            raise ValueError('conn_string field must contain driver')
+        return v
 
 
 class SourceRegistryUpdateIn(SourceRegistryCommon):
