@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     api_iam = 'http://iam.lan:8000'
 
+    origins = [
+        '*'
+    ]
+
     class Config:
         env_prefix = "dwh_data_catalog_"
         case_sensitive = False

@@ -19,20 +19,15 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def create_source_registry(source_registry: SourceRegistryIn, user_guid: str, session: AsyncSession) -> str:
+async def create_source_registry(source_registry: SourceRegistryIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     source_registry_dict = source_registry.dict(exclude={'tags', 'comments'})
+    driver = source_registry.conn_string.split('://', maxsplit=1)[0]
 
-    source_registry_model = SourceRegister(**source_registry_dict, guid=guid)
+    source_registry_model = SourceRegister(**source_registry_dict, guid=guid, type=driver)
 
     for tag in source_registry.tags:
-        source_registry_model.tags.append(
-            Tag(name=tag)
-        )
-    for comment in source_registry.comments:
-        source_registry_model.comments.append(
-            Comment(**comment.dict(), author_guid=user_guid)
-        )
+        source_registry_model.tags.append(Tag(name=tag))
 
     session.add(source_registry_model)
     await session.commit()
@@ -41,10 +36,11 @@ async def create_source_registry(source_registry: SourceRegistryIn, user_guid: s
 
 
 async def edit_source_registry(guid: str, source_registry: SourceRegistryUpdateIn, session: AsyncSession):
+    driver = source_registry.conn_string.split('://', maxsplit=1)[0]
     await session.execute(
         update(SourceRegister)
         .where(SourceRegister.guid == guid)
-        .values(**source_registry.dict())
+        .values(**source_registry.dict(), type=driver)
     )
     await session.commit()
 
@@ -65,7 +61,7 @@ async def read_all(token: str, session: AsyncSession) -> List[SourceRegistryOut]
     )
     source_registries = source_registries.scalars().all()
     if not source_registries:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return source_registries
 
     author_guids = {
         comment.author_guid

@@ -11,13 +11,14 @@ from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn
 from app.dependencies import db_session, get_user, get_token
 
 router = APIRouter(
+    prefix="/source_registries",
     tags=['source registry']
 )
 
 
 @router.post('/', response_model=Dict[str, str])
-async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), user=Depends(get_user)):
-    guid = await create_source_registry(source_registry, user['identity_id'], session)
+async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), _=Depends(get_user)):
+    guid = await create_source_registry(source_registry, session)
     return {'guid': guid}
 
 

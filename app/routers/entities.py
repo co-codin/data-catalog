@@ -6,7 +6,8 @@ from app.dependencies import neo4j_session
 from app.crud.crud_entity import add_entity, edit_entity, remove_entity
 
 router = APIRouter(
-    tags=["hubs"]
+    prefix='/hubs',
+    tags=['hubs']
 )
 
 @router.get('')

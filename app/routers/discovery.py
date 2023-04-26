@@ -5,7 +5,8 @@ from app.dependencies import neo4j_session
 from app.services.graph import find_entities, describe_entity
 
 router = APIRouter(
-    tags=["discovery"]
+    prefix='/discover',
+    tags=['discovery']
 )
 
 
