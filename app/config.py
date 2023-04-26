@@ -1,4 +1,6 @@
 from collections import namedtuple
+from typing import List
+
 from pydantic import BaseSettings
 import os
 
@@ -15,12 +17,12 @@ class Settings(BaseSettings):
     neo4j_auth: Neo4jCreds = (os.environ.get('dwh_data_catalog_neo4j_connection_user', 'neo4j'),
                               os.environ.get('dwh_data_catalog_neo4j_connection_password', 'dwh'))
 
-    db_connection_string = "postgresql+asyncpg://postgres:dwh@db.lan:5432/data_catalog"
-    db_migration_connection_string = "postgresql+psycopg2://postgres:dwh@db.lan:5432/data_catalog"
+    db_connection_string: str = "postgresql+asyncpg://postgres:dwh@db.lan:5432/data_catalog"
+    db_migration_connection_string: str = "postgresql+psycopg2://postgres:dwh@db.lan:5432/data_catalog"
 
-    api_iam = 'http://iam.lan:8000'
+    api_iam: str = 'http://iam.lan:8000'
 
-    origins = [
+    origins: List[str] = [
         '*'
     ]
 
