@@ -11,6 +11,7 @@ from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn
 from app.dependencies import db_session, get_user, get_token
 
 router = APIRouter(
+    prefix="/source_registries",
     tags=['source registry']
 )
 

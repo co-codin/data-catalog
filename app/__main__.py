@@ -2,6 +2,7 @@ import logging
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.logger_config import config_logger
 from app.routers import db_mappings, discovery, entities, sats, links, source_registry
@@ -15,12 +16,21 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
-app.include_router(db_mappings.router, prefix='/mappings')
-app.include_router(discovery.router, prefix='/discover')
-app.include_router(entities.router, prefix='/hubs')
-app.include_router(sats.router, prefix='/sats')
-app.include_router(links.router, prefix='/links')
-app.include_router(source_registry.router, prefix='/source_registries')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(db_mappings.router)
+app.include_router(discovery.router)
+app.include_router(entities.router)
+app.include_router(sats.router)
+app.include_router(links.router)
+app.include_router(source_registry.router)
 
 
 @app.on_event('startup')

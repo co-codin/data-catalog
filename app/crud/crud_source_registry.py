@@ -61,7 +61,7 @@ async def read_all(token: str, session: AsyncSession) -> List[SourceRegistryOut]
     )
     source_registries = source_registries.scalars().all()
     if not source_registries:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return source_registries
 
     author_guids = {
         comment.author_guid
