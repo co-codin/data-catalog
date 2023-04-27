@@ -24,10 +24,10 @@ spec:
         - name: "{{ .Chart.Name }}-migrations"
           image: "{{ printf "%s-migrations:%s" .Values.image.repository (.Values.image.tag | default .Chart.AppVersion) }}"
           env:
-            - name: DWH_TASK_BROKER_DB_MIGRATION_CONNECTION_STRING
+            - name: dwh_data_catalog_db_migration_connection_string
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "data-catalog.fullname" . }}-secret
+                  name: {{ template "data-catalog.fullname" . }}-secret
                   key: dwh_data_catalog_db_migration_connection_string
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
