@@ -10,7 +10,7 @@ class CommentIn(BaseModel):
     msg: str
 
 
-class SourceRegistryCommon(BaseModel):
+class SourceRegistryIn(BaseModel):
     name: str
     origin: Origin
     status: Status
@@ -18,6 +18,7 @@ class SourceRegistryCommon(BaseModel):
     working_mode: WorkingMode
     owner: str
     desc: Optional[str] = None
+    tags: Optional[List[str]] = []
 
     @validator('conn_string')
     def conn_string_must_be_formatted(cls, v: str):
@@ -27,12 +28,8 @@ class SourceRegistryCommon(BaseModel):
         return v
 
 
-class SourceRegistryUpdateIn(SourceRegistryCommon):
+class SourceRegistryUpdateIn(SourceRegistryIn):
     synchronized_at: Optional[datetime] = None
-
-
-class SourceRegistryIn(SourceRegistryCommon):
-    tags: Optional[List[str]] = []
 
 
 class TagOut(BaseModel):
@@ -63,6 +60,7 @@ class SourceRegistryOut(SourceRegistryUpdateIn):
     _id: int
     guid: str
     type: str
+    is_synchronized: bool
     created_at: datetime
     updated_at: datetime
 

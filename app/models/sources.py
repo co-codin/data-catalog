@@ -2,7 +2,7 @@ import enum
 
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, BigInteger, String, Boolean, DateTime, ForeignKey, Enum, Table
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -26,6 +26,14 @@ class Status(enum.Enum):
     OFF = 'off'
 
 
+source_registry_tags = Table(
+    "source_registry_tags",
+    Base.metadata,
+    Column("source_registry_id", ForeignKey("source_registers.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+
 class SourceRegister(Base):
     __tablename__ = 'source_registers'
 
@@ -39,16 +47,17 @@ class SourceRegister(Base):
 
     conn_string = Column(String(500), unique=True, nullable=False)
     working_mode = Column(Enum(WorkingMode), nullable=False)
-    owner = Column(String(36), nullable=False)
+    owner = Column(String(36*3), nullable=False)
     desc = Column(String(500), index=True)
+    is_synchronized = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
     synchronized_at = Column(DateTime)
 
-    tags = relationship('Tag')
-    comments = relationship('Comment')
+    tags = relationship('Tag', secondary=source_registry_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
 
 
 class Tag(Base):
@@ -57,7 +66,7 @@ class Tag(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String(100), index=True, unique=True, nullable=False)
 
-    source_guid = Column(String(36), ForeignKey(SourceRegister.guid, ondelete='CASCADE'))
+    source_registries = relationship('SourceRegister', secondary=source_registry_tags)
 
 
 class Comment(Base):
