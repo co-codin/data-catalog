@@ -6,7 +6,6 @@ from app.config import settings
 
 
 engine = create_engine(settings.db_migration_connection_string)
-
 if not database_exists(engine.url):
     create_database(engine.url)
 
