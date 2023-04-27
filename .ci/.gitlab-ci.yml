@@ -36,7 +36,7 @@ deploy:
     name: $CI_COMMIT_REF_SLUG
     url: https://$CI_COMMIT_REF_SLUG.smartdwh.k8s.bi.n3zdrav.ru
   rules:
-    - if: ($CI_COMMIT_REF_PROTECTED == "true" || $CI_COMMIT_REF_SLUG == "fix-helm-vars") && $CI_PIPELINE_SOURCE != "schedule"
+    - if: $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE != "merge_request_event" 
     - when: never
   before_script:
     - mkdir -p /root/.kube
