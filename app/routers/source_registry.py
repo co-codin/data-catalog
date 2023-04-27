@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.crud.crud_source_registry import (
     create_source_registry, read_all, read_by_guid, edit_source_registry, remove_source_registry,
-    create_comment, edit_comment, remove_comment, verify_comment_owner,
-    create_tag, remove_tag
+    create_comment, edit_comment, remove_comment, verify_comment_owner, remove_redundant_tags
 )
 from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn
 from app.dependencies import db_session, get_user, get_token
@@ -27,12 +26,14 @@ async def update_source_registry(
         guid: str, source_registry: SourceRegistryUpdateIn, session=Depends(db_session), _=Depends(get_user)
 ):
     await edit_source_registry(guid, source_registry, session)
+    await remove_redundant_tags(session)
     return {'msg': 'source registry has been updated'}
 
 
 @router.delete('/{guid}', response_model=Dict[str, str])
 async def delete_source_registry(guid: str, session=Depends(db_session), _=Depends(get_user)):
     await remove_source_registry(guid, session)
+    await remove_redundant_tags(session)
     return {'msg': 'source registry has been deleted'}
 
 
@@ -64,15 +65,3 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
-
-
-@router.post('/{guid}/tags', response_model=Dict[str, int])
-async def add_tag(guid: str, tag: str, session=Depends(db_session), _=Depends(get_user)):
-    tag_id = await create_tag(guid, tag, session)
-    return {'id': tag_id}
-
-
-@router.delete('/tags/{id_}', response_model=Dict[str, str])
-async def delete_tag(id_: int, session=Depends(db_session), _=Depends(get_user)):
-    await remove_tag(id_, session)
-    return {'msg': 'tag has been deleted'}
