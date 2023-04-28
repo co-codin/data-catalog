@@ -3,6 +3,7 @@ from typing import List, Dict
 from fastapi import APIRouter, Depends
 
 from app.crud.crud_source_registry import (
+    check_on_uniqueness,
     create_source_registry, read_all, read_by_guid, edit_source_registry, remove_source_registry,
     set_source_registry_status, create_comment, edit_comment, remove_comment, verify_comment_owner,
     remove_redundant_tags
@@ -19,6 +20,7 @@ router = APIRouter(
 
 @router.post('/', response_model=Dict[str, str])
 async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), _=Depends(get_user)):
+    await check_on_uniqueness(source_registry.name, source_registry.conn_string, session)
     guid = await create_source_registry(source_registry, session)
     return {'guid': guid}
 
@@ -27,6 +29,7 @@ async def add_source_registry(source_registry: SourceRegistryIn, session=Depends
 async def update_source_registry(
         guid: str, source_registry: SourceRegistryUpdateIn, session=Depends(db_session), _=Depends(get_user)
 ):
+    await check_on_uniqueness(source_registry.name, source_registry.conn_string, session)
     await edit_source_registry(guid, source_registry, session)
     await remove_redundant_tags(session)
     return {'msg': 'source registry has been updated'}

@@ -7,13 +7,14 @@ from typing import List, Dict, Iterable
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_
 from sqlalchemy.orm import selectinload, joinedload, load_only
 
 from app.schemas.source_registry import (
     SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut
 )
 from app.models.sources import SourceRegister, Tag, Comment, Status
+from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,6 @@ logger = logging.getLogger(__name__)
 async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     driver = source_registry_in.conn_string.split('://', maxsplit=1)[0]
-
     source_registry_model = SourceRegister(**source_registry_in.dict(exclude={'tags'}), guid=guid, type=driver)
     await add_tags(source_registry_model, source_registry_in.tags, session)
 
@@ -30,6 +30,25 @@ async def create_source_registry(source_registry_in: SourceRegistryIn, session: 
     await session.commit()
 
     return source_registry_model.guid
+
+
+async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession):
+    source_registries = await session.execute(
+        select(SourceRegister)
+        .options(load_only(SourceRegister.conn_string, SourceRegister.name))
+        .filter(
+            or_(
+                SourceRegister.conn_string == conn_string,
+                SourceRegister.name == name
+            )
+        )
+    )
+    source_registries = source_registries.scalars().all()
+    for source_registry in source_registries:
+        if source_registry.name == name:
+            raise SourceRegistryNameAlreadyExist(name)
+        elif source_registry.conn_string == conn_string:
+            raise ConnStringAlreadyExist(conn_string)
 
 
 async def add_tags(source_registry_model: SourceRegister, tags_in: Iterable[str], session: AsyncSession):
