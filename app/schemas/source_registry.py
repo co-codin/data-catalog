@@ -13,7 +13,6 @@ class CommentIn(BaseModel):
 class SourceRegistryIn(BaseModel):
     name: str
     origin: Origin
-    status: Status
     conn_string: str
     working_mode: WorkingMode
     owner: str
@@ -60,7 +59,7 @@ class SourceRegistryOut(SourceRegistryUpdateIn):
     _id: int
     guid: str
     type: str
-    is_synchronized: bool
+    status: Status
     created_at: datetime
     updated_at: datetime
 

@@ -10,7 +10,7 @@ Neo4jCreds = namedtuple('Neo4jCreds', ['username', 'password'])
 
 class Settings(BaseSettings):
     port: int = 8000
-    debug: bool = False
+    debug: bool = True
     log_dir: str = "/var/log/n3dwh/"
     log_name: str = "data_catalog.log"
     neo4j_connection_string: str = 'bolt://graphdb.lan:7687'
