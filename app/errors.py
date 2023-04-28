@@ -115,7 +115,7 @@ class ConnStringAlreadyExist(APIError):
         self._conn_string = conn_string
 
     def __str__(self):
-        return f'conn_string = {self._conn_string} already exist'
+        return f'conn_string {self._conn_string} already exist'
 
 
 class SourceRegistryNameAlreadyExist(APIError):
@@ -124,4 +124,4 @@ class SourceRegistryNameAlreadyExist(APIError):
         self._name = name
 
     def __str__(self):
-        return f'source registry name = {self._name} already exist'
+        return f'source registry name {self._name} already exist'
