@@ -27,9 +27,6 @@ async def db_session() -> AsyncSession:
         try:
             yield session
             await session.commit()
-        except IntegrityError:
-            await session.rollback()
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
         except Exception:
             await session.rollback()
             raise
