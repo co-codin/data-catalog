@@ -1,11 +1,9 @@
 from contextlib import asynccontextmanager
 
-from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 
