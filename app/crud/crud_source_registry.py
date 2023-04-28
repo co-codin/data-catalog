@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload, joinedload, load_only
 from app.schemas.source_registry import (
     SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut
 )
-from app.models.sources import SourceRegister, Tag, Comment
+from app.models.sources import SourceRegister, Tag, Comment, Status
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,15 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     await add_tags(source_registry_model, tags_to_create, session)
 
     session.add(source_registry_model)
+    await session.commit()
+
+
+async def set_source_registry_status(guid: str, status_in: Status, session: AsyncSession):
+    await session.execute(
+        update(SourceRegister)
+        .where(SourceRegister.guid == guid)
+        .values(status=status_in)
+    )
     await session.commit()
 
 

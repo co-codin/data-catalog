@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends
 
 from app.crud.crud_source_registry import (
     create_source_registry, read_all, read_by_guid, edit_source_registry, remove_source_registry,
-    create_comment, edit_comment, remove_comment, verify_comment_owner, remove_redundant_tags
+    set_source_registry_status, create_comment, edit_comment, remove_comment, verify_comment_owner,
+    remove_redundant_tags
 )
+from app.models import Status
 from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn
 from app.dependencies import db_session, get_user, get_token
 
@@ -28,6 +30,12 @@ async def update_source_registry(
     await edit_source_registry(guid, source_registry, session)
     await remove_redundant_tags(session)
     return {'msg': 'source registry has been updated'}
+
+
+@router.post('/{guid}/status')
+async def set_status(guid: str, status_in: Status, session=Depends(db_session), _=Depends(get_user)):
+    await set_source_registry_status(guid, status_in, session)
+    return {'msg': 'status has been set'}
 
 
 @router.delete('/{guid}', response_model=Dict[str, str])

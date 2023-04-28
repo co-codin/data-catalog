@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('type', sa.String(length=36), nullable=False),
     sa.Column('origin', sa.Enum('INTERNAL', 'PRIMARY', name='origin'), nullable=False),
-    sa.Column('status', sa.Enum('ON', 'OFF', name='status'), nullable=False),
+    sa.Column('status', sa.Enum('ON', 'OFF', 'SYNCHRONIZING', name='status'), nullable=False),
     sa.Column('conn_string', sa.String(length=500), nullable=False),
     sa.Column('working_mode', sa.Enum('PASSIVE', 'ACTIVE', 'BATCHED', 'STREAMED', name='workingmode'), nullable=False),
     sa.Column('owner', sa.String(length=36), nullable=False),
