@@ -1,4 +1,4 @@
-FROM repo.n3zdrav.ru:18444/python:3.8-alpine
+FROM python:3.8-alpine
 
 WORKDIR /app
 COPY requirements.dev.txt requirements.txt ./
