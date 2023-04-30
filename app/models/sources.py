@@ -44,7 +44,7 @@ class SourceRegister(Base):
     name = Column(String(100), index=True, unique=True, nullable=False)
     type = Column(String(36), nullable=False)
     origin = Column(Enum(Origin), nullable=False)
-    status = Column(Enum(Status), nullable=False, default=Status.ON)
+    status = Column(Enum(Status), nullable=False, default=Status.SYNCHRONIZING)
 
     conn_string = Column(String(500), unique=True, nullable=False)
     working_mode = Column(Enum(WorkingMode), nullable=False)
