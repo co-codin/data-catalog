@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -36,6 +36,30 @@ app.include_router(source_registry.router)
 @app.on_event('startup')
 async def on_startup():
     await load_jwks()
+
+
+@app.middleware("http")
+async def request_log(request: Request, call_next):
+    """
+    Global exception handler for catching non API errors.
+    ALso catch, sort and write uvicorn output and critical errors to log
+    :param request: Request
+    :param call_next: call_next
+    :return: JSONResponse
+    """
+    try:
+        response: Response = await call_next(request)
+        if response.status_code < 400:
+            logger.info(f"{request.method} {request.url} Status code: {response.status_code}")
+        else:
+            logger.warning(f"{request.method} {request.url} Status code: {response.status_code}")
+        return response
+    except Exception as exc:  # noqa
+        logger.exception(str(exc))
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Something went wrong!"},
+        )
 
 
 @app.get("/health")
