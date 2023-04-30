@@ -10,8 +10,7 @@ from app.config import settings
 
 engine = create_async_engine(
     settings.db_connection_string,
-    echo=settings.debug,
-    pool_pre_ping=True
+    echo=settings.debug
 )
 
 
