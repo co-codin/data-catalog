@@ -4,6 +4,9 @@ metadata:
   name: {{ template "data-catalog.fullname" . }}-configmap
   labels:
     {{- include "data-catalog.labels" . | nindent 4 }}
+    {{- if ne .Values.ciEnv "" }}
+    environment: {{ .Values.ciEnv }}
+    {{- end }}
 data:
   {{- range $key, $value := .Values.configmap }}
   dwh_data_catalog_{{ $key }}: {{ $value | quote }}

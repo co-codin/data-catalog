@@ -10,6 +10,8 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+ciEnv: ""
+
 secrets:
   neo4j_connection_string: ""
   neo4j_connection_user: "neo4j"

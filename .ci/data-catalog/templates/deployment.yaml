@@ -4,6 +4,9 @@ metadata:
   name: {{ include "data-catalog.fullname" . }}
   labels:
     {{- include "data-catalog.labels" . | nindent 4 }}
+    {{- if ne .Values.ciEnv "" }}
+    environment: {{ .Values.ciEnv }}
+    {{- end }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
