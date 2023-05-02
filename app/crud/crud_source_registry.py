@@ -1,8 +1,9 @@
 import uuid
 import logging
 import requests
+import asyncio
 
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterable, Optional
 
 from fastapi import HTTPException, status
 
@@ -11,7 +12,7 @@ from sqlalchemy import select, update, delete, or_
 from sqlalchemy.orm import selectinload, joinedload, load_only
 
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut, SourceRegistryManyOut
 )
 from app.models.sources import SourceRegister, Tag, Comment, Status
 from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
@@ -32,10 +33,10 @@ async def create_source_registry(source_registry_in: SourceRegistryIn, session: 
     return source_registry_model.guid
 
 
-async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession):
+async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession, guid: Optional[str] = None):
     source_registries = await session.execute(
         select(SourceRegister)
-        .options(load_only(SourceRegister.conn_string, SourceRegister.name))
+        .options(load_only(SourceRegister.conn_string, SourceRegister.name, SourceRegister.guid))
         .filter(
             or_(
                 SourceRegister.conn_string == conn_string,
@@ -45,9 +46,9 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
     )
     source_registries = source_registries.scalars().all()
     for source_registry in source_registries:
-        if source_registry.name == name:
+        if source_registry.name == name and source_registry.guid != guid:
             raise SourceRegistryNameAlreadyExist(name)
-        elif source_registry.conn_string == conn_string:
+        elif source_registry.conn_string == conn_string and source_registry.guid != guid:
             raise ConnStringAlreadyExist(conn_string)
 
 
@@ -137,30 +138,18 @@ async def remove_source_registry(guid: str, session: AsyncSession):
     await session.commit()
 
 
-async def read_all(token: str, session: AsyncSession) -> List[SourceRegistryOut]:
+async def read_all(session: AsyncSession) -> List[SourceRegistryManyOut]:
     source_registries = await session.execute(
         select(SourceRegister)
         .options(selectinload(SourceRegister.tags))
         .options(selectinload(SourceRegister.comments))
-        .order_by(SourceRegister.id)
+        .order_by(SourceRegister.created_at)
     )
     source_registries = source_registries.scalars().all()
     if not source_registries:
         return source_registries
 
-    source_registries_out = [SourceRegistryOut.from_orm(source_registry) for source_registry in source_registries]
-    author_guids = {
-        comment.author_guid
-        for source_registry in source_registries
-        for comment in source_registry.comments
-    }
-    if not author_guids:
-        return source_registries_out
-
-    authors_data = await _get_authors_data_by_guids(author_guids, token)
-
-    for source_registry in source_registries_out:
-        _set_author_data(source_registry.comments, authors_data)
+    source_registries_out = [SourceRegistryManyOut.from_orm(source_registry) for source_registry in source_registries]
     return source_registries_out
 
 
@@ -179,14 +168,15 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
     source_registry_out = SourceRegistryOut.from_orm(source_registry)
     if source_registry_out.comments:
         author_guids = {comment.author_guid for comment in source_registry.comments}
-        authors_data = await _get_authors_data_by_guids(author_guids, token)
-
+        authors_data = await asyncio.get_running_loop().run_in_executor(
+            None, _get_authors_data_by_guids, author_guids, token
+        )
         _set_author_data(source_registry_out.comments, authors_data)
 
     return source_registry_out
 
 
-async def _get_authors_data_by_guids(guids: Iterable[str], token: str) -> Dict[str, Dict[str, str]]:
+def _get_authors_data_by_guids(guids: Iterable[str], token: str) -> Dict[str, Dict[str, str]]:
     response = requests.get(
         f'{settings.api_iam}/internal/users/',
         json={'guids': tuple(guids)},
