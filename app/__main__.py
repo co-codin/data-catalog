@@ -54,6 +54,10 @@ async def request_log(request: Request, call_next):
             content={"message": "Something went wrong!"},
         )
 
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
+
 
 @app.exception_handler(APIError)
 def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
