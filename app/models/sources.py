@@ -41,15 +41,15 @@ class SourceRegister(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
-    name = Column(String(100), index=True, unique=True, nullable=False)
+    name = Column(String(100), unique=True, nullable=False)
     type = Column(String(36), nullable=False)
     origin = Column(Enum(Origin), nullable=False)
     status = Column(Enum(Status), nullable=False, default=Status.SYNCHRONIZING)
 
     conn_string = Column(String(500), unique=True, nullable=False)
     working_mode = Column(Enum(WorkingMode), nullable=False)
-    owner = Column(String(36*3), nullable=False)
-    desc = Column(String(500), index=True)
+    owner = Column(String(36*4), nullable=False)
+    desc = Column(String(500))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -64,7 +64,7 @@ class Tag(Base):
     __tablename__ = 'tags'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    name = Column(String(100), index=True, unique=True, nullable=False)
+    name = Column(String(100), unique=True, nullable=False)
 
     source_registries = relationship('SourceRegister', secondary=source_registry_tags)
 
@@ -74,7 +74,7 @@ class Comment(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     author_guid = Column(String(36), nullable=False)
-    msg = Column(String(10_000), index=True, nullable=False)
+    msg = Column(String(10_000), nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
