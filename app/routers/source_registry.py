@@ -9,7 +9,8 @@ from app.crud.crud_source_registry import (
     remove_redundant_tags
 )
 from app.models import Status
-from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn
+from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, \
+    SourceRegistryManyOut
 from app.dependencies import db_session, get_user, get_token
 
 router = APIRouter(
@@ -20,7 +21,7 @@ router = APIRouter(
 
 @router.post('/', response_model=Dict[str, str])
 async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), _=Depends(get_user)):
-    await check_on_uniqueness(source_registry.name, source_registry.conn_string, session)
+    await check_on_uniqueness(name=source_registry.name, conn_string=source_registry.conn_string, session=session)
     guid = await create_source_registry(source_registry, session)
     return {'guid': guid}
 
@@ -29,7 +30,9 @@ async def add_source_registry(source_registry: SourceRegistryIn, session=Depends
 async def update_source_registry(
         guid: str, source_registry: SourceRegistryUpdateIn, session=Depends(db_session), _=Depends(get_user)
 ):
-    await check_on_uniqueness(source_registry.name, source_registry.conn_string, session)
+    await check_on_uniqueness(
+        guid=guid, name=source_registry.name, conn_string=source_registry.conn_string, session=session
+    )
     await edit_source_registry(guid, source_registry, session)
     await remove_redundant_tags(session)
     return {'msg': 'source registry has been updated'}
@@ -48,9 +51,9 @@ async def delete_source_registry(guid: str, session=Depends(db_session), _=Depen
     return {'msg': 'source registry has been deleted'}
 
 
-@router.get('/', response_model=List[SourceRegistryOut])
-async def get_all(session=Depends(db_session), token=Depends(get_token)) -> List[SourceRegistryOut]:
-    return await read_all(token, session)
+@router.get('/', response_model=List[SourceRegistryManyOut])
+async def get_all(session=Depends(db_session), _=Depends(get_user)) -> List[SourceRegistryManyOut]:
+    return await read_all(session)
 
 
 @router.get('/{guid}', response_model=SourceRegistryOut)
