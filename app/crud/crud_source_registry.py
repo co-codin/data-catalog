@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     driver = source_registry_in.conn_string.split('://', maxsplit=1)[0]
-    encrypted_conn_string = encrypt(settings.secret_key, source_registry_in.conn_string.encode())
+    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_in.conn_string.encode())
     source_registry_model = SourceRegister(
         **source_registry_in.dict(exclude={'tags', 'conn_string'}),
         guid=guid,
@@ -57,7 +57,7 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
             raise SourceRegistryNameAlreadyExist(name)
         else:
             decrypted_conn_string = decrypt(
-                settings.secret_key,
+                settings.encryption_key,
                 bytes.fromhex(source_registry.conn_string)
             )
             if decrypted_conn_string:
@@ -87,7 +87,7 @@ async def add_tags(source_registry_model: SourceRegister, tags_in: Iterable[str]
 
 async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryUpdateIn, session: AsyncSession):
     driver = source_registry_update_in.conn_string.split('://', maxsplit=1)[0]
-    encrypted_conn_string = encrypt(settings.secret_key, source_registry_update_in.conn_string.encode())
+    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_update_in.conn_string.encode())
     await session.execute(
         update(SourceRegister)
         .where(SourceRegister.guid == guid)
@@ -185,7 +185,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     decrypted_conn_string = decrypt(
-        settings.secret_key,
+        settings.encryption_key,
         bytes.fromhex(source_registry.conn_string)
     )
     if decrypted_conn_string:
