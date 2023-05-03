@@ -15,6 +15,7 @@ from app.schemas.source_registry import (
     SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut, SourceRegistryManyOut
 )
 from app.models.sources import SourceRegister, Tag, Comment, Status
+from app.services.crypto import encrypt, decrypt
 from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
 from app.config import settings
 
@@ -24,7 +25,13 @@ logger = logging.getLogger(__name__)
 async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     driver = source_registry_in.conn_string.split('://', maxsplit=1)[0]
-    source_registry_model = SourceRegister(**source_registry_in.dict(exclude={'tags'}), guid=guid, type=driver)
+    encrypted_conn_string = encrypt(settings.secret_key, source_registry_in.conn_string.encode())
+    source_registry_model = SourceRegister(
+        **source_registry_in.dict(exclude={'tags', 'conn_string'}),
+        guid=guid,
+        type=driver,
+        conn_string=encrypted_conn_string.hex()
+    )
     await add_tags(source_registry_model, source_registry_in.tags, session)
 
     session.add(source_registry_model)
@@ -39,7 +46,7 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
         .options(load_only(SourceRegister.conn_string, SourceRegister.name, SourceRegister.guid))
         .filter(
             or_(
-                SourceRegister.conn_string == conn_string,
+                SourceRegister.conn_string.is_not(None),
                 SourceRegister.name == name
             )
         )
@@ -48,8 +55,15 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
     for source_registry in source_registries:
         if source_registry.name == name and source_registry.guid != guid:
             raise SourceRegistryNameAlreadyExist(name)
-        elif source_registry.conn_string == conn_string and source_registry.guid != guid:
-            raise ConnStringAlreadyExist(conn_string)
+        else:
+            decrypted_conn_string = decrypt(
+                settings.secret_key,
+                bytes.fromhex(source_registry.conn_string)
+            )
+            if decrypted_conn_string:
+                decrypted_conn_string = decrypted_conn_string.decode('utf-8')
+            if conn_string == decrypted_conn_string and source_registry.guid != guid:
+                raise ConnStringAlreadyExist(conn_string)
 
 
 async def add_tags(source_registry_model: SourceRegister, tags_in: Iterable[str], session: AsyncSession):
@@ -73,10 +87,15 @@ async def add_tags(source_registry_model: SourceRegister, tags_in: Iterable[str]
 
 async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryUpdateIn, session: AsyncSession):
     driver = source_registry_update_in.conn_string.split('://', maxsplit=1)[0]
+    encrypted_conn_string = encrypt(settings.secret_key, source_registry_update_in.conn_string.encode())
     await session.execute(
         update(SourceRegister)
         .where(SourceRegister.guid == guid)
-        .values(**source_registry_update_in.dict(exclude={'tags'}), type=driver)
+        .values(
+            **source_registry_update_in.dict(exclude={'tags', 'conn_string'}),
+            type=driver,
+            conn_string=encrypted_conn_string.hex()
+        )
     )
 
     source_registry_model = await session.execute(
@@ -165,7 +184,16 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
     if not source_registry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    decrypted_conn_string = decrypt(
+        settings.secret_key,
+        bytes.fromhex(source_registry.conn_string)
+    )
+    if decrypted_conn_string:
+        decrypted_conn_string = decrypted_conn_string.decode('utf-8')
+
     source_registry_out = SourceRegistryOut.from_orm(source_registry)
+    source_registry_out.conn_string = decrypted_conn_string
+
     if source_registry_out.comments:
         author_guids = {comment.author_guid for comment in source_registry.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(

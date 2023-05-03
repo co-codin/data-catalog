@@ -1,27 +1,27 @@
 from typing import List, Optional
 from datetime import datetime
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 from app.models.sources import Origin, WorkingMode, Status
 
 
 class CommentIn(BaseModel):
-    msg: str
+    msg: str = Field(..., max_length=10_000)
 
     class Config:
         orm_mode = True
 
 
 class SourceRegistryCommon(BaseModel):
-    name: str
+    name: str = Field(..., max_length=100)
     origin: Origin
-    owner: str
-    desc: Optional[str] = None
+    owner: str = Field(..., max_length=36*4)
+    desc: Optional[str] = Field(None, max_length=500)
 
 
 class SourceRegistryIn(SourceRegistryCommon):
-    conn_string: str
+    conn_string: str = Field(..., max_length=500)
     working_mode: WorkingMode
     tags: Optional[List[str]] = []
 
@@ -66,9 +66,13 @@ class SourceRegistryOutCommon(BaseModel):
     status: Status
 
 
-class SourceRegistryOut(SourceRegistryOutCommon, SourceRegistryUpdateIn):
+class SourceRegistryOut(SourceRegistryOutCommon, SourceRegistryCommon):
+    conn_string: str = Field(None, max_length=500)
+    working_mode: WorkingMode
+
     created_at: datetime
     updated_at: datetime
+    synchronized_at: Optional[datetime] = None
 
     tags: List[TagOut] = []
     comments: List[CommentOut] = []
