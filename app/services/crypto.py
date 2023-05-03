@@ -9,14 +9,16 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 logger = logging.getLogger(__name__)
 
 
-def encrypt(key: bytes, data: bytes) -> bytes:
+def encrypt(key: str, data: bytes) -> bytes:
+    key = bytes.fromhex(key)
     nonce = os.urandom(12)
     aad = os.urandom(16)
     encrypted = nonce + AESGCM(key).encrypt(nonce, data, aad) + aad
     return base64.b64encode(encrypted)
 
 
-def decrypt(key: bytes, data: bytes) -> Optional[bytes]:
+def decrypt(key: str, data: bytes) -> Optional[bytes]:
+    key = bytes.fromhex(key)
     data = base64.b64decode(data)
     nonce = data[:12]
     aad = data[-16:]
