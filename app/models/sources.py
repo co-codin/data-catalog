@@ -2,7 +2,7 @@ import enum
 
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, LargeBinary
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -46,7 +46,7 @@ class SourceRegister(Base):
     origin = Column(Enum(Origin), nullable=False)
     status = Column(Enum(Status), nullable=False, default=Status.SYNCHRONIZING)
 
-    conn_string = Column(String(500), unique=True, nullable=False)
+    conn_string = Column(String(728), nullable=False)
     working_mode = Column(Enum(WorkingMode), nullable=False)
     owner = Column(String(36*4), nullable=False)
     desc = Column(String(500))

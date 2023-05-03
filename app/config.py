@@ -1,9 +1,11 @@
+import os
+
 from collections import namedtuple
 from typing import List
 
 from pydantic import BaseSettings
-import os
 
+from app.services.crypto import load_key
 
 Neo4jCreds = namedtuple('Neo4jCreds', ['username', 'password'])
 
@@ -21,6 +23,11 @@ class Settings(BaseSettings):
     db_migration_connection_string: str = "postgresql+psycopg2://postgres:dwh@db.lan:5432/data_catalog"
 
     api_iam: str = 'http://iam.lan:8000'
+
+    data_dir: str = '/data'
+    private_key_dir: str = f'{data_dir}/.secrets'
+    key_file_name: str = '.secret.key'
+    secret_key: bytes = load_key(private_key_dir, key_file_name)
 
     origins: List[str] = [
         '*'
