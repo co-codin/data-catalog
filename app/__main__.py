@@ -1,5 +1,4 @@
 import logging
-import os
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -37,8 +36,6 @@ app.include_router(source_registry.router)
 @app.on_event('startup')
 async def on_startup():
     await load_jwks()
-    os.makedirs(settings.data_dir, exist_ok=True)
-    os.chmod(settings.data_dir, 0o700)
 
 
 @app.middleware("http")

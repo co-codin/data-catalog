@@ -5,8 +5,6 @@ from typing import List
 
 from pydantic import BaseSettings
 
-from app.services.crypto import load_key
-
 Neo4jCreds = namedtuple('Neo4jCreds', ['username', 'password'])
 
 
@@ -24,10 +22,7 @@ class Settings(BaseSettings):
 
     api_iam: str = 'http://iam.lan:8000'
 
-    data_dir: str = '/data'
-    private_key_dir: str = f'{data_dir}/.secrets'
-    key_file_name: str = '.secret.key'
-    secret_key: bytes = load_key(private_key_dir, key_file_name)
+    encryption_key: bytes = bytes.fromhex('e4f0d87c56a99e57d4470da7396783d7003cec28ef3abf0ff3a1daf37002470a')
 
     origins: List[str] = [
         '*'
