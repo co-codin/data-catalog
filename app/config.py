@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     api_iam: str = 'http://iam.lan:8000'
 
-    encryption_key: bytes = bytes.fromhex('e4f0d87c56a99e57d4470da7396783d7003cec28ef3abf0ff3a1daf37002470a')
+    encryption_key: str = 'e4f0d87c56a99e57d4470da7396783d7003cec28ef3abf0ff3a1daf37002470a'
 
     origins: List[str] = [
         '*'
