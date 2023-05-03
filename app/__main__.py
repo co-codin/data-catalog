@@ -43,13 +43,6 @@ async def on_startup():
 
 @app.middleware("http")
 async def request_log(request: Request, call_next):
-    """
-    Global exception handler for catching non API errors.
-    ALso catch, sort and write uvicorn output and critical errors to log
-    :param request: Request
-    :param call_next: call_next
-    :return: JSONResponse
-    """
     try:
         response: Response = await call_next(request)
         if response.status_code < 400:
@@ -64,9 +57,8 @@ async def request_log(request: Request, call_next):
             content={"message": "Something went wrong!"},
         )
 
-
-@app.get("/health")
-def health_check():
+@app.get("/ping")
+def ping():
     return {"status": "ok"}
 
 
