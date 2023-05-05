@@ -3,7 +3,7 @@ import logging
 import requests
 import asyncio
 
-from typing import List, Dict, Iterable, Optional
+from typing import List, Dict, Iterable, Optional, Set
 
 from fastapi import HTTPException, status
 
@@ -18,6 +18,7 @@ from app.models.sources import SourceRegister, Tag, Comment, Status
 from app.services.crypto import encrypt, decrypt
 from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
 from app.config import settings
+from app.utils.metadata_extractor_utils import get_metadata_extractor_by_conn_string
 
 logger = logging.getLogger(__name__)
 
@@ -258,3 +259,36 @@ async def verify_comment_owner(id_: int, author_guid: str, session: AsyncSession
 
     if comment_from_db.author_guid != author_guid:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
+
+async def read_names_by_status(status_in: Status, session: AsyncSession):
+    source_registries = await session.execute(
+        select(SourceRegister)
+        .options(load_only(SourceRegister.guid, SourceRegister.name))
+        .filter(SourceRegister.status == status_in)
+    )
+    source_registries = source_registries.scalars().all()
+    return {
+        source_registry.name: source_registry.guid
+        for source_registry in source_registries
+    }
+
+
+async def get_objects(guid: str, session: AsyncSession) -> Set[str]:
+    source_registry = await session.execute(
+        select(SourceRegister)
+        .options(selectinload(SourceRegister.objects))
+        .options(load_only(SourceRegister.conn_string, SourceRegister.objects))
+        .filter(SourceRegister.guid == guid)
+    )
+    source_registry = source_registry.scalars().first()
+    if not source_registry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    metadata_extractor = await get_metadata_extractor_by_conn_string(source_registry.conn_string)
+    source_table_names = await metadata_extractor.extract_table_names()
+    local_table_names = {
+        object_.name
+        for object_ in source_registry.objects
+    }
+    return source_table_names - local_table_names

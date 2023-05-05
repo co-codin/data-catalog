@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Set
 
 from fastapi import APIRouter, Depends
 
@@ -6,11 +6,12 @@ from app.crud.crud_source_registry import (
     check_on_uniqueness,
     create_source_registry, read_all, read_by_guid, edit_source_registry, remove_source_registry,
     set_source_registry_status, create_comment, edit_comment, remove_comment, verify_comment_owner,
-    remove_redundant_tags
+    remove_redundant_tags, read_names_by_status, get_objects
 )
 from app.models import Status
-from app.schemas.source_registry import SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, \
-    SourceRegistryManyOut
+from app.schemas.source_registry import (
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, SourceRegistryManyOut
+)
 from app.dependencies import db_session, get_user, get_token
 
 router = APIRouter(
@@ -56,6 +57,15 @@ async def get_all(session=Depends(db_session), _=Depends(get_user)) -> List[Sour
     return await read_all(session)
 
 
+@router.get('/filter')
+async def get_names_by_status(status: Status, session=Depends(db_session), _=Depends(get_user)):
+    """
+    Get all source registries with a given status: on, off, synchronizing
+    return {guid: source_registry_guid, name: source_registry_name}
+    """
+    return await read_names_by_status(status, session)
+
+
 @router.get('/{guid}', response_model=SourceRegistryOut)
 async def get_by_guid(guid: str, session=Depends(db_session), token=Depends(get_token)):
     return await read_by_guid(guid, token, session)
@@ -79,3 +89,17 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
+
+
+@router.get('/{guid}/objects')
+async def read_objects(guid: str, session=Depends(db_session), _=Depends(get_user)) -> Set[str]:
+    """
+    Read objects of the given source registry(guid) which are not present in the data catalog
+    return List[str] - list of object names
+
+    1) Read all table names from the database which is referenced by the conn_string field
+    2) Read all object names in the local database which belong to the source registry
+    3) Calculate the set difference = source_objects_sets - local_objects_set
+    4) Return the difference
+    """
+    return await get_objects(guid, session)

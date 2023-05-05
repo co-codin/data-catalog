@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.logger_config import config_logger
-from app.routers import db_mappings, discovery, entities, sats, links, source_registry, keys
+from app.routers import db_mappings, discovery, entities, sats, links, source_registry, keys, objects
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
@@ -32,6 +32,7 @@ app.include_router(sats.router)
 app.include_router(links.router)
 app.include_router(source_registry.router)
 app.include_router(keys.router)
+app.include_router(objects.router)
 
 
 @app.on_event('startup')
@@ -71,4 +72,4 @@ def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=settings.port)
+    uvicorn.run(app, host='localhost', port=settings.port)

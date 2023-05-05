@@ -2,7 +2,7 @@ import enum
 
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, LargeBinary
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -34,6 +34,13 @@ source_registry_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+objects_tags = Table(
+    "objects_tags",
+    Base.metadata,
+    Column("object_id", ForeignKey("objects.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 
 class SourceRegister(Base):
     __tablename__ = 'source_registers'
@@ -58,6 +65,30 @@ class SourceRegister(Base):
 
     tags = relationship('Tag', secondary=source_registry_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
+    objects = relationship('Object')
+
+
+class Object(Base):
+    __tablename__ = 'objects'
+
+    id = Column(BigInteger, nullable=False, autoincrement=True, primary_key=True)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    name = Column(String, nullable=False)
+    owner = Column(String(36*4), nullable=False)
+
+    source_created_at = Column(DateTime)
+    source_updated_at = Column(DateTime)
+    local_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                              server_onupdate=func.now())
+    synchronized_at = Column(DateTime)
+
+    short_desc = Column(Text)
+    business_desc = Column(Text)
+
+    source_registry_guid = Column(String(36), ForeignKey(SourceRegister.guid))
+
+    tags = relationship('Tag', secondary=objects_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
 
 
 class Tag(Base):
@@ -67,6 +98,7 @@ class Tag(Base):
     name = Column(String(100), unique=True, nullable=False)
 
     source_registries = relationship('SourceRegister', secondary=source_registry_tags)
+    objects = relationship('Object', secondary=objects_tags)
 
 
 class Comment(Base):
@@ -81,3 +113,4 @@ class Comment(Base):
                         server_onupdate=func.now())
 
     source_guid = Column(String(36), ForeignKey(SourceRegister.guid, ondelete='CASCADE'))
+    object_guid = Column(String(36), ForeignKey(Object.guid, ondelete='CASCADE'))
