@@ -72,4 +72,4 @@ def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='localhost', port=settings.port)
+    uvicorn.run(app, host='0.0.0.0', port=settings.port)
