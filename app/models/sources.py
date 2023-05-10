@@ -2,7 +2,7 @@ import enum
 
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -84,6 +84,8 @@ class Object(Base):
 
     short_desc = Column(Text)
     business_desc = Column(Text)
+
+    is_synchronized = Column(Boolean, nullable=False, default=False)
 
     source_registry_guid = Column(String(36), ForeignKey(SourceRegister.guid))
 

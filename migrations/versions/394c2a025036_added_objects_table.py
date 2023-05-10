@@ -1,8 +1,8 @@
-"""added object table
+"""added objects table
 
-Revision ID: 5a6ad848b498
+Revision ID: 394c2a025036
 Revises: 70ec5d7c5916
-Create Date: 2023-05-05 18:01:14.242124
+Create Date: 2023-05-10 14:59:02.325559
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5a6ad848b498'
+revision = '394c2a025036'
 down_revision = '70ec5d7c5916'
 branch_labels = None
 depends_on = None
@@ -29,6 +29,7 @@ def upgrade() -> None:
     sa.Column('synchronized_at', sa.DateTime(), nullable=True),
     sa.Column('short_desc', sa.Text(), nullable=True),
     sa.Column('business_desc', sa.Text(), nullable=True),
+    sa.Column('is_synchronized', sa.Boolean(), nullable=False),
     sa.Column('source_registry_guid', sa.String(length=36), nullable=True),
     sa.ForeignKeyConstraint(['source_registry_guid'], ['source_registers.guid'], ),
     sa.PrimaryKeyConstraint('id')
