@@ -1,11 +1,11 @@
-from typing import Dict
+from typing import Dict, List
 
 from fastapi import APIRouter, Depends
 
 
 from app.crud.crud_object import create_object, read_all
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
-from app.schemas.objects import ObjectIn
+from app.schemas.objects import ObjectIn, ObjectManyOut
 from app.dependencies import db_session, get_user
 from app.schemas.source_registry import CommentIn
 
@@ -21,7 +21,7 @@ async def add_object(object_in: ObjectIn, session=Depends(db_session), _=Depends
     return {'guid': guid}
 
 
-@router.get('/')
+@router.get('/', response_model=List[ObjectManyOut])
 async def get_all(session=Depends(db_session), _=Depends(get_user)):
     return await read_all(session)
 
