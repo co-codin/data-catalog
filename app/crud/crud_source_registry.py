@@ -3,22 +3,22 @@ import logging
 import requests
 import asyncio
 
-from typing import List, Dict, Iterable, Optional, Set
+from typing import List, Dict, Iterable, Optional, Set, Union
 
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, or_
+from sqlalchemy import select, update, delete, or_, and_
 from sqlalchemy.orm import selectinload, joinedload, load_only
 
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, CommentOut, SourceRegistryManyOut
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut
 )
-from app.models.sources import SourceRegister, Tag, Comment, Status
+from app.models.sources import SourceRegister, Tag, Status, Object
 from app.services.crypto import encrypt, decrypt
+from app.services.metadata_extractor import MetaDataExtractorFactory
 from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
 from app.config import settings
-from app.utils.metadata_extractor_utils import get_metadata_extractor_by_conn_string
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,12 @@ logger = logging.getLogger(__name__)
 async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     driver = source_registry_in.conn_string.split('://', maxsplit=1)[0]
-    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_in.conn_string.encode())
+    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_in.conn_string)
     source_registry_model = SourceRegister(
         **source_registry_in.dict(exclude={'tags', 'conn_string'}),
         guid=guid,
         type=driver,
-        conn_string=encrypted_conn_string.hex()
+        conn_string=encrypted_conn_string
     )
     await add_tags(source_registry_model, source_registry_in.tags, session)
 
@@ -57,17 +57,12 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
         if source_registry.name == name and source_registry.guid != guid:
             raise SourceRegistryNameAlreadyExist(name)
         else:
-            decrypted_conn_string = decrypt(
-                settings.encryption_key,
-                bytes.fromhex(source_registry.conn_string)
-            )
-            if decrypted_conn_string:
-                decrypted_conn_string = decrypted_conn_string.decode('utf-8')
+            decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
             if conn_string == decrypted_conn_string and source_registry.guid != guid:
                 raise ConnStringAlreadyExist(conn_string)
 
 
-async def add_tags(source_registry_model: SourceRegister, tags_in: Iterable[str], session: AsyncSession):
+async def add_tags(tags_like_model: Union[SourceRegister, Object], tags_in: Iterable[str], session: AsyncSession):
     if not tags_in:
         return
 
@@ -79,23 +74,23 @@ async def add_tags(source_registry_model: SourceRegister, tags_in: Iterable[str]
     tag_models_set = {tag.name for tag in tag_models}
 
     for tag in tag_models:
-        source_registry_model.tags.append(tag)
+        tags_like_model.tags.append(tag)
 
     for tag in tags_in:
         if tag not in tag_models_set:
-            source_registry_model.tags.append(Tag(name=tag))
+            tags_like_model.tags.append(Tag(name=tag))
 
 
 async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryUpdateIn, session: AsyncSession):
     driver = source_registry_update_in.conn_string.split('://', maxsplit=1)[0]
-    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_update_in.conn_string.encode())
+    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_update_in.conn_string)
     await session.execute(
         update(SourceRegister)
         .where(SourceRegister.guid == guid)
         .values(
             **source_registry_update_in.dict(exclude={'tags', 'conn_string'}),
             type=driver,
-            conn_string=encrypted_conn_string.hex()
+            conn_string=encrypted_conn_string
         )
     )
 
@@ -135,25 +130,23 @@ async def set_source_registry_status(guid: str, status_in: Status, session: Asyn
 async def remove_redundant_tags(session: AsyncSession):
     tags = await session.execute(
         select(Tag)
-        .options(load_only(Tag.id), joinedload(Tag.source_registries))
-        .where(~Tag.source_registries.any())
+        .options(load_only(Tag.id), joinedload(Tag.source_registries), joinedload(Tag.objects))
+        .where(
+            and_(
+                ~Tag.source_registries.any(),
+                ~Tag.objects.any()
+            )
+        )
     )
 
     tags = tags.scalars().unique()
     if not tags:
         return
 
+    tag_ids = [tag.id for tag in tags]
     await session.execute(
         delete(Tag)
-        .where(Tag.id.in_([tag.id for tag in tags]))
-    )
-    await session.commit()
-
-
-async def remove_source_registry(guid: str, session: AsyncSession):
-    await session.execute(
-        delete(SourceRegister)
-        .where(SourceRegister.guid == guid)
+        .where(Tag.id.in_(tag_ids))
     )
     await session.commit()
 
@@ -185,13 +178,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
     if not source_registry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    decrypted_conn_string = decrypt(
-        settings.encryption_key,
-        bytes.fromhex(source_registry.conn_string)
-    )
-    if decrypted_conn_string:
-        decrypted_conn_string = decrypted_conn_string.decode('utf-8')
-
+    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
     source_registry_out = SourceRegistryOut.from_orm(source_registry)
     source_registry_out.conn_string = decrypted_conn_string
 
@@ -223,44 +210,6 @@ def _set_author_data(comments: Iterable[CommentOut], authors_data: Dict[str, Dic
         comment.author_email = authors_data[comment.author_guid]['email']
 
 
-async def create_comment(guid: str, author_guid: str, comment: CommentIn, session: AsyncSession) -> int:
-    comment = Comment(**comment.dict(), author_guid=author_guid, source_guid=guid)
-
-    session.add(comment)
-    await session.commit()
-    return comment.id
-
-
-async def edit_comment(id_: int, comment: CommentIn, session: AsyncSession):
-    await session.execute(
-        update(Comment)
-        .where(Comment.id == id_)
-        .values(**comment.dict())
-    )
-    await session.commit()
-
-
-async def remove_comment(id_: int, session: AsyncSession):
-    await session.execute(
-        delete(Comment)
-        .where(Comment.id == id_)
-    )
-    await session.commit()
-
-
-async def verify_comment_owner(id_: int, author_guid: str, session: AsyncSession):
-    comment_from_db = await session.execute(
-        select(Comment)
-        .filter(Comment.id == id_)
-    )
-    comment_from_db = comment_from_db.scalars().first()
-    if not comment_from_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-    if comment_from_db.author_guid != author_guid:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-
-
 async def read_names_by_status(status_in: Status, session: AsyncSession):
     source_registries = await session.execute(
         select(SourceRegister)
@@ -278,14 +227,14 @@ async def get_objects(guid: str, session: AsyncSession) -> Set[str]:
     source_registry = await session.execute(
         select(SourceRegister)
         .options(selectinload(SourceRegister.objects))
-        .options(load_only(SourceRegister.conn_string, SourceRegister.objects))
         .filter(SourceRegister.guid == guid)
     )
     source_registry = source_registry.scalars().first()
     if not source_registry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    metadata_extractor = await get_metadata_extractor_by_conn_string(source_registry.conn_string)
+    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    metadata_extractor = MetaDataExtractorFactory.build(decrypted_conn_string)
     source_table_names = await metadata_extractor.extract_table_names()
     local_table_names = {
         object_.name
