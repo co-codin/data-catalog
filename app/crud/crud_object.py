@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from typing import List
 
@@ -8,9 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
-from app.crud.crud_source_registry import add_tags
+from app.crud.crud_source_registry import add_tags, _get_authors_data_by_guids, _set_author_data
 from app.models.sources import Object, SourceRegister
-from app.schemas.objects import ObjectIn, ObjectManyOut
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut
 from app.services.crypto import decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 
@@ -55,3 +56,25 @@ async def read_all(session: AsyncSession) -> List[ObjectManyOut]:
     )
     objects = objects.scalars().all()
     return [ObjectManyOut.from_orm(object_) for object_ in objects]
+
+
+async def read_by_guid(guid: str, token: str, session: AsyncSession):
+    object_ = await session.execute(
+        select(Object)
+        .options(selectinload(Object.source), selectinload(Object.tags), selectinload(Object.comments))
+        .where(Object.guid == guid)
+    )
+    object_ = object_.scalars().first()
+    if not object_:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    object_out = ObjectOut.from_orm(object_)
+
+    if object_out.comments:
+        author_guids = {comment.author_guid for comment in object_out.comments}
+        authors_data = await asyncio.get_running_loop().run_in_executor(
+            None, _get_authors_data_by_guids, author_guids, token
+        )
+        _set_author_data(object_out.comments, authors_data)
+
+    return object_out
