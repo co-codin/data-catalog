@@ -3,9 +3,10 @@ from typing import Dict, List
 from fastapi import APIRouter, Depends
 
 
-from app.crud.crud_object import create_object, read_all, read_by_guid
+from app.crud.crud_object import create_object, read_all, read_by_guid, edit_object
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
-from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut
+from app.crud.crud_source_registry import remove_redundant_tags
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn
 from app.dependencies import db_session, get_user, get_token
 from app.schemas.source_registry import CommentIn
 
@@ -29,6 +30,15 @@ async def get_all(session=Depends(db_session), _=Depends(get_user)):
 @router.get('/{guid}', response_model=ObjectOut)
 async def get_by_guid(guid: str, session=Depends(db_session), token=Depends(get_token)):
     return await read_by_guid(guid, token, session)
+
+
+@router.put('/{guid}', response_model=Dict[str, str])
+async def update_object(
+        guid: str, object_update_in: ObjectUpdateIn, session=Depends(db_session), _=Depends(get_user)
+):
+    await edit_object(guid, object_update_in, session)
+    await remove_redundant_tags(session)
+    return {'msg': 'object has been updated'}
 
 
 @router.post('/{guid}/comments', response_model=Dict[str, int])

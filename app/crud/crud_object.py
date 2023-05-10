@@ -5,13 +5,13 @@ from typing import List
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
-from app.crud.crud_source_registry import add_tags, _get_authors_data_by_guids, _set_author_data
+from app.crud.crud_source_registry import add_tags, _get_authors_data_by_guids, _set_author_data, update_tags
 from app.models.sources import Object, SourceRegister
-from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn
 from app.services.crypto import decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 
@@ -78,3 +78,27 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession):
         _set_author_data(object_out.comments, authors_data)
 
     return object_out
+
+
+async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: AsyncSession):
+    await session.execute(
+        update(Object)
+        .where(Object.guid == guid)
+        .values(
+            **object_update_in.dict(exclude={'tags'}),
+        )
+    )
+
+    object_model = await session.execute(
+        select(Object)
+        .options(selectinload(Object.tags))
+        .filter(Object.guid == guid)
+    )
+    object_model = object_model.scalars().first()
+    if not object_model:
+        return
+
+    await update_tags(object_model, object_update_in.tags, session)
+
+    session.add(object_model)
+    await session.commit()
