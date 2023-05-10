@@ -1,15 +1,16 @@
 import uuid
+from typing import List
 
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
 from app.crud.crud_source_registry import add_tags
 from app.models.sources import Object, SourceRegister
-from app.schemas.objects import ObjectIn
+from app.schemas.objects import ObjectIn, ObjectManyOut
 from app.services.crypto import decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 
@@ -45,3 +46,12 @@ async def select_created_at_updated_at_from_source(source_registry_guid: str, ta
     metadata_extractor = MetaDataExtractorFactory.build(decrypted_conn_string)
     created_at, updated_at = await metadata_extractor.extract_created_at_updated_at(table_name=table_name)
     return created_at, updated_at
+
+
+async def read_all(session: AsyncSession) -> List[ObjectManyOut]:
+    objects = await session.execute(
+        select(Object)
+        .options(joinedload(Object.source))
+    )
+    objects = objects.scalars().all()
+    return [ObjectManyOut.from_orm(object_) for object_ in objects]

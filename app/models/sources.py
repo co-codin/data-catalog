@@ -91,6 +91,7 @@ class Object(Base):
 
     tags = relationship('Tag', secondary=objects_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
+    source = relationship('SourceRegister')
 
 
 class Tag(Base):

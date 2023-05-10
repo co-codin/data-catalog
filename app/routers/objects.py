@@ -3,7 +3,7 @@ from typing import Dict
 from fastapi import APIRouter, Depends
 
 
-from app.crud.crud_object import create_object
+from app.crud.crud_object import create_object, read_all
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
 from app.schemas.objects import ObjectIn
 from app.dependencies import db_session, get_user
@@ -19,6 +19,11 @@ router = APIRouter(
 async def add_object(object_in: ObjectIn, session=Depends(db_session), _=Depends(get_user)):
     guid = await create_object(object_in, session)
     return {'guid': guid}
+
+
+@router.get('/')
+async def get_all(session=Depends(db_session), _=Depends(get_user)):
+    return await read_all(session)
 
 
 @router.post('/{guid}/comments', response_model=Dict[str, int])
