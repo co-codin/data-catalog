@@ -101,19 +101,23 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     if not source_registry_model:
         return
 
-    tags_update_in_set = {tag for tag in source_registry_update_in.tags}
-    tags_model_set = {tag.name for tag in source_registry_model.tags}
-    tags_model_dict = {tag.name: tag for tag in source_registry_model.tags}
-
-    tags_to_delete = tags_model_set - tags_update_in_set
-    for tag in tags_to_delete:
-        source_registry_model.tags.remove(tags_model_dict[tag])
-
-    tags_to_create = tags_update_in_set - tags_model_set
-    await add_tags(source_registry_model, tags_to_create, session)
+    await update_tags(source_registry_model, source_registry_update_in.tags, session)
 
     session.add(source_registry_model)
     await session.commit()
+
+
+async def update_tags(tags_like_model: Union[SourceRegister, Object], tags_update_in: List[str], session: AsyncSession):
+    tags_update_in_set = {tag for tag in tags_update_in}
+    tags_model_set = {tag.name for tag in tags_like_model.tags}
+    tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
+
+    tags_to_delete = tags_model_set - tags_update_in_set
+    for tag in tags_to_delete:
+        tags_like_model.tags.remove(tags_model_dict[tag])
+
+    tags_to_create = tags_update_in_set - tags_model_set
+    await add_tags(tags_like_model, tags_to_create, session)
 
 
 async def set_source_registry_status(guid: str, status_in: Status, session: AsyncSession):

@@ -87,3 +87,10 @@ class ObjectOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ObjectUpdateIn(BaseModel):
+    owner: str
+    tags: Optional[List[str]] = []
+    short_desc: Optional[str] = None
+    business_desc: Optional[str] = None
