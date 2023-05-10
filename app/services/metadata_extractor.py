@@ -30,7 +30,7 @@ class PostgresExtractor(MetadataExtractor):
                     "select table_name "
                     "from information_schema.tables "
                     "where table_schema = %s;",
-                    ('public',)
+                    ('dv_raw',)
                 )
                 table_names = await cursor.fetchall()
                 return {res[0] for res in table_names}
@@ -39,3 +39,15 @@ class PostgresExtractor(MetadataExtractor):
         created_at = datetime.datetime.now()
         updated_at = datetime.datetime.now()
         return created_at, updated_at
+
+
+class MetaDataExtractorFactory:
+    _DRIVER_TO_METADATA_EXTRACTOR_TYPE = {
+        'postgresql': PostgresExtractor
+    }
+
+    @classmethod
+    def build(cls, conn_string: str) -> MetadataExtractor:
+        driver = conn_string.split('://', maxsplit=1)[0]
+        metadata_extractor_class = cls._DRIVER_TO_METADATA_EXTRACTOR_TYPE[driver]
+        return metadata_extractor_class(conn_string)
