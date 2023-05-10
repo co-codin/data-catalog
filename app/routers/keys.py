@@ -29,14 +29,11 @@ async def rotate(key_in: KeyIn, session: AsyncSession = Depends(db_session), _=D
         .options(load_only(SourceRegister.conn_string))
     )
     source_registries = source_registries.scalars().all()
+
     for source_registry in source_registries:
-        decrypted_conn_string = decrypt(
-            key_in.old_key,
-            bytes.fromhex(source_registry.conn_string)
-        )
+        decrypted_conn_string = decrypt(key_in.old_key, source_registry.conn_string)
         if decrypted_conn_string:
-            decrypted_conn_string = decrypted_conn_string.decode('utf-8')
-            encrypted_conn_string = encrypt(settings.encryption_key, decrypted_conn_string.encode())
-            source_registry.conn_string = encrypted_conn_string.hex()
+            encrypted_conn_string = encrypt(settings.encryption_key, decrypted_conn_string)
+            source_registry.conn_string = encrypted_conn_string
             session.add(source_registry)
     await session.commit()
