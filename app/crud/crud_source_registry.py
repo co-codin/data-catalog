@@ -73,12 +73,10 @@ async def add_tags(tags_like_model: Union[SourceRegister, Object], tags_in: Iter
     tag_models = tag_models.scalars().all()
     tag_models_set = {tag.name for tag in tag_models}
 
-    for tag in tag_models:
-        tags_like_model.tags.append(tag)
-
-    for tag in tags_in:
-        if tag not in tag_models_set:
-            tags_like_model.tags.append(Tag(name=tag))
+    tags_like_model.tags.extend(tag_models)
+    tags_like_model.tags.extend(
+        (Tag(name=tag) for tag in tags_in if tag not in tag_models_set)
+    )
 
 
 async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryUpdateIn, session: AsyncSession):
