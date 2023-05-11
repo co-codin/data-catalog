@@ -7,13 +7,13 @@ from app.schemas.source_registry import CommentIn, TagOut
 
 
 class ObjectCommon(BaseModel):
-    name: str
     owner: str = Field(..., max_length=36*4)
     short_desc: Optional[str] = None
     business_desc: Optional[str] = None
 
 
 class ObjectIn(ObjectCommon):
+    name: str
     source_registry_guid: str
 
     tags: Optional[List[str]] = []
@@ -32,6 +32,7 @@ class SourceManyOut(BaseModel):
 
 class ObjectManyOut(ObjectCommon):
     guid: str
+    name: str
     is_synchronized: bool
     synchronized_at: Optional[datetime] = None
     source: SourceManyOut
@@ -70,6 +71,7 @@ class SourceOut(SourceManyOut):
 
 class ObjectOut(ObjectCommon):
     guid: str
+    name: str
     synchronized_at: Optional[datetime] = None
     local_updated_at: datetime
     source_updated_at: Optional[datetime] = None
@@ -84,8 +86,6 @@ class ObjectOut(ObjectCommon):
         orm_mode = True
 
 
-class ObjectUpdateIn(BaseModel):
-    owner: str
+class ObjectUpdateIn(ObjectCommon):
     tags: Optional[List[str]] = []
-    short_desc: Optional[str] = None
-    business_desc: Optional[str] = None
+
