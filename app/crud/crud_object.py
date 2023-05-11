@@ -104,3 +104,12 @@ async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: Asyn
 
     session.add(object_model)
     await session.commit()
+
+
+async def edit_is_synchronized(guid: str, is_synchronized: bool, session: AsyncSession):
+    await session.execute(
+        update(Object)
+        .where(Object.guid == guid)
+        .values(is_synchronized=is_synchronized)
+    )
+    await session.commit()

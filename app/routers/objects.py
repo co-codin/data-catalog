@@ -3,7 +3,7 @@ from typing import Dict, List
 from fastapi import APIRouter, Depends
 
 
-from app.crud.crud_object import create_object, read_all, read_by_guid, edit_object
+from app.crud.crud_object import create_object, read_all, read_by_guid, edit_object, edit_is_synchronized
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
 from app.crud.crud_source_registry import remove_redundant_tags
 from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn
@@ -39,6 +39,12 @@ async def update_object(
     await edit_object(guid, object_update_in, session)
     await remove_redundant_tags(session)
     return {'msg': 'object has been updated'}
+
+
+@router.put('/{guid}/')
+async def set_is_synchronized(guid: str, is_synchronized: bool, session=Depends(db_session), _=Depends(get_user)):
+    await edit_is_synchronized(guid, is_synchronized, session)
+    return {'msg': 'is_synchronized field has been set'}
 
 
 @router.post('/{guid}/comments', response_model=Dict[str, int])
