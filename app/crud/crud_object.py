@@ -53,6 +53,8 @@ async def read_all(session: AsyncSession) -> List[ObjectManyOut]:
     objects = await session.execute(
         select(Object)
         .options(joinedload(Object.source))
+        .options(selectinload(Object.tags))
+        .options(selectinload(Object.comments))
     )
     objects = objects.scalars().all()
     return [ObjectManyOut.from_orm(object_) for object_ in objects]
