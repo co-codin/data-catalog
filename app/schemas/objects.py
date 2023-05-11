@@ -3,20 +3,24 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.models.sources import Origin, Status
-from app.schemas.source_registry import CommentIn
+from app.schemas.source_registry import CommentIn, TagOut
 
 
-class ObjectIn(BaseModel):
+class ObjectCommon(BaseModel):
     name: str
-    source_registry_guid: str
     owner: str = Field(..., max_length=36*4)
     short_desc: Optional[str] = None
     business_desc: Optional[str] = None
+
+
+class ObjectIn(ObjectCommon):
+    source_registry_guid: str
 
     tags: Optional[List[str]] = []
 
 
 class SourceManyOut(BaseModel):
+    guid: str
     name: str
     type: str
     origin: Origin
@@ -26,19 +30,14 @@ class SourceManyOut(BaseModel):
         orm_mode = True
 
 
-class ObjectManyOut(BaseModel):
+class ObjectManyOut(ObjectCommon):
     guid: str
-    name: str
-    owner: str
+    is_synchronized: bool
     synchronized_at: Optional[datetime] = None
     source: SourceManyOut
 
-    class Config:
-        orm_mode = True
-
-
-class TagOut(BaseModel):
-    name: str
+    tags: List[TagOut] = []
+    comments: List[CommentIn] = []
 
     class Config:
         orm_mode = True
@@ -69,16 +68,12 @@ class SourceOut(SourceManyOut):
         orm_mode = True
 
 
-class ObjectOut(BaseModel):
+class ObjectOut(ObjectCommon):
     guid: str
-    name: str
     synchronized_at: Optional[datetime] = None
     local_updated_at: datetime
     source_updated_at: Optional[datetime] = None
     source_created_at: Optional[datetime] = None
-    owner: str
-    short_desc: Optional[str] = None
-    business_desc: Optional[str] = None
 
     source: SourceOut
 
