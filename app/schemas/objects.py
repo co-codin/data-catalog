@@ -72,6 +72,7 @@ class SourceOut(SourceManyOut):
 class ObjectOut(ObjectCommon):
     guid: str
     name: str
+    is_synchronized: bool
     synchronized_at: Optional[datetime] = None
     local_updated_at: datetime
     source_updated_at: Optional[datetime] = None

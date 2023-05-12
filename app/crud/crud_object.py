@@ -60,7 +60,7 @@ async def read_all(session: AsyncSession) -> List[ObjectManyOut]:
     return [ObjectManyOut.from_orm(object_) for object_ in objects]
 
 
-async def read_by_guid(guid: str, token: str, session: AsyncSession):
+async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ObjectOut:
     object_ = await session.execute(
         select(Object)
         .options(selectinload(Object.source), selectinload(Object.tags), selectinload(Object.comments))
