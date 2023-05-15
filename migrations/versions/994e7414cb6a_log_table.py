@@ -1,9 +1,8 @@
-"""activity log table'
+"""log table
 
-
-Revision ID: 80430efcd9ee
+Revision ID: 994e7414cb6a
 Revises: 85510f0ddbf1
-Create Date: 2023-05-04 14:46:37.510289
+Create Date: 2023-05-15 16:35:10.573007
 
 """
 from alembic import op
@@ -11,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '80430efcd9ee'
+revision = '994e7414cb6a'
 down_revision = '85510f0ddbf1'
 branch_labels = None
 depends_on = None
