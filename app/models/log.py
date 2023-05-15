@@ -1,12 +1,12 @@
 from app.database import Base
-from sqlalchemy import Column, BigInteger, String, DateTime, Text, Boolean
+from sqlalchemy import Column, BigInteger, String, DateTime, Text
 from datetime import datetime
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
 
 
-class ActivityLog(Base):
-    __tablename__ = 'activity_log'
+class Log(Base):
+    __tablename__ = 'logs'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
 
