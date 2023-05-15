@@ -1,0 +1,9 @@
+FROM repo.n3zdrav.ru:18444/python:3.8.7
+WORKDIR /app
+COPY .ci/requirements-migrations.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY migrations /app/migrations
+COPY alembic.ini /app/alembic.ini
+COPY app /app/app
+COPY .ci/create_db_and_migrate.py /app/create_db_and_migrate.py
+CMD ["python", "/app/create_db_and_migrate.py"]

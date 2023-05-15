@@ -8,7 +8,8 @@ from app.dependencies import neo4j_session
 from app.services.graph import get_attr_db_info
 
 router = APIRouter(
-    tags=["mappings"]
+    prefix='/mappings',
+    tags=['mappings']
 )
 
 

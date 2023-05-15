@@ -6,7 +6,8 @@ from app.dependencies import neo4j_session
 from app.crud.crud_link import add_link, edit_link, remove_link
 
 router = APIRouter(
-    tags=["links"]
+    prefix='/links',
+    tags=['links']
 )
 
 

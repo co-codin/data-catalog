@@ -2,11 +2,13 @@ import logging
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.logger_config import config_logger
-from app.routers import db_mappings, discovery, entities, sats, links
+from app.routers import db_mappings, discovery, entities, sats, links, source_registry, keys, objects
 from app.errors import APIError
 from app.config import settings
+from app.services.auth import load_jwks
 
 config_logger()
 
@@ -14,22 +16,32 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
-app.include_router(db_mappings.router, prefix='/mappings')
-app.include_router(discovery.router, prefix='/discover')
-app.include_router(entities.router, prefix='/hubs')
-app.include_router(sats.router, prefix='/sats')
-app.include_router(links.router, prefix='/links')
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(db_mappings.router)
+app.include_router(discovery.router)
+app.include_router(entities.router)
+app.include_router(sats.router)
+app.include_router(links.router)
+app.include_router(source_registry.router)
+app.include_router(keys.router)
+app.include_router(objects.router)
+
+
+@app.on_event('startup')
+async def on_startup():
+    await load_jwks()
 
 
 @app.middleware("http")
 async def request_log(request: Request, call_next):
-    """
-    Global exception handler for catching non API errors.
-    ALso catch, sort and write uvicorn output and critical errors to log
-    :param request: Request
-    :param call_next: call_next
-    :return: JSONResponse
-    """
     try:
         response: Response = await call_next(request)
         if response.status_code < 400:
@@ -44,9 +56,8 @@ async def request_log(request: Request, call_next):
             content={"message": "Something went wrong!"},
         )
 
-
-@app.get("/health")
-def health_check():
+@app.get("/ping")
+def ping():
     return {"status": "ok"}
 
 

@@ -10,10 +10,18 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
+ciEnv: ""
+
 secrets:
-  neo4j_connection_string: "" # base64 encoded
-  neo4j_connection_user: "neo4j" # not base64 encoded
-  neo4j_connection_password: "password" # not base64 encoded
+  neo4j_connection_string: ""
+  neo4j_connection_user: "neo4j"
+  neo4j_connection_password: "password"
+  db_connection_string: ""
+  db_migration_connection_string: ""
+  encryption_key: ""
+
+configmap:
+  api_iam: "http://iam:8000"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -50,6 +58,7 @@ ingress:
   className: ""
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/enable-opentelemetry: "true"
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:

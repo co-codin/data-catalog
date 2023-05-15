@@ -4,6 +4,9 @@ metadata:
   name: {{ include "data-catalog.fullname" . }}
   labels:
     {{- include "data-catalog.labels" . | nindent 4 }}
+    {{- if ne .Values.ciEnv "" }}
+    environment: {{ .Values.ciEnv }}
+    {{- end }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -20,6 +23,15 @@ spec:
       labels:
         {{- include "data-catalog.selectorLabels" . | nindent 8 }}
     spec:
+      initContainers:
+        - name: "{{ .Chart.Name }}-migrations"
+          image: "{{ printf "%s-migrations:%s" .Values.image.repository (.Values.image.tag | default .Chart.AppVersion) }}"
+          env:
+            - name: dwh_data_catalog_db_migration_connection_string
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "data-catalog.fullname" . }}-secret
+                  key: dwh_data_catalog_db_migration_connection_string
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -32,6 +44,8 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ template "data-catalog.fullname" . }}-secret
+            - configMapRef:
+                name: {{ template "data-catalog.fullname" . }}-configmap
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -42,11 +56,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /health
+              path: /ping
               port: http
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ping
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
