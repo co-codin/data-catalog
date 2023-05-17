@@ -1,9 +1,9 @@
 
 from ast import List
-from dataclasses import Field
+from pydantic import Field
 
 from pydantic import BaseModel
-from pyparsing import Optional
+from typing import Optional
 
 
 class ModelIn(BaseModel):

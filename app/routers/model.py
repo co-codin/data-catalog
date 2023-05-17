@@ -23,3 +23,5 @@ async def add_model(model_in: ModelIn, session=Depends(db_session), _=Depends(ge
 @router.get('/', response_model=List[Model])
 async def read_all():
     pass
+
+
