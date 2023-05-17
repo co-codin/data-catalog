@@ -13,8 +13,8 @@ class Log(Base):
     log_name = Column(String(36), nullable=False, index=True)
     description = Column(Text, nullable=False)
 
-    subject_type = Column(String(36), nullable=False)
-    subject_id = Column(BigInteger, nullable=False, index=True)
+    subject_type = Column(String, nullable=True)
+    subject_id = Column(BigInteger, nullable=True, index=True)
 
     identity_id = Column(String(36), nullable=False, index=True)
 
