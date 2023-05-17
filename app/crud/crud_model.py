@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import List, Optional
 import uuid
+from fastapi import HTTPException, status
 from neo4j import AsyncSession
 from app.crud.crud_source_registry import add_tags
 from app.errors import ModelNameAlreadyExist
 from app.models.model import Model
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, joinedload, load_only
-from app.schemas.model import ModelIn
+from app.schemas.model import ModelIn, ModelOut
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
@@ -51,3 +52,18 @@ async def read_all(session: AsyncSession):
 
     return models
 
+
+async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut:
+    model = await session.execute(
+        select(Model)
+        .options(selectinload(Model.tags))
+        .filter(Model.guid == guid)
+    )
+
+    model = model.scalars().first()
+
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+    return model
