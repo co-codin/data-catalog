@@ -39,3 +39,15 @@ async def check_on_model_uniqueness(name: str, session: AsyncSession, guid: Opti
             raise ModelNameAlreadyExist(name)
 
 
+async def read_all(session: AsyncSession):
+    models = await session.execute(
+        select(Model)
+        .options(selectinload(Model.tags))
+        .order_by(Model.created_at)
+    )
+    models = models.scalars().all()
+    if not models:
+        return models
+
+    return models
+
