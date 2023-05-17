@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, or_, and_
 from sqlalchemy.orm import selectinload, joinedload, load_only
+from app.models.model import Model
 
 from app.schemas.source_registry import (
     SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut
@@ -62,7 +63,7 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
                 raise ConnStringAlreadyExist(conn_string)
 
 
-async def add_tags(tags_like_model: Union[SourceRegister, Object], tags_in: Iterable[str], session: AsyncSession):
+async def add_tags(tags_like_model: Union[SourceRegister, Object, Model], tags_in: Iterable[str], session: AsyncSession):
     if not tags_in:
         return
 

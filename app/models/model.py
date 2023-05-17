@@ -16,6 +16,7 @@ class Model(Base):
     __tablename__ = 'models'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    name = Column(String(100), nullable=False)
     owner = Column(String(36*4), nullable=False)
     desc = Column(String(500))
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
