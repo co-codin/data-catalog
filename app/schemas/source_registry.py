@@ -28,7 +28,7 @@ class SourceRegistryIn(SourceRegistryCommon):
     @validator('conn_string')
     def conn_string_must_be_formatted(cls, v: str):
         driver = v.split('://', maxsplit=1)
-        if len(driver) != 2:
+        if len(driver) != 2 or not (driver[0] and driver[1]):
             raise ValueError('conn_string field must contain driver')
         return v
 
