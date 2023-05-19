@@ -108,7 +108,7 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     await session.commit()
 
 
-async def update_tags(tags_like_model: Union[SourceRegister, Object], tags_update_in: List[str], session: AsyncSession):
+async def update_tags(tags_like_model: Union[SourceRegister, Object, Model], tags_update_in: List[str], session: AsyncSession):
     tags_update_in_set = {tag for tag in tags_update_in}
     tags_model_set = {tag.name for tag in tags_like_model.tags}
     tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
@@ -133,7 +133,7 @@ async def set_source_registry_status(guid: str, status_in: Status, session: Asyn
 async def remove_redundant_tags(session: AsyncSession):
     tags = await session.execute(
         select(Tag)
-        .options(load_only(Tag.id), joinedload(Tag.source_registries), joinedload(Tag.objects))
+        .options(load_only(Tag.id), joinedload(Tag.source_registries), joinedload(Tag.objects), joinedload(Tag.models))
         .where(
             and_(
                 ~Tag.source_registries.any(),
