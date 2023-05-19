@@ -22,7 +22,7 @@ async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
     session.add(model)
     await session.commit()
 
-    return model.guid
+    return guid
 
 
 
@@ -53,7 +53,7 @@ async def read_all(session: AsyncSession):
     return models
 
 
-async def read_by_guid(guid: str, session: AsyncSession) -> ModelOut:
+async def read_by_guid(guid: str, session: AsyncSession):
     model = await session.execute(
         select(Model)
         .options(selectinload(Model.tags))
