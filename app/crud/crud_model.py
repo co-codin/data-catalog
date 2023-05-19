@@ -67,3 +67,11 @@ async def read_by_guid(guid: str, session: AsyncSession):
 
 
     return model
+
+
+async def delete_by_guid(guid: str, session: AsyncSession):
+    await session.execute(
+        delete(Model)
+        .where(Model.guid == guid)
+    )
+    await session.commit()

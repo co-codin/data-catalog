@@ -1,5 +1,5 @@
 
-from app.crud.crud_model import check_on_model_uniqueness, create_model, read_all, read_by_guid
+from app.crud.crud_model import check_on_model_uniqueness, create_model, delete_by_guid, read_all, read_by_guid
 from app.dependencies import db_session
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -35,5 +35,5 @@ async def add_model(model_in: ModelIn, session=Depends(db_session)):
 
 
 @router.delete('/{guid}')
-async def delete_model(session=Depends(db_session)):
-    pass
+async def delete_model(guid: str, session=Depends(db_session)):
+    await delete_by_guid(guid, session)
