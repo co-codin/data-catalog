@@ -25,5 +25,5 @@ class Model(Base):
                         server_onupdate=func.now())
 
     tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
-
+    model_versions = relationship('ModelVersion', back_populates='model')
 
