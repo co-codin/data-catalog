@@ -12,10 +12,3 @@ class ModelIn(BaseModel):
     desc: Optional[str] = Field(None, max_length=500)
     tags: Optional[List[str]] = []
 
-
-class ModelManyOut(BaseModel):
-    pass
-
-
-class ModelOut(BaseModel):
-    pass

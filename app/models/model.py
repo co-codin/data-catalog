@@ -12,6 +12,13 @@ model_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_version_tags = Table(
+    "model_version_tags",
+    Base.metadata,
+    Column("model_version_tags", ForeignKey("model_versions.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 class Model(Base):
     __tablename__ = 'models'
 
@@ -46,3 +53,5 @@ class ModelVersion(Base):
     confirmed_at = Column(DateTime, nullable=True)
 
     model = relationship('Model', back_populates='model_versions')
+
+    tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
