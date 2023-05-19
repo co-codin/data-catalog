@@ -53,7 +53,7 @@ async def read_all(session: AsyncSession):
     return models
 
 
-async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut:
+async def read_by_guid(guid: str, session: AsyncSession) -> ModelOut:
     model = await session.execute(
         select(Model)
         .options(selectinload(Model.tags))

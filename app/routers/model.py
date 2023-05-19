@@ -1,8 +1,7 @@
 
-from neo4j import AsyncSession
-from app.crud.crud_model import check_on_model_uniqueness, create_model
-from app.dependencies import db_session, get_user, get_token
-from typing import List, Dict, Set
+from app.crud.crud_model import check_on_model_uniqueness, create_model, read_all, read_by_guid
+from app.dependencies import db_session, get_user
+from typing import List, Dict
 
 from fastapi import APIRouter, Depends
 from app.models.model import Model
@@ -21,7 +20,15 @@ async def add_model(model_in: ModelIn, session=Depends(db_session), _=Depends(ge
 
 
 @router.get('/', response_model=List[Model])
-async def read_all():
+async def read_models(session=Depends(db_session), _=Depends(get_user)):
+    return await read_all(session)
+
+
+@router.get('/{guid}', response_model=List[Model])
+async def get_model(guid: str, session=Depends(db_session), _=Depends(get_user)):
+    return await read_by_guid(session, guid)
+
+
+@router.delete('/{guid}', response_model=List[Model])
+async def create_model(session=Depends(db_session), _=Depends(get_user)):
     pass
-
-
