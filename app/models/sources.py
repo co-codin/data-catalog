@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from app.models.model import model_tags
 
 from app.database import Base
 
@@ -102,6 +103,7 @@ class Tag(Base):
 
     source_registries = relationship('SourceRegister', secondary=source_registry_tags)
     objects = relationship('Object', secondary=objects_tags)
+    models = relationship('Model', secondary=model_tags)
 
 
 class Comment(Base):
