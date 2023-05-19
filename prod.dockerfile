@@ -12,7 +12,7 @@ RUN apk add --no-cache --virtual .build-deps \
     && apk del .build-deps
 
 FROM python:3.10-alpine
-COPY --from=builder /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY app/ /app/app/
 WORKDIR /app
 
