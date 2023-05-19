@@ -1,5 +1,5 @@
 
-from ast import List
+from typing import List
 from pydantic import Field
 
 from pydantic import BaseModel

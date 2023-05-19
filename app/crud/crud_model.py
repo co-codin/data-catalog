@@ -1,7 +1,7 @@
 from typing import List, Optional
 import uuid
 from fastapi import HTTPException, status
-from neo4j import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.crud_source_registry import add_tags
 from app.errors import ModelNameAlreadyExist
 from app.models.model import Model
