@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,8 +6,8 @@ from app.crud.crud_source_registry import add_tags, update_tags
 from app.errors import ModelNameAlreadyExist
 from app.models.model import Model
 from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload, joinedload, load_only
-from app.schemas.model import ModelIn, ModelOut
+from sqlalchemy.orm import selectinload, load_only, joinedload
+from app.schemas.model import ModelIn
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
@@ -57,6 +57,7 @@ async def read_by_guid(guid: str, session: AsyncSession):
     model = await session.execute(
         select(Model)
         .options(selectinload(Model.tags))
+        .options(joinedload(Model.model_versions))
         .filter(Model.guid == guid)
     )
 

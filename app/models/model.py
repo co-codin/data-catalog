@@ -12,6 +12,13 @@ model_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_version_tags = Table(
+    "model_version_tags",
+    Base.metadata,
+    Column("model_version_tags", ForeignKey("model_versions.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 class Model(Base):
     __tablename__ = 'models'
 
@@ -25,5 +32,26 @@ class Model(Base):
                         server_onupdate=func.now())
 
     tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
+    model_versions = relationship('ModelVersion', back_populates='model')
 
 
+class ModelVersion(Base):
+    __tablename__ = 'model_versions'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+
+    model_id = Column(BigInteger, ForeignKey(Model.id))
+
+    name = Column(String(100), nullable=False)
+    owner = Column(String(36*4), nullable=False)
+    status = Column(String, nullable=False, default='draft')
+    desc = Column(String(500))
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+    confirmed_at = Column(DateTime, nullable=True)
+
+    model = relationship('Model', back_populates='model_versions')
+
+    tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
