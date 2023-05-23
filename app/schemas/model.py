@@ -9,6 +9,7 @@ from typing import Optional
 class ModelIn(BaseModel):
     name: str = Field(..., max_length=100)
     owner: str = Field(..., max_length=36*4)
-    desc: Optional[str] = Field(None, max_length=500)
+    short_desc: Optional[str] = Field(None, max_length=500)
+    business_desc: Optional[str] = Field(None, max_length=500)
     tags: Optional[List[str]] = []
 
