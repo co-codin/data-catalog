@@ -13,6 +13,7 @@ from app.models.sources import Comment
 class CommentOwnerTypes(enum.Enum):
     source_registry = 0
     object_ = 1
+    model = 2
 
 
 async def create_comment(
@@ -20,6 +21,8 @@ async def create_comment(
 ) -> int:
     if comment_owner == CommentOwnerTypes.source_registry:
         comment = Comment(**comment.dict(), author_guid=author_guid, source_guid=guid)
+    elif comment_owner == CommentOwnerTypes.model:
+        comment = Comment(**comment.dict(), author_guid=author_guid, model_guid=guid)
     else:
         comment = Comment(**comment.dict(), author_guid=author_guid, object_guid=guid)
 

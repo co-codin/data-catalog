@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text
 from sqlalchemy.sql import func
 from app.database import Base
 from sqlalchemy.orm import relationship
@@ -26,13 +26,15 @@ class Model(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
     name = Column(String(100), nullable=False)
     owner = Column(String(36*4), nullable=False)
-    desc = Column(String(500))
+    short_desc = Column(Text)
+    business_desc = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
     tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
     model_versions = relationship('ModelVersion', back_populates='model')
+    comments = relationship('Comment', order_by='Comment.id')
 
 
 class ModelVersion(Base):
