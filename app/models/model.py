@@ -34,6 +34,7 @@ class Model(Base):
 
     tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
     model_versions = relationship('ModelVersion', back_populates='model')
+    comments = relationship('Comment', order_by='Comment.id')
 
 
 class ModelVersion(Base):
