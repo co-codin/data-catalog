@@ -57,6 +57,7 @@ async def read_by_guid(guid: str, session: AsyncSession):
     model = await session.execute(
         select(Model)
         .options(selectinload(Model.tags))
+        .options(selectinload(Model.comments))
         .options(joinedload(Model.model_versions))
         .filter(Model.guid == guid)
     )
