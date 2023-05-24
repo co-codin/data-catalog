@@ -10,16 +10,13 @@ class Log(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
 
+    type = Column(String(36), nullable=False, index=True)
     log_name = Column(String(36), nullable=False, index=True)
+    text = Column(Text, nullable=False)
+    identity_id = Column(String(36), nullable=False, index=True)
+    event = Column(String(36), nullable=False)
     description = Column(Text, nullable=False)
 
-    subject_type = Column(String, nullable=True)
-    subject_id = Column(BigInteger, nullable=True, index=True)
-
-    identity_id = Column(String(36), nullable=False, index=True)
-
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-
-    type = Column(String(36), nullable=False, index=True)
 
     properties = Column(JSONB, nullable=True)

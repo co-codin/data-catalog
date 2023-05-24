@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from app.models.model import Model, model_tags, model_version_tags
 
 from app.database import Base
 
@@ -102,6 +103,8 @@ class Tag(Base):
 
     source_registries = relationship('SourceRegister', secondary=source_registry_tags)
     objects = relationship('Object', secondary=objects_tags)
+    models = relationship('Model', secondary=model_tags)
+    model_versions = relationship('ModelVersion', secondary=model_version_tags)
 
 
 class Comment(Base):
@@ -117,3 +120,4 @@ class Comment(Base):
 
     source_guid = Column(String(36), ForeignKey(SourceRegister.guid, ondelete='CASCADE'))
     object_guid = Column(String(36), ForeignKey(Object.guid, ondelete='CASCADE'))
+    model_guid = Column(String(36), ForeignKey(Model.guid, ondelete='CASCADE'))
