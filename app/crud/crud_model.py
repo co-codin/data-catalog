@@ -7,7 +7,7 @@ from app.errors import ModelNameAlreadyExist
 from app.models.model import Model
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, load_only, joinedload
-from app.schemas.model import ModelIn
+from app.schemas.model import ModelIn, ModelUpdateIn
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
@@ -71,12 +71,17 @@ async def read_by_guid(guid: str, session: AsyncSession):
     return model
 
 
-async def edit_model(guid: str, model_update_in: ModelIn, session: AsyncSession):
+async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSession):
+    model_update_in_data = {
+        key: value for key, value in model_update_in.dict(exclude={'tags'}).items()
+        if value is not None
+    }
+
     await session.execute(
         update(Model)
         .where(Model.guid == guid)
         .values(
-            **model_update_in.dict(exclude={'tags'}),
+            **model_update_in_data,
         )
     )
 
