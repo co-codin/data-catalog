@@ -6,7 +6,7 @@ from app.dependencies import db_session, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.schemas.model import ModelIn
+from app.schemas.model import ModelIn, ModelUpdateIn
 from app.schemas.source_registry import CommentIn
 
 router = APIRouter(
@@ -25,10 +25,7 @@ async def get_model(guid: str, session=Depends(db_session), user=Depends(get_use
 
 
 @router.put('/{guid}')
-async def update_model(guid: str, model_in: ModelIn, session=Depends(db_session), user=Depends(get_user)):
-    await check_on_model_uniqueness(
-        guid=guid, name=model_in.name, session=session
-    )
+async def update_model(guid: str, model_in: ModelUpdateIn, session=Depends(db_session), user=Depends(get_user)):
     await edit_model(guid, model_in, session)
     await remove_redundant_tags(session)
 
