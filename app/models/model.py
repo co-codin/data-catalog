@@ -42,6 +42,8 @@ class ModelVersion(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
 
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+
     model_id = Column(BigInteger, ForeignKey(Model.id))
 
     name = Column(String(100), nullable=False)
@@ -57,3 +59,4 @@ class ModelVersion(Base):
     model = relationship('Model', back_populates='model_versions')
 
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
