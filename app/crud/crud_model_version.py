@@ -70,16 +70,6 @@ async def read_by_guid(guid: str, session: AsyncSession):
     return model_version
 
 
-async def confirm_model_version(guid: str, session: AsyncSession):
-    await session.execute(
-        update(ModelVersion)
-        .where(ModelVersion.guid == guid)
-        .values(
-            confirmed_at=datetime.now()
-        )
-    )
-
-
 async def delete_model_version(guid: str, session: AsyncSession):
     await session.execute(
         delete(ModelVersion)
