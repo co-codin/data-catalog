@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud.crud_source_registry import add_tags
+from app.crud.crud_source_registry import add_tags, update_tags
 from sqlalchemy import select, update, delete
 
 from app.models.model import ModelVersion
@@ -22,20 +22,32 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
     return model_version.id
 
 async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
-    pass
-    # model_version = await session.execute(
-    #     select(ModelVersion)
-    #     .options(selectinload(ModelVersion.tags))
-    #     .filter(ModelVersion.guid == guid)
-    # )
+    model_version_update_in_data = {
+        key: value for key, value in model_version_update_in.dict(exclude={'tags'}).items()
+        if value is not None
+    }
 
-    # model_version = model_version.scalars().first()
+    await session.execute(
+        update(ModelVersion)
+        .where(ModelVersion.guid == guid)
+        .values(
+            **model_version_update_in_data,
+        )
+    )
 
-    # if not model_version:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    model_version = await session.execute(
+        select(ModelVersion)
+        .options(selectinload(ModelVersion.tags))
+        .filter(ModelVersion.guid == guid)
+    )
+    model_version = model_version.scalars().first()
+    if not model_version:
+        return
 
+    await update_tags(model_version, model_version_update_in.tags, session)
 
-    # return model_version
+    session.add(model_version)
+    await session.commit()
 
 
 async def read_by_guid(guid: str, session: AsyncSession):
