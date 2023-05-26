@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.crud_source_registry import add_tags
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 
 from app.models.model import ModelVersion
 from app.schemas.model_version import ModelVersionIn
@@ -22,11 +22,11 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
     return model_version.id
 
 
-async def read_by_id(id: str, session: AsyncSession):
+async def read_by_id(guid: str, session: AsyncSession):
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
-        .filter(ModelVersion.id == id)
+        .filter(ModelVersion.guid == guid)
     )
 
     model_version = model_version.scalars().first()
@@ -38,11 +38,19 @@ async def read_by_id(id: str, session: AsyncSession):
     return model_version
 
 
-async def confirm_model_version(id: str, session: AsyncSession):
+async def confirm_model_version(guid: str, session: AsyncSession):
     await session.execute(
         update(ModelVersion)
-        .where(ModelVersion.id == id)
+        .where(ModelVersion.guid == guid)
         .values(
             confirmed_at=datetime.now()
         )
     )
+
+
+async def delete_model_version(guid: str, session: AsyncSession):
+    await session.execute(
+        delete(ModelVersion)
+        .where(ModelVersion.guid == guid)
+    )
+    await session.commit()

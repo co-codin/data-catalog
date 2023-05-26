@@ -11,6 +11,4 @@ class ModelVersionIn(BaseModel):
     name: str = Field(..., max_length=100)
     owner: str = Field(..., max_length=36*4)
     desc: Optional[str] = Field(None, max_length=500)
-    status: str = Field(..., max_length=100)
-    confirmed_at: Optional[str]
     tags: Optional[List[str]] = []
