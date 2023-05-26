@@ -8,7 +8,6 @@ from app.models.model import ModelVersion
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 
 from sqlalchemy.orm import selectinload
-from datetime import datetime
 
 
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> str:
@@ -24,6 +23,7 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
     await session.commit()
 
     return model_version.guid
+
 
 async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
     model_version_update_in_data = {

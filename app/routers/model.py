@@ -1,7 +1,6 @@
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.crud.crud_model import check_on_model_uniqueness, create_model, delete_by_guid, edit_model, read_all, read_by_guid
-from app.crud.crud_source_registry import remove_redundant_tags
 from app.dependencies import db_session, get_token, get_user
 
 from fastapi import APIRouter, Depends, HTTPException

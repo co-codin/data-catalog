@@ -55,8 +55,6 @@ class ModelVersion(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
-    confirmed_at = Column(DateTime, nullable=True)
-
     model = relationship('Model', back_populates='model_versions')
 
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
@@ -71,3 +69,4 @@ class ModelDataType(Base):
     desc = Column(String(500))
 
     json = Column(JSONB)
+    xml = Column(Text)
