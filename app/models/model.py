@@ -42,11 +42,13 @@ class ModelVersion(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
 
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+
     model_id = Column(BigInteger, ForeignKey(Model.id))
 
-    name = Column(String(100), nullable=False)
+    version = Column(String(100), nullable=True)
     owner = Column(String(36*4), nullable=False)
-    status = Column(String, nullable=False, default='draft')
+
     desc = Column(String(500))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -57,3 +59,4 @@ class ModelVersion(Base):
     model = relationship('Model', back_populates='model_versions')
 
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
