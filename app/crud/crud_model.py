@@ -49,7 +49,7 @@ async def read_all(session: AsyncSession):
     )
     models = models.scalars().all()
     if not models:
-        return models
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return models
 
