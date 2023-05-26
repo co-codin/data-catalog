@@ -31,6 +31,15 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         if value is not None
     }
 
+    model_version = await session.execute(
+        select(ModelVersion)
+        .options(selectinload(ModelVersion.tags))
+        .filter(ModelVersion.guid == guid)
+    )
+    model_version = model_version.scalars().first()
+    if not model_version.status == 'draft':
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Model version is not draft')
+
     await session.execute(
         update(ModelVersion)
         .where(ModelVersion.guid == guid)
@@ -47,6 +56,15 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     model_version = model_version.scalars().first()
     if not model_version:
         return
+
+    if not model_version.status == 'draft' and not model_version.version:
+        await session.execute(
+        update(ModelVersion)
+        .where(ModelVersion.guid == guid)
+        .values(
+            version=str(uuid.uuid4())
+        )
+    )
 
     await update_tags(model_version, model_version_update_in.tags, session)
 
