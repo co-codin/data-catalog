@@ -1,3 +1,4 @@
+import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.crud_source_registry import add_tags, update_tags
@@ -11,15 +12,18 @@ from datetime import datetime
 
 
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> str:
+    guid = str(uuid.uuid4())
+    
     model_version = ModelVersion(
         **model_version_in.dict(exclude={'tags'}),
+        guid=guid
     )
     await add_tags(model_version, model_version_in.tags, session)
 
     session.add(model_version)
     await session.commit()
 
-    return model_version.id
+    return model_version.guid
 
 async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
     model_version_update_in_data = {

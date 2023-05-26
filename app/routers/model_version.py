@@ -21,9 +21,9 @@ async def get_model_version(guid: str, session=Depends(db_session)):
 
 @router.post('/')
 async def add_model_version(model_version_in: ModelVersionIn, session=Depends(db_session)):
-    id = await create_model_version(model_version_in, session)
+    guid = await create_model_version(model_version_in, session)
 
-    return {'id': id}
+    return {'guid': guid}
 
 
 
