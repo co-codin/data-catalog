@@ -4,7 +4,7 @@ from app.crud.crud_source_registry import add_tags
 from sqlalchemy import select, update, delete
 
 from app.models.model import ModelVersion
-from app.schemas.model_version import ModelVersionIn
+from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 
 from sqlalchemy.orm import selectinload
 from datetime import datetime
@@ -21,8 +21,24 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
 
     return model_version.id
 
+async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
+    pass
+    # model_version = await session.execute(
+    #     select(ModelVersion)
+    #     .options(selectinload(ModelVersion.tags))
+    #     .filter(ModelVersion.guid == guid)
+    # )
 
-async def read_by_id(guid: str, session: AsyncSession):
+    # model_version = model_version.scalars().first()
+
+    # if not model_version:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+    # return model_version
+
+
+async def read_by_guid(guid: str, session: AsyncSession):
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))

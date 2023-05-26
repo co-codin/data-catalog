@@ -1,13 +1,12 @@
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_id, confirm_model_version
-from app.crud.crud_source_registry import remove_redundant_tags
+from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, confirm_model_version, update_model_version
 from app.dependencies import db_session, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
 from app.models.model import ModelVersion
 
-from app.schemas.model_version import ModelVersionIn
+from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 from app.schemas.source_registry import CommentIn
 
 router = APIRouter(
@@ -17,7 +16,7 @@ router = APIRouter(
 
 @router.get('/{guid}')
 async def get_model_version(guid: str, session=Depends(db_session)):
-    return await read_by_id(guid, session)
+    return await read_by_guid(guid, session)
 
 
 @router.post('/')
@@ -27,9 +26,15 @@ async def add_model_version(model_version_in: ModelVersionIn, session=Depends(db
     return {'id': id}
 
 
+
 @router.put('/{guid}/confirm')
 async def confirm(guid: str, session=Depends(db_session)):
     return await confirm_model_version(guid, session)
+
+
+@router.put('/{guid}')
+async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, session=Depends(db_session)):
+    return await update_model_version(guid, model_version_update_in, session)
 
 
 @router.delete('/{guid}')
