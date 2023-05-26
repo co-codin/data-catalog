@@ -4,6 +4,7 @@ from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, 
 from sqlalchemy.sql import func
 from app.database import Base
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
 model_tags = Table(
     "model_tags",
@@ -54,9 +55,18 @@ class ModelVersion(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
-    confirmed_at = Column(DateTime, nullable=True)
-
     model = relationship('Model', back_populates='model_versions')
 
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
+
+
+class ModelDataType(Base):
+    __tablename__ = 'model_data_types'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    name = Column(String(100), nullable=False)
+    desc = Column(String(500))
+
+    json = Column(JSONB)
+    xml = Column(Text)
