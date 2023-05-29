@@ -51,7 +51,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     if not model_version.status == 'draft':
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Model version is not draft')
 
-    if approved_model_version:
+    if approved_model_version and model_version_update_in_data.status == 'approved':
         model_version_update_in_data['status'] = 'archive'
 
     if model_version_update_in.status == 'confirmed':
