@@ -1,7 +1,8 @@
+import asyncio
 import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud.crud_source_registry import add_tags, update_tags
+from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
 from sqlalchemy import select, update, delete
 
 from app.models.model import ModelVersion
@@ -74,7 +75,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     await session.commit()
 
 
-async def read_by_guid(guid: str, session: AsyncSession):
+async def read_by_guid(guid: str, token: str, session: AsyncSession):
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
@@ -86,6 +87,13 @@ async def read_by_guid(guid: str, session: AsyncSession):
 
     if not model_version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+    if model_version.comments:
+        author_guids = {comment.author_guid for comment in model_version.comments}
+        authors_data = await asyncio.get_running_loop().run_in_executor(
+            None, _get_authors_data_by_guids, author_guids, token
+        )
+        _set_author_data(model_version.comments, authors_data)
 
 
     return model_version

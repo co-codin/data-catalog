@@ -1,7 +1,7 @@
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version
-from app.dependencies import db_session, get_user
+from app.dependencies import db_session, get_token, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -14,8 +14,8 @@ router = APIRouter(
 )
 
 @router.get('/{guid}')
-async def get_model_version(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    return await read_by_guid(guid, session)
+async def get_model_version(guid: str, session=Depends(db_session), token=Depends(get_token)):
+    return await read_by_guid(guid, token, session)
 
 
 @router.post('/')
