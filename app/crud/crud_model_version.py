@@ -8,6 +8,7 @@ from app.models.model import ModelVersion
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 
 from sqlalchemy.orm import selectinload
+from datetime import datetime
 
 
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> str:
@@ -39,6 +40,9 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     model_version = model_version.scalars().first()
     if not model_version.status == 'draft':
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Model version is not draft')
+
+    if model_version_update_in.status == 'confirmed':
+        model_version_update_in_data['confirmed_at'] = datetime.now()
 
     await session.execute(
         update(ModelVersion)
@@ -76,6 +80,7 @@ async def read_by_guid(guid: str, session: AsyncSession):
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
+        .options(selectinload(ModelVersion.comments))
         .filter(ModelVersion.guid == guid)
     )
 
