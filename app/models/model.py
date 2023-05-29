@@ -49,7 +49,7 @@ class ModelVersion(Base):
     status = Column(String, nullable=False, default='draft')
     version = Column(String(100), nullable=True)
     owner = Column(String(36*4), nullable=False)
-
+    
     desc = Column(String(500))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -59,6 +59,7 @@ class ModelVersion(Base):
 
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
+    confirmed_at = Column(DateTime, nullable=True)
 
 
 class ModelDataType(Base):
