@@ -48,8 +48,6 @@ async def read_all(session: AsyncSession):
         .order_by(Model.created_at)
     )
     models = models.scalars().all()
-    if not models:
-        return models
 
     return models
 
