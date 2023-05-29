@@ -3,7 +3,7 @@ from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_commen
 from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version
 from app.dependencies import db_session, get_user
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 from app.schemas.source_registry import CommentIn
@@ -32,7 +32,10 @@ async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, sessi
 
 @router.delete('/{guid}')
 async def delete(guid: str, session=Depends(db_session)):
-    return await delete_model_version(guid, session)
+    try:
+        await delete_model_version(guid, session)
+    except:
+        raise HTTPException(status_code=403, detail='Можно удалить только черновика')
 
 
 @router.post('/{guid}/comments')
