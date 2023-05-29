@@ -48,8 +48,6 @@ async def read_all(session: AsyncSession):
         .order_by(Model.created_at)
     )
     models = models.scalars().all()
-    if not models:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return models
 
