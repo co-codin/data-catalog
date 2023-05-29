@@ -85,7 +85,7 @@ class ModelQuality(Base):
     __tablename__ = 'model_qualities'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    model_version_id = Column(BigInteger, ForeignKey(Model.id))
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
 
     name = Column(String(100), nullable=False)
     owner = Column(String(36*4), nullable=False)

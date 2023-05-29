@@ -1,8 +1,8 @@
-"""model quality
+"""model qualities
 
-Revision ID: 4fbd76b95c24
-Revises: 65ca2912225a
-Create Date: 2023-05-26 15:13:36.738342
+Revision ID: 8b51cc56ef77
+Revises: d4717bf4e55b
+Create Date: 2023-05-29 13:31:43.209932
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '4fbd76b95c24'
-down_revision = '65ca2912225a'
+revision = '8b51cc56ef77'
+down_revision = 'd4717bf4e55b'
 branch_labels = None
 depends_on = None
 
@@ -27,7 +27,7 @@ def upgrade() -> None:
     sa.Column('function', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['model_version_id'], ['models.id'], ),
+    sa.ForeignKeyConstraint(['model_version_id'], ['model_versions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('model_quality_tags',
