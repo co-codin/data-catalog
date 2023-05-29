@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.logger_config import config_logger
-from app.routers import db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects
+from app.routers import db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects, model_data_type, model_quality
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
@@ -35,7 +35,8 @@ app.include_router(keys.router)
 app.include_router(objects.router)
 app.include_router(model.router)
 app.include_router(model_version.router)
-
+app.include_router(model_data_type.router)
+app.include_router(model_quality.router)
 
 @app.on_event('startup')
 async def on_startup():

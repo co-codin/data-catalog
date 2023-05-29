@@ -20,6 +20,13 @@ model_version_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_quality_tags = Table(
+    "model_quality_tags",
+    Base.metadata,
+    Column("model_quality_tags", ForeignKey("model_qualities.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 class Model(Base):
     __tablename__ = 'models'
 
@@ -59,6 +66,7 @@ class ModelVersion(Base):
 
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
+    model_qualities = relationship('ModelQuality', back_populates='model_version')
     confirmed_at = Column(DateTime, nullable=True)
 
 
@@ -71,3 +79,23 @@ class ModelDataType(Base):
 
     json = Column(JSONB)
     xml = Column(Text)
+
+
+class ModelQuality(Base):
+    __tablename__ = 'model_qualities'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+
+    name = Column(String(100), nullable=False)
+    owner = Column(String(36*4), nullable=False)
+
+    desc = Column(Text, nullable=True)
+    function = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_version = relationship('ModelVersion', back_populates='model_qualities')
+    tags = relationship('Tag', secondary=model_quality_tags, order_by='Tag.id')

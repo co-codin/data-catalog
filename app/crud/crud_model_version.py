@@ -38,35 +38,33 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         .filter(ModelVersion.guid == guid)
     )
     model_version = model_version.scalars().first()
+
+    approved_model_version = await session.execute(
+        select(ModelVersion)
+        .filter(ModelVersion.model_id == model_version.model_id)
+        .filter(ModelVersion.status == 'approved')
+    )
+
+    approved_model_version = approved_model_version.scalars().first()
+
+
     if not model_version.status == 'draft':
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Model version is not draft')
 
+    if approved_model_version and model_version_update_in_data.status == 'approved':
+        model_version_update_in_data['status'] = 'archive'
+
     if model_version_update_in.status == 'confirmed':
         model_version_update_in_data['confirmed_at'] = datetime.now()
+
+    if not model_version.status == 'draft' and not model_version.version:
+        model_version_update_in_data['version'] = str(uuid.uuid4())
 
     await session.execute(
         update(ModelVersion)
         .where(ModelVersion.guid == guid)
         .values(
             **model_version_update_in_data,
-        )
-    )
-
-    model_version = await session.execute(
-        select(ModelVersion)
-        .options(selectinload(ModelVersion.tags))
-        .filter(ModelVersion.guid == guid)
-    )
-    model_version = model_version.scalars().first()
-    if not model_version:
-        return
-
-    if not model_version.status == 'draft' and not model_version.version:
-        await session.execute(
-        update(ModelVersion)
-        .where(ModelVersion.guid == guid)
-        .values(
-            version=str(uuid.uuid4())
         )
     )
 
