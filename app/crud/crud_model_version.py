@@ -89,6 +89,15 @@ async def read_by_guid(guid: str, session: AsyncSession):
 
 
 async def delete_model_version(guid: str, session: AsyncSession):
+    model_version = await session.execute(
+        select(ModelVersion)
+        .filter(ModelVersion.guid == guid)
+    )
+    model_version = model_version.scalars().first()
+
+    if not model_version.status == 'draft':
+        raise HTTPException(status_code=403, detail='Можно удалить только черновика')
+
     await session.execute(
         delete(ModelVersion)
         .where(ModelVersion.guid == guid)
