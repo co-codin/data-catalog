@@ -12,6 +12,15 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 
 
+async def read_all(session: AsyncSession):
+    model_versions = await session.execute(
+        select(ModelVersion)
+        .options(selectinload(ModelVersion.comments))
+    )
+    model_versions = model_versions.scalars().all()
+    return model_versions
+
+
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     
@@ -28,10 +37,6 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
 
 
 async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
-    model_version_update_in_data = {
-        key: value for key, value in model_version_update_in.dict(exclude={'tags'}).items()
-        if value is not None
-    }
 
     model_version = await session.execute(
         select(ModelVersion)
@@ -48,17 +53,21 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
 
     approved_model_version = approved_model_version.scalars().first()
 
-
     if not model_version.status == 'draft':
-        model_version_update_in_data['status'] = model_version.status
+        model_version_update_in.status = model_version.status
 
-    if approved_model_version and model_version_update_in_data.status == 'approved':
-        model_version_update_in_data['status'] = 'archive'
+    if approved_model_version and model_version_update_in.status == 'approved':
+        model_version_update_in.status = 'archive'
 
     if model_version_update_in.status == 'confirmed':
-        model_version_update_in_data['confirmed_at'] = datetime.now()
+        model_version_update_in.confirmed_at = datetime.now()
 
-    if not model_version.status == 'draft' and not model_version.version:
+    model_version_update_in_data = {
+        key: value for key, value in model_version_update_in.dict(exclude={'tags'}).items()
+        if value is not None
+    }
+
+    if model_version.status == 'draft' and not model_version.version:
         model_version_update_in_data['version'] = str(uuid.uuid4())
 
     await session.execute(
