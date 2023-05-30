@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
 from app.errors import ModelNameAlreadyExist
-from app.models.model import Model
+from app.models.model import Model, ModelVersion
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, load_only, joinedload
 from app.schemas.model import ModelIn, ModelUpdateIn
@@ -107,6 +107,16 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
 
 
 async def delete_by_guid(guid: str, session: AsyncSession):
+    model = await session.execute(
+        select(Model)
+        .filter(Model.guid == guid)
+    )
+    model = model.scalars().first()
+
+    await session.execute(
+        delete(ModelVersion)
+        .where(ModelVersion.model_id == model.id)
+    )
     await session.execute(
         delete(Model)
         .where(Model.guid == guid)
