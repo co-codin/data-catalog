@@ -12,6 +12,15 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 
 
+async def read_all(session: AsyncSession):
+    model_versions = await session.execute(
+        select(ModelVersion)
+        .options(selectinload(ModelVersion.comments))
+    )
+    model_versions = model_versions.scalars().all()
+    return model_versions
+
+
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
     
