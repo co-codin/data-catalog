@@ -13,7 +13,7 @@ router = APIRouter(
     tags=['model versions']
 )
 
-@router.get('/{guid}')
+@router.get('/')
 async def read_model_version(session=Depends(db_session), user=Depends(get_user)):
     return await read_all(session)
 
