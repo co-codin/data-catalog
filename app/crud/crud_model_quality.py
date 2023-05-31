@@ -1,3 +1,4 @@
+import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,8 +21,11 @@ async def read_all(session: AsyncSession):
 
 
 async def create(model_quality_in: ModelQualityIn, session: AsyncSession):
+    guid = str(uuid.uuid4())
+
     model_quality = ModelQuality(
         **model_quality_in.dict(exclude={'tags'}),
+        guid=guid
     )
     await add_tags(model_quality, model_quality_in.tags, session)
 
@@ -31,7 +35,7 @@ async def create(model_quality_in: ModelQualityIn, session: AsyncSession):
     return model_quality.guid
 
 
-async def update_by_id(id: str, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
+async def update_by_id(id: int, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
     model_quality = await session.execute(
         select(ModelQuality)
         .options(selectinload(ModelQuality.tags))
