@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 
 from app.dependencies import db_session, get_user
-from app.crud.crud_model_quality import read_all, create, update_by_id, read_by_id, delete_by_id
+from app.crud.crud_model_quality import read_all, create, update_by_guid, read_by_guid, delete_by_guid
 from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
 
 router = APIRouter(
@@ -22,16 +22,16 @@ async def create_model_quality(model_quality_in: ModelQualityIn, session=Depends
     return {'guid': guid}
 
 
-@router.put('/{id}')
-async def update_model_quality(id: int, model_quality_update_in: ModelQualityUpdateIn, session=Depends(db_session), user=Depends(get_user)):
-    return await update_by_id(id, model_quality_update_in, session)
+@router.put('/{guid}')
+async def update_model_quality(guid: int, model_quality_update_in: ModelQualityUpdateIn, session=Depends(db_session), user=Depends(get_user)):
+    return await update_by_guid(guid, model_quality_update_in, session)
 
 
-@router.get('/{id}')
-async def get_model_quality(id: str, session=Depends(db_session), user=Depends(get_user)):
-    return await read_by_id(id, session)
+@router.get('/{guid}')
+async def get_model_quality(guid: str, session=Depends(db_session), user=Depends(get_user)):
+    return await read_by_guid(guid, session)
 
 
-@router.delete('/{id}')
-async def delete_model_quality(id: str, session=Depends(db_session), user=Depends(get_user)):
-    await delete_by_id(id, session)
+@router.delete('/{guid}')
+async def delete_model_quality(guid: str, session=Depends(db_session), user=Depends(get_user)):
+    await delete_by_guid(guid, session)

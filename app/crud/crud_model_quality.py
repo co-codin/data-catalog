@@ -35,11 +35,11 @@ async def create(model_quality_in: ModelQualityIn, session: AsyncSession):
     return model_quality.guid
 
 
-async def update_by_id(id: int, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
+async def update_by_guid(guid: int, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
     model_quality = await session.execute(
         select(ModelQuality)
         .options(selectinload(ModelQuality.tags))
-        .filter(ModelQuality.id == id)
+        .filter(ModelQuality.guid == guid)
     )
     model_quality = model_quality.scalars().first()
 
@@ -50,7 +50,7 @@ async def update_by_id(id: int, model_quality_update_in: ModelQualityUpdateIn, s
 
     await session.execute(
         update(ModelQuality)
-        .where(ModelQuality.id == id)
+        .where(ModelQuality.guid == guid)
         .values(
             **model_quality_update_in_data,
         )
@@ -62,10 +62,10 @@ async def update_by_id(id: int, model_quality_update_in: ModelQualityUpdateIn, s
     await session.commit()
 
 
-async def read_by_id(id: str, session: AsyncSession):
+async def read_by_guid(guid: str, session: AsyncSession):
     model_quality = await session.execute(
         select(ModelQuality)
-        .filter(ModelQuality.id == id)
+        .filter(ModelQuality.guid == guid)
     )
 
     model_quality = model_quality.scalars().first()
@@ -76,9 +76,9 @@ async def read_by_id(id: str, session: AsyncSession):
     return model_quality
 
 
-async def delete_by_id(id: str, session: AsyncSession):
+async def delete_by_guid(guid: str, session: AsyncSession):
     await session.execute(
         delete(ModelQuality)
-        .where(ModelQuality.id == id)
+        .where(ModelQuality.guid == guid)
     )
     await session.commit()
