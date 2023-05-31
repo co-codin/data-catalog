@@ -20,12 +20,15 @@ async def read_all(session: AsyncSession):
 
 
 async def create(model_quality_in: ModelQualityIn, session: AsyncSession):
-    model_version = ModelQuality(
+    model_quality = ModelQuality(
         **model_quality_in.dict(exclude={'tags'}),
     )
-    await add_tags(model_version, model_quality_in.tags, session)
+    await add_tags(model_quality, model_quality_in.tags, session)
 
-    return model_version.guid
+    session.add(model_quality)
+    await session.commit()
+
+    return model_quality.guid
 
 
 async def update_by_id(id: str, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
