@@ -8,7 +8,7 @@ from sqlalchemy import select, update, delete
 from app.models.model import ModelVersion
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from datetime import datetime
 
 
@@ -89,6 +89,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession):
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
         .options(selectinload(ModelVersion.comments))
+        .options(joinedload(ModelVersion.model_qualities))
         .filter(ModelVersion.guid == guid)
     )
 
