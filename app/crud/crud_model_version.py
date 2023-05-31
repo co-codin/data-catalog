@@ -97,7 +97,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession):
 
     if not model_version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    
+
     if model_version.comments:
         author_guids = {comment.author_guid for comment in model_version.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(

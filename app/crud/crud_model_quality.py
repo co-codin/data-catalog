@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.model import ModelQuality
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 
 async def read_all(session: AsyncSession):
@@ -13,6 +13,10 @@ async def read_all(session: AsyncSession):
     model_qualities = model_qualities.scalars().all()
 
     return model_qualities
+
+
+async def create(session: AsyncSession):
+    pass
 
 
 async def read_by_id(id: str, session: AsyncSession):
@@ -30,4 +34,8 @@ async def read_by_id(id: str, session: AsyncSession):
 
 
 async def delete_by_id(id: str, session: AsyncSession):
-    pass
+    await session.execute(
+        delete(ModelQuality)
+        .where(ModelQuality.id == id)
+    )
+    await session.commit()

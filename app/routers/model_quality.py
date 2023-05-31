@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import db_session
 from app.dependencies import get_user
-from app.crud.crud_model_quality import read_all, read_by_id
+from app.crud.crud_model_quality import read_all, read_by_id, delete_by_id
 
 router = APIRouter(
     prefix="/model_qualities",
@@ -13,6 +13,11 @@ router = APIRouter(
 
 @router.get('/')
 async def get_all(session=Depends(db_session), user=Depends(get_user)):
+    return await read_all(session)
+
+
+@router.post('/')
+async def create_model_quality(session=Depends(db_session), user=Depends(get_user)):
     return await read_all(session)
 
 
