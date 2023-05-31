@@ -20,3 +20,7 @@ async def get_all(session=Depends(db_session), user=Depends(get_user)):
 async def get_model_quality(id: str, session=Depends(db_session), user=Depends(get_user)):
     return await read_by_id(id, session)
 
+
+@router.delete('/{id}')
+async def delete_model_quality(id: str, session=Depends(db_session), user=Depends(get_user)):
+    await delete_by_id(id, session)

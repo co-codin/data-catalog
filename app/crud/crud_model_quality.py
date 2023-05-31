@@ -27,3 +27,7 @@ async def read_by_id(id: str, session: AsyncSession):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return model_quality
+
+
+async def delete_by_id(id: str, session: AsyncSession):
+    pass
