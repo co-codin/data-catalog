@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from app.models.model import ModelRelationGroup
+from app.models.model import ModelRelationGroup, ModelRelation
 from app.schemas.model_relation_group import ModelRelationGroupIn, ModelRelationGroupUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
@@ -76,6 +76,17 @@ async def update_model_relation_group(guid: int, relation_group_update_in: Model
 
 
 async def delete_model_relation_group(guid: str, session: AsyncSession):
+    model_relation_group = await session.execute(
+        select(ModelRelationGroup)
+        .filter(ModelRelationGroup.guid == guid)
+    )
+    model_relation_group = model_relation_group.scalars().first()
+
+    await session.execute(
+        delete(ModelRelation)
+        .where(ModelRelation.model_relation_group_id == model_relation_group.id)
+    )
+
     await session.execute(
         delete(ModelRelationGroup)
         .where(ModelRelationGroup.guid == guid)

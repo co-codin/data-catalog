@@ -10,10 +10,10 @@ from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
-async def read_relations_by_group_id(group_id: str, session: AsyncSession):
+async def read_relations_by_group_id(group_id: int, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
-        .filter(ModelRelation.relation_group_id == group_id)
+        .filter(ModelRelation.model_relation_group_id == group_id)
     )
     model_relation = model_relation.scalars().all()
     return model_relation

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-
 from app.dependencies import db_session, get_user, get_token
 from app.crud.crud_model_relation_group import read_relation_groups, read_relation_group_by_guid, create_model_relation_group, update_model_relation_group, delete_model_relation_group
 from app.schemas.model_relation_group import ModelRelationGroupIn, ModelRelationGroupUpdateIn
@@ -34,4 +33,4 @@ async def update(guid: str, relation_group_update_in: ModelRelationGroupUpdateIn
 
 @router.delete('/{guid}')
 async def delete(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    await delete_model_relation_group(guid, session)
+    return await delete_model_relation_group(guid, session)
