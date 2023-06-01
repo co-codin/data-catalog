@@ -21,12 +21,18 @@ class Settings(BaseSettings):
     db_migration_connection_string: str = "postgresql+psycopg2://postgres:dwh@db.lan:5432/data_catalog"
 
     api_iam: str = 'http://iam.lan:8000'
+    api_graph_db_migrater: str = 'http://graph_db_migrater.lan:8081'
 
     encryption_key: str = 'e4f0d87c56a99e57d4470da7396783d7003cec28ef3abf0ff3a1daf37002470a'
 
     origins: List[str] = [
         '*'
     ]
+
+    mq_connection_string: str = 'amqp://dwh:dwh@rabbit.lan:5672'
+    migration_exchange = 'graph_migration'
+    migration_request_queue = 'migration_requests'
+    migrations_result_queue = 'migration_results'
 
     class Config:
         env_prefix = "dwh_data_catalog_"
