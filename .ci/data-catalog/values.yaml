@@ -19,6 +19,10 @@ secrets:
   db_connection_string: ""
   db_migration_connection_string: ""
   encryption_key: ""
+  mq_connection_string: ""
+  migration_exchange: ""
+  migration_request_queue: ""
+  migrations_result_queue: ""
 
 configmap:
   api_iam: "http://iam:8000"
