@@ -2,7 +2,7 @@ import enum
 
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.models.model import Model, ModelVersion, model_tags, model_version_tags
@@ -42,6 +42,13 @@ objects_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+fields_tags = Table(
+    "fields_tags",
+    Base.metadata,
+    Column("field_id", ForeignKey("fields.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 
 class SourceRegister(Base):
     __tablename__ = 'source_registers'
@@ -68,6 +75,13 @@ class SourceRegister(Base):
     comments = relationship('Comment', order_by='Comment.id')
     objects = relationship('Object')
 
+    @property
+    def objects_set(self):
+        return {object_.name for object_ in self.objects}
+
+    def object_db_path_to_object(self, tables: set[str]):
+        return {object_.db_path: object_ for object_ in self.objects if object_.db_path in tables}
+
 
 class Object(Base):
     __tablename__ = 'objects'
@@ -76,6 +90,7 @@ class Object(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
     name = Column(String, nullable=False)
     owner = Column(String(36*4), nullable=False)
+    db_path = Column(String)
 
     source_created_at = Column(DateTime)
     source_updated_at = Column(DateTime)
@@ -90,9 +105,40 @@ class Object(Base):
 
     source_registry_guid = Column(String(36), ForeignKey(SourceRegister.guid))
 
+    fields = relationship('Field')
     tags = relationship('Tag', secondary=objects_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
     source = relationship('SourceRegister')
+
+    @property
+    def field_db_path_to_field(self):
+        return {field.db_path: field for field in self.fields}
+
+
+class Field(Base):
+    __tablename__ = 'fields'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    object_guid = Column(String, ForeignKey(Object.guid))
+
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False)
+    length = Column(Integer, nullable=False)
+    is_key = Column(Boolean, nullable=False)
+    db_path = Column(String, nullable=False)
+    owner = Column(String(36*4), nullable=False)
+    desc = Column(Text)
+
+    source_created_at = Column(DateTime)
+    source_updated_at = Column(DateTime)
+    local_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                              server_onupdate=func.now())
+    synchronized_at = Column(DateTime)
+
+    object = relationship('Object')
+    tags = relationship('Tag', secondary=fields_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
 
 
 class Tag(Base):
@@ -122,3 +168,4 @@ class Comment(Base):
     object_guid = Column(String(36), ForeignKey(Object.guid, ondelete='CASCADE'))
     model_guid = Column(String(36), ForeignKey(Model.guid, ondelete='CASCADE'))
     model_version_guid = Column(String(36), ForeignKey(ModelVersion.guid, ondelete='CASCADE'))
+    field_guid = Column(String(36), ForeignKey(Field.guid, ondelete='CASCADE'))
