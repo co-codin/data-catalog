@@ -10,8 +10,8 @@ from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
 from app.crud.crud_source_registry import add_tags, _get_authors_data_by_guids, _set_author_data, update_tags
-from app.models.sources import Object, SourceRegister
-from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn
+from app.models.sources import Object, SourceRegister, Field
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut
 from app.services.crypto import decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 
@@ -113,3 +113,13 @@ async def edit_is_synchronized(guid: str, is_synchronized: bool, session: AsyncS
         .values(is_synchronized=is_synchronized)
     )
     await session.commit()
+
+
+async def select_object_fields(guid: str, session: AsyncSession) -> list[FieldManyOut]:
+    fields = await session.execute(
+        select(Field)
+        .options(selectinload(Field.tags), selectinload(Field.comments))
+        .where(Field.object_guid == guid)
+    )
+    fields = fields.scalars().all()
+    return [FieldManyOut.from_orm(field) for field in fields]

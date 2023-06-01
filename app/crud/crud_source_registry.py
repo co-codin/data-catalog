@@ -15,7 +15,7 @@ from app.models.model import Model
 from app.schemas.source_registry import (
     SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut
 )
-from app.models.sources import SourceRegister, Tag, Status, Object
+from app.models.sources import SourceRegister, Tag, Status, Object, Field
 from app.services.crypto import encrypt, decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
@@ -24,7 +24,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> str:
+async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> SourceRegister:
     guid = str(uuid.uuid4())
     driver = source_registry_in.conn_string.split('://', maxsplit=1)[0]
     encrypted_conn_string = encrypt(settings.encryption_key, source_registry_in.conn_string)
@@ -39,7 +39,7 @@ async def create_source_registry(source_registry_in: SourceRegistryIn, session: 
     session.add(source_registry_model)
     await session.commit()
 
-    return source_registry_model.guid
+    return source_registry_model
 
 
 async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession, guid: Optional[str] = None):
@@ -108,7 +108,9 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     await session.commit()
 
 
-async def update_tags(tags_like_model: Union[SourceRegister, Object, Model], tags_update_in: List[str], session: AsyncSession):
+async def update_tags(
+        tags_like_model: Union[SourceRegister, Object, Model, Field], tags_update_in: List[str], session: AsyncSession
+):
     tags_update_in_set = {tag for tag in tags_update_in}
     tags_model_set = {tag.name for tag in tags_like_model.tags}
     tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
@@ -137,7 +139,8 @@ async def remove_redundant_tags(session: AsyncSession):
         .where(
             and_(
                 ~Tag.source_registries.any(),
-                ~Tag.objects.any()
+                ~Tag.objects.any(),
+                ~Tag.models.any()
             )
         )
     )

@@ -6,6 +6,22 @@ from app.models.sources import Origin, Status
 from app.schemas.source_registry import CommentIn, TagOut
 
 
+class CommentOut(CommentIn):
+    id: int
+    author_guid: str
+
+    author_first_name: Optional[str] = None
+    author_last_name: Optional[str] = None
+    author_middle_name: Optional[str] = None
+    author_email: Optional[str] = None
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
 class ObjectCommon(BaseModel):
     owner: str = Field(..., max_length=36*4)
     short_desc: Optional[str] = None
@@ -30,31 +46,53 @@ class SourceManyOut(BaseModel):
         orm_mode = True
 
 
-class ObjectManyOut(ObjectCommon):
+class FieldManyOut(BaseModel):
     guid: str
+    is_key: bool
     name: str
-    is_synchronized: bool
-    synchronized_at: Optional[datetime] = None
-    source: SourceManyOut
+    type: str
+    length: int
+    owner: str
+    desc: str | None
 
-    tags: List[TagOut] = []
-    comments: List[CommentIn] = []
+    local_updated_at: datetime
+    synchronized_at: datetime | None
+    source_updated_at: datetime | None
+
+    tags: list[TagOut] = []
+    comments: list[CommentIn] = []
 
     class Config:
         orm_mode = True
 
 
-class CommentOut(CommentIn):
-    id: int
-    author_guid: str
+class FieldOut(FieldManyOut):
+    source_created_at: datetime | None
+    type: str
+    db_path: str
+    desc: str | None
 
-    author_first_name: Optional[str] = None
-    author_last_name: Optional[str] = None
-    author_middle_name: Optional[str] = None
-    author_email: Optional[str] = None
+    comments: list[CommentOut] = []
 
-    created_at: datetime
-    updated_at: datetime
+    class Config:
+        orm_mode = True
+
+
+class FieldUpdateIn(BaseModel):
+    owner: str
+    desc: str
+    tags: list[str] = []
+
+
+class ObjectManyOut(ObjectCommon):
+    guid: str
+    name: str
+    is_synchronized: bool
+    synchronized_at: datetime | None
+    source: SourceManyOut
+
+    tags: list[TagOut] = []
+    comments: list[CommentIn] = []
 
     class Config:
         orm_mode = True
@@ -72,16 +110,18 @@ class SourceOut(SourceManyOut):
 class ObjectOut(ObjectCommon):
     guid: str
     name: str
+    db_path: str
     is_synchronized: bool
-    synchronized_at: Optional[datetime] = None
+
+    synchronized_at: datetime | None
     local_updated_at: datetime
-    source_updated_at: Optional[datetime] = None
-    source_created_at: Optional[datetime] = None
+    source_updated_at: datetime | None
+    source_created_at: datetime | None
 
     source: SourceOut
 
-    tags: List[TagOut]
-    comments: List[CommentOut]
+    tags: list[TagOut]
+    comments: list[CommentOut]
 
     class Config:
         orm_mode = True
@@ -89,4 +129,3 @@ class ObjectOut(ObjectCommon):
 
 class ObjectUpdateIn(ObjectCommon):
     tags: Optional[List[str]] = []
-
