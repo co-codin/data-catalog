@@ -11,6 +11,7 @@ from app.routers import (
     db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects,
     model_data_type, model_quality, fields
 )
+from app.routers import db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects, model_data_type, model_quality, model_relation_group, model_relation
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
@@ -44,7 +45,8 @@ app.include_router(model_version.router)
 app.include_router(model_data_type.router)
 app.include_router(model_quality.router)
 app.include_router(fields.router)
-
+app.include_router(model_relation_group.router)
+app.include_router(model_relation.router)
 
 @app.on_event('startup')
 async def on_startup():
