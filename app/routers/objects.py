@@ -3,10 +3,12 @@ from typing import Dict, List
 from fastapi import APIRouter, Depends
 
 
-from app.crud.crud_object import create_object, read_all, read_by_guid, edit_object, edit_is_synchronized
+from app.crud.crud_object import (
+    create_object, read_all, read_by_guid, edit_object, edit_is_synchronized, select_object_fields
+)
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
 from app.crud.crud_source_registry import remove_redundant_tags
-from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut
 from app.dependencies import db_session, get_user, get_token
 from app.schemas.source_registry import CommentIn
 
@@ -65,3 +67,8 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
+
+
+@router.get('/{guid}/fields', response_model=list[FieldManyOut])
+async def get_object_fields(guid: str, session=Depends(db_session), _=Depends(get_user)):
+    return await select_object_fields(guid, session)
