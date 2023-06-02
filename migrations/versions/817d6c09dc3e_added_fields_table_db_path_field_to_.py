@@ -1,8 +1,8 @@
-"""added fields table and db_path field to objects table
+"""added fields table + db_path field to objects table
 
-Revision ID: 28e75ba3bb48
-Revises: 8b51cc56ef77
-Create Date: 2023-05-31 16:38:01.850574
+Revision ID: 817d6c09dc3e
+Revises: 89dc1f0baaf8
+Create Date: 2023-06-02 15:36:58.883927
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '28e75ba3bb48'
-down_revision = '8b51cc56ef77'
+revision = '817d6c09dc3e'
+down_revision = '89dc1f0baaf8'
 branch_labels = None
 depends_on = None
 

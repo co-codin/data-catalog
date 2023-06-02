@@ -27,6 +27,20 @@ model_quality_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_relation_group_tags = Table(
+    "model_relation_group_tags",
+    Base.metadata,
+    Column("model_relation_group_tags", ForeignKey("model_relation_groups.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+model_relation_tags = Table(
+    "model_relation_tags",
+    Base.metadata,
+    Column("model_relation_tags", ForeignKey("model_relations.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 class Model(Base):
     __tablename__ = 'models'
 
@@ -56,7 +70,7 @@ class ModelVersion(Base):
     status = Column(String, nullable=False, default='draft')
     version = Column(String(100), nullable=True)
     owner = Column(String(36*4), nullable=False)
-    
+
     desc = Column(String(500))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -67,6 +81,7 @@ class ModelVersion(Base):
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
     model_qualities = relationship('ModelQuality', back_populates='model_version')
+    relation_groups = relationship('ModelRelationGroup', back_populates='model_version')
     confirmed_at = Column(DateTime, nullable=True)
 
 
@@ -100,3 +115,43 @@ class ModelQuality(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_qualities')
     tags = relationship('Tag', secondary=model_quality_tags, order_by='Tag.id')
+
+
+class ModelRelationGroup(Base):
+    __tablename__ = 'model_relation_groups'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+
+    name = Column(String(100), nullable=False)
+    owner = Column(String(36 * 4), nullable=False)
+    desc = Column(String(500))
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_version = relationship('ModelVersion', back_populates='relation_groups')
+    model_relations = relationship('ModelRelation', back_populates='model_relation_group')
+    tags = relationship('Tag', secondary=model_relation_group_tags, order_by='Tag.id')
+
+
+class ModelRelation(Base):
+    __tablename__ = 'model_relations'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    model_relation_group_id = Column(BigInteger, ForeignKey(ModelRelationGroup.id))
+
+    name = Column(String(100), nullable=False)
+    owner = Column(String(36 * 4), nullable=False)
+    desc = Column(String(500))
+    function = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_relation_group = relationship('ModelRelationGroup', back_populates='model_relations')
+    tags = relationship('Tag', secondary=model_relation_tags, order_by='Tag.id')

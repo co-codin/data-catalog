@@ -56,10 +56,10 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     if not model_version.status == 'draft':
         model_version_update_in.status = model_version.status
 
-    if approved_model_version and model_version_update_in.status == 'approved':
+    elif approved_model_version and model_version_update_in.status == 'approved':
         model_version_update_in.status = 'archive'
 
-    if model_version_update_in.status == 'confirmed':
+    elif model_version_update_in.status == 'confirmed':
         model_version_update_in.confirmed_at = datetime.now()
 
     model_version_update_in_data = {
