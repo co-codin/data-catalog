@@ -1,9 +1,10 @@
-FROM repo.n3zdrav.ru:18444/python:3.8.7
+FROM python:3.10-alpine
 WORKDIR /app
 COPY .ci/requirements-migrations.txt /app/requirements.txt
+RUN apk add g++ python3-dev libpq-dev --no-cache
 RUN pip install --no-cache-dir -r requirements.txt
 COPY migrations /app/migrations
 COPY alembic.ini /app/alembic.ini
-COPY app /app/app
+COPY migration_service /app/migration_service
 COPY .ci/create_db_and_migrate.py /app/create_db_and_migrate.py
 CMD ["python", "/app/create_db_and_migrate.py"]
