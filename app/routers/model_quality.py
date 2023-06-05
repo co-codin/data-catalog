@@ -11,9 +11,9 @@ router = APIRouter(
 )
 
 
-@router.get('/{model_version_id}')
-async def get_all(model_version_id: str, session=Depends(db_session), user=Depends(get_user)):
-    return await read_all(model_version_id, session)
+# @router.get('/{model_version_id}')
+# async def get_all(model_version_id: str, session=Depends(db_session), user=Depends(get_user)):
+#     return await read_all(model_version_id, session)
 
 
 @router.post('/')

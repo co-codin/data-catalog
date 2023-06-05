@@ -3,7 +3,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 
 from app.models.model import ModelVersion
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
@@ -47,17 +47,18 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     model_version = model_version.scalars().first()
 
     approved_model_version = await session.execute(
-        select(ModelVersion)
+        select(func.count())
+        .select_from(ModelVersion)
         .filter(ModelVersion.model_id == model_version.model_id)
         .filter(ModelVersion.status == 'approved')
     )
 
-    approved_model_version = approved_model_version.scalars().first()
+    approved_model_version_count: int = approved_model_version.scalar()
 
     if not model_version.status == 'draft':
         model_version_update_in.status = model_version.status
 
-    elif approved_model_version and model_version_update_in.status == 'approved':
+    elif approved_model_version_count > 1 and model_version_update_in.status == 'approved':
         model_version_update_in.status = 'archive'
 
     elif model_version_update_in.status == 'confirmed':

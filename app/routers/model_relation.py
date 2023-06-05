@@ -11,9 +11,9 @@ router = APIRouter(
 )
 
 
-@router.get('/by_group/{group_id}')
-async def read_model_relations(group_id: int, session=Depends(db_session), user=Depends(get_user)):
-    return await read_relations_by_group_id(group_id, session)
+# @router.get('/by_group/{group_id}')
+# async def read_model_relations(group_id: int, session=Depends(db_session), user=Depends(get_user)):
+#     return await read_relations_by_group_id(group_id, session)
 
 
 @router.get('/{guid}')
