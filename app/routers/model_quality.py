@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import db_session, get_user
 from app.crud.crud_model_quality import read_all, create, update_by_guid, read_by_guid, delete_by_guid
+from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
+from app.schemas.source_registry import CommentIn
 
 router = APIRouter(
     prefix="/model_qualities",
@@ -35,3 +37,23 @@ async def get_model_quality(guid: str, session=Depends(db_session), user=Depends
 @router.delete('/{guid}')
 async def delete_model_quality(guid: str, session=Depends(db_session), user=Depends(get_user)):
     await delete_by_guid(guid, session)
+
+
+@router.post('/{guid}/comments')
+async def add_comment(guid: str, comment: CommentIn, session=Depends(db_session), user=Depends(get_user)):
+    comment_id = await create_comment(guid, user['identity_id'], comment, CommentOwnerTypes.model_quality, session)
+    return {'id': comment_id}
+
+
+@router.put('/comments/{id_}')
+async def update_comment(id_: int, comment: CommentIn, session=Depends(db_session), user=Depends(get_user)):
+    await verify_comment_owner(id_, user['identity_id'], session)
+    await edit_comment(id_, comment, session)
+    return {'msg': 'comment has been updated'}
+
+
+@router.delete('/comments/{id_}')
+async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get_user)):
+    await verify_comment_owner(id_, user['identity_id'], session)
+    await remove_comment(id_, session)
+    return {'msg': 'comment has been deleted'}
