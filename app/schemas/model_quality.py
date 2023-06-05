@@ -17,4 +17,4 @@ class ModelQualityUpdateIn(BaseModel):
     owner: str = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=500)
     function: Optional[str] = Field(None)
-    tags: Optional[List[str]] = []
+    tags: Optional[List[str]] = None
