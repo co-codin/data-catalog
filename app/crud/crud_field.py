@@ -45,4 +45,4 @@ async def alter_field(field_guid: str, field_update: FieldUpdateIn, session: Asy
         .values(**field_update.dict(exclude={'tags'}))
     )
 
-    await update_tags(field_model, field_update.tags, session)
+    await update_tags(field_model, session, field_update.tags)

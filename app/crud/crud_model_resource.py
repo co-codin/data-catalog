@@ -71,7 +71,7 @@ async def update_model_resource(guid: int, resource_update_in: ModelResourceUpda
         )
     )
 
-    await update_tags(model_relation, resource_update_in.tags, session)
+    await update_tags(model_relation, session, resource_update_in.tags)
 
     session.add(model_relation)
     await session.commit()

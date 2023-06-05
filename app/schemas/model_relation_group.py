@@ -14,4 +14,4 @@ class ModelRelationGroupUpdateIn(BaseModel):
     name: str = Field(None, max_length=100)
     owner: str = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=500)
-    tags: Optional[List[str]] = []
+    tags: Optional[List[str]] = None
