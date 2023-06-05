@@ -41,6 +41,13 @@ model_relation_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_resource_tags = Table(
+    "model_resource_tags",
+    Base.metadata,
+    Column("model_resource_tags", ForeignKey("model_resources.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 class Model(Base):
     __tablename__ = 'models'
 
@@ -82,6 +89,7 @@ class ModelVersion(Base):
     comments = relationship('Comment', order_by='Comment.id')
     model_qualities = relationship('ModelQuality', back_populates='model_version')
     relation_groups = relationship('ModelRelationGroup', back_populates='model_version')
+    model_resources = relationship('ModelResource', back_populates='model_version')
     confirmed_at = Column(DateTime, nullable=True)
 
 
@@ -155,3 +163,25 @@ class ModelRelation(Base):
 
     model_relation_group = relationship('ModelRelationGroup', back_populates='model_relations')
     tags = relationship('Tag', secondary=model_relation_tags, order_by='Tag.id')
+
+class ModelResource(Base):
+    __tablename__ = 'model_resources'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+
+    name = Column(String(100), nullable=False)
+    owner = Column(String(36 * 4), nullable=False)
+    desc = Column(String(500))
+    type = Column(String(500))
+    db_link = Column(String(500))
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_version = relationship('ModelVersion', back_populates='model_resources')
+    tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
+    
