@@ -15,7 +15,7 @@ class ModelResourceIn(BaseModel):
 class ModelResourceUpdateIn(BaseModel):
     name: str = Field(None, max_length=100)
     owner: str = Field(None, max_length=36 * 4)
-    type: str = Field(..., max_length=36 * 4)
-    db_link: Optional[str] = Field(..., max_length=36 * 4)
+    type: str = Field(None, max_length=36 * 4)
+    db_link: Optional[str] = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=500)
     tags: Optional[List[str]] = []
