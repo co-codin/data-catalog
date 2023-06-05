@@ -69,7 +69,7 @@ async def update_model_relation_group(guid: int, relation_group_update_in: Model
         )
     )
 
-    await update_tags(model_relation_group, relation_group_update_in.tags, session)
+    await update_tags(model_relation_group, session, relation_group_update_in.tags)
 
     session.add(model_relation_group)
     await session.commit()

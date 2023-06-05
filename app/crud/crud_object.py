@@ -100,7 +100,7 @@ async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: Asyn
     if not object_model:
         return
 
-    await update_tags(object_model, object_update_in.tags, session)
+    await update_tags(object_model, session, object_update_in.tags)
 
     session.add(object_model)
     await session.commit()

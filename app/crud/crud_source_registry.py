@@ -102,25 +102,26 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     if not source_registry_model:
         return
 
-    await update_tags(source_registry_model, source_registry_update_in.tags, session)
+    await update_tags(source_registry_model, session, source_registry_update_in.tags)
 
     session.add(source_registry_model)
     await session.commit()
 
 
 async def update_tags(
-        tags_like_model: Union[SourceRegister, Object, Model, Field], tags_update_in: List[str], session: AsyncSession
+        tags_like_model: Union[SourceRegister, Object, Model, Field], session: AsyncSession, tags_update_in: List[str] | None
 ):
-    tags_update_in_set = {tag for tag in tags_update_in}
-    tags_model_set = {tag.name for tag in tags_like_model.tags}
-    tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
+    if tags_update_in is not None:
+        tags_update_in_set = {tag for tag in tags_update_in}
+        tags_model_set = {tag.name for tag in tags_like_model.tags}
+        tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
 
-    tags_to_delete = tags_model_set - tags_update_in_set
-    for tag in tags_to_delete:
-        tags_like_model.tags.remove(tags_model_dict[tag])
+        tags_to_delete = tags_model_set - tags_update_in_set
+        for tag in tags_to_delete:
+            tags_like_model.tags.remove(tags_model_dict[tag])
 
-    tags_to_create = tags_update_in_set - tags_model_set
-    await add_tags(tags_like_model, tags_to_create, session)
+        tags_to_create = tags_update_in_set - tags_model_set
+        await add_tags(tags_like_model, tags_to_create, session)
 
 
 async def set_source_registry_status(guid: str, status_in: Status, session: AsyncSession):

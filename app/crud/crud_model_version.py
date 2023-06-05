@@ -80,7 +80,14 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         )
     )
 
-    await update_tags(model_version, model_version_update_in.tags, session)
+    model_version = await session.execute(
+        select(ModelVersion)
+        .options(selectinload(ModelVersion.tags))
+        .filter(ModelVersion.guid == guid)
+    )
+    model_version = model_version.scalars().first()
+
+    await update_tags(model_version, session, model_version_update_in.tags)
 
     session.add(model_version)
     await session.commit()

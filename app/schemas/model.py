@@ -19,4 +19,4 @@ class ModelUpdateIn(BaseModel):
     owner: Optional[str] = Field(None, max_length=36*4)
     short_desc: Optional[str] = None
     business_desc: Optional[str] = None
-    tags: Optional[List[str]] = []
+    tags: Optional[List[str]] = None
