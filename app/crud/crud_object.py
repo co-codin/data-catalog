@@ -138,6 +138,9 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
     elif object_.source.status != Status.ON:
         raise SourceRegistryIsNotOnError(object_.source.status)
 
+    object_.is_synchronized = False
+    session.add(object_)
+
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(
         object_name=object_.name, conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid

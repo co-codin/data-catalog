@@ -66,8 +66,9 @@ async def update_data_catalog_data(graph_migration: str):
                 session.add(object_)
             else:
                 await set_synchronized_at(registry)
-                session.add(registry)
+                registry.status = Status.ON
 
+            session.add(registry)
             await session.commit()
 
             await remove_redundant_tags(session)
@@ -104,8 +105,6 @@ async def add_objects(
 ):
     objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry.owner)
     source_registry.objects.extend(objects)
-
-    session.add(source_registry)
 
 
 async def create_objects_from_migration_out(migration: MigrationOut, db_source: str, owner: str) -> list[Object]:
@@ -204,7 +203,6 @@ async def create_fields(fields_to_create: list[FieldToCreate], table_db_path: st
 async def set_synchronized_at(source_registry: SourceRegister):
     for object_ in source_registry.objects:
         await set_object_synchronized_at(object_)
-    source_registry.status = Status.ON
     source_registry.synchronized_at = datetime.now()
 
 
