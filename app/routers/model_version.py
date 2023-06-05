@@ -13,9 +13,9 @@ router = APIRouter(
     tags=['model versions']
 )
 
-@router.get('/{model_id}')
-async def read_model_version(model_id: str, session=Depends(db_session), user=Depends(get_user)):
-    return await read_all(model_id, session)
+# @router.get('/{model_id}')
+# async def read_model_version(model_id: str, session=Depends(db_session), user=Depends(get_user)):
+#     return await read_all(model_id, session)
 
 
 @router.get('/{guid}')
