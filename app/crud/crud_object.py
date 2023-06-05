@@ -10,10 +10,11 @@ from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
 from app.crud.crud_source_registry import add_tags, _get_authors_data_by_guids, _set_author_data, update_tags
-from app.models.sources import Object, SourceRegister, Field
-from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut
+from app.models.sources import Object, SourceRegister, Field, Status
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut, ObjectSynch
 from app.services.crypto import decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
+from app.errors.source_registry_errors import SourceRegistryIsNotOnError
 
 
 async def create_object(object_in: ObjectIn, session: AsyncSession):
@@ -123,3 +124,22 @@ async def select_object_fields(guid: str, session: AsyncSession) -> list[FieldMa
     )
     fields = fields.scalars().all()
     return [FieldManyOut.from_orm(field) for field in fields]
+
+
+async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
+    object_ = await session.execute(
+        select(Object)
+        .options(joinedload(Object.source))
+        .where(Object.guid == guid)
+    )
+    object_ = object_.scalars().first()
+    if not object_:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    elif object_.source.status != Status.ON:
+        raise SourceRegistryIsNotOnError(object_.source.status)
+
+    decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
+    object_sync = ObjectSynch(
+        object_name=object_.name, conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid
+    )
+    return object_sync

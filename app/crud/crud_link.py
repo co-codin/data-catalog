@@ -4,7 +4,7 @@ from typing import Tuple
 from neo4j import AsyncSession, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
 
-from app.errors import EntitiesAlreadyLinkedError, NoNodesUUIDError, NoNodeUUIDError, NodeUUIDAlreadyExists
+from app.errors.errors import EntitiesAlreadyLinkedError, NoNodesUUIDError, NoNodeUUIDError, NodeUUIDAlreadyExists
 from app.schemas.link import LinkIn, LinkUpdateIn
 from app.crud.common import edit_node_fields
 from app.cql_queries.link_queries import *

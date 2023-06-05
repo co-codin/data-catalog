@@ -10,15 +10,19 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, or_, and_
 from sqlalchemy.orm import selectinload, joinedload, load_only
+
 from app.models.model import Model
 
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut, SourceRegistrySynch
 )
 from app.models.sources import SourceRegister, Tag, Status, Object, Field
 from app.services.crypto import encrypt, decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
-from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
+
+from app.errors.source_registry_errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
+from app.errors.source_registry_errors import SourceRegistryIsNotOnError
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -196,6 +200,25 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         _set_author_data(source_registry_out.comments, authors_data)
 
     return source_registry_out
+
+
+async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> SourceRegistrySynch:
+    source_registry = await session.execute(
+        select(SourceRegister)
+        .where(SourceRegister.guid == guid)
+    )
+
+    source_registry = source_registry.scalars().first()
+    if not source_registry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    elif source_registry.status != Status.ON:
+        raise SourceRegistryIsNotOnError(source_registry.status)
+
+    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    source_registry_synch = SourceRegistrySynch(
+        source_registry_guid=source_registry.guid, conn_string=decrypted_conn_string
+    )
+    return source_registry_synch
 
 
 def _get_authors_data_by_guids(guids: Iterable[str], token: str) -> Dict[str, Dict[str, str]]:

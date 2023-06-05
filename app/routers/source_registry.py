@@ -4,14 +4,18 @@ from fastapi import APIRouter, Depends
 
 from app.crud.crud_source_registry import (
     check_on_uniqueness, create_source_registry, read_all, read_by_guid, edit_source_registry,
-    set_source_registry_status, remove_redundant_tags, read_names_by_status, get_objects
+    set_source_registry_status, remove_redundant_tags, read_names_by_status, get_objects, read_source_registry_by_guid
 )
 from app.crud.crud_comment import create_comment, edit_comment, remove_comment, verify_comment_owner, CommentOwnerTypes
 from app.models import Status
+
+from app.schemas.migration import MigrationPattern
 from app.schemas.source_registry import (
     SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, SourceRegistryManyOut
 )
+
 from app.dependencies import db_session, get_user, get_token
+
 from app.services.synchronizer import send_for_synchronization
 
 router = APIRouter(
@@ -21,12 +25,20 @@ router = APIRouter(
 
 
 @router.post('/', response_model=Dict[str, str])
-async def add_source_registry(source_registry: SourceRegistryIn, session=Depends(db_session), _=Depends(get_user)):
+async def add_source_registry(
+        source_registry: SourceRegistryIn,
+        session=Depends(db_session), _=Depends(get_user)
+):
     await check_on_uniqueness(name=source_registry.name, conn_string=source_registry.conn_string, session=session)
     source_registry_model = await create_source_registry(source_registry, session)
-
-    await send_for_synchronization(source_registry_model.guid, source_registry.conn_string)
     return {'guid': source_registry_model.guid}
+
+
+@router.post('/{guid}')
+async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), _=Depends(get_user)):
+    source_registry_synch = await read_source_registry_by_guid(guid, session)
+    await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern)
+    return {'msg': 'source registry has been sent to synchronize'}
 
 
 @router.put('/{guid}', response_model=Dict[str, str])

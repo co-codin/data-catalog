@@ -129,3 +129,9 @@ class ObjectOut(ObjectCommon):
 
 class ObjectUpdateIn(ObjectCommon):
     tags: Optional[List[str]] = []
+
+
+class ObjectSynch(BaseModel):
+    object_name: str
+    conn_string: str
+    source_registry_guid: str
