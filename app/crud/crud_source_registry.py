@@ -214,6 +214,8 @@ async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> Sour
     elif source_registry.status != Status.ON:
         raise SourceRegistryIsNotOnError(source_registry.status)
 
+    source_registry.status = Status.SYNCHRONIZING
+
     decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
     source_registry_synch = SourceRegistrySynch(
         source_registry_guid=source_registry.guid, conn_string=decrypted_conn_string
