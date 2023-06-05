@@ -18,4 +18,4 @@ class ModelResourceUpdateIn(BaseModel):
     type: str = Field(None, max_length=36 * 4)
     db_link: Optional[str] = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=500)
-    tags: Optional[List[str]] = []
+    tags: Optional[List[str]] = None

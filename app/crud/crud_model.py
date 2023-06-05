@@ -99,7 +99,7 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
     if not model:
         return
 
-    await update_tags(model, model_update_in.tags, session)
+    await update_tags(model, session, model_update_in.tags)
 
     session.add(model)
     await session.commit()

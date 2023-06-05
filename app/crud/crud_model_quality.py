@@ -57,7 +57,7 @@ async def update_by_guid(guid: int, model_quality_update_in: ModelQualityUpdateI
         )
     )
 
-    await update_tags(model_quality, model_quality_update_in.tags, session)
+    await update_tags(model_quality, session, model_quality_update_in.tags)
 
     session.add(model_quality)
     await session.commit()
