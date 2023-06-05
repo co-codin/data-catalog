@@ -4,13 +4,19 @@ from fastapi import APIRouter, Depends
 
 
 from app.crud.crud_object import (
-    create_object, read_all, read_by_guid, edit_object, edit_is_synchronized, select_object_fields
+    create_object, read_all, read_by_guid, edit_object, edit_is_synchronized, select_object_fields, read_object_by_guid
 )
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
 from app.crud.crud_source_registry import remove_redundant_tags
-from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut
+
 from app.dependencies import db_session, get_user, get_token
+
+from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut
 from app.schemas.source_registry import CommentIn
+from app.schemas.migration import MigrationPattern
+
+from app.services.synchronizer import send_for_synchronization
+
 
 router = APIRouter(
     prefix='/objects',
@@ -22,6 +28,13 @@ router = APIRouter(
 async def add_object(object_in: ObjectIn, session=Depends(db_session), _=Depends(get_user)):
     guid = await create_object(object_in, session)
     return {'guid': guid}
+
+
+@router.post('/{guid}/synchronize')
+async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), _=Depends(get_user)):
+    object_synch = await read_object_by_guid(guid, session)
+    await send_for_synchronization(**object_synch.dict(), migration_pattern=migration_pattern)
+    return {'msg': 'object has been sent to synchronize'}
 
 
 @router.get('/', response_model=List[ObjectManyOut])

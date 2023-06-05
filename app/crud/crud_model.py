@@ -3,7 +3,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
-from app.errors import ModelNameAlreadyExist
+from app.errors.errors import ModelNameAlreadyExist
 from app.models.model import Model, ModelVersion
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, load_only, joinedload
@@ -99,7 +99,7 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
     if not model:
         return
 
-    await update_tags(model, model_update_in.tags, session)
+    await update_tags(model, session, model_update_in.tags)
 
     session.add(model)
     await session.commit()

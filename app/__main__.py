@@ -9,9 +9,9 @@ from app.logger_config import config_logger
 from app.mq import create_channel
 from app.routers import (
     db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects,
-    model_data_type, model_quality, fields
+    model_data_type, model_quality, fields, model_relation_group, model_relation, model_resource,
+    model_resource_attitude
 )
-from app.routers import db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects, model_data_type, model_quality, model_relation_group, model_relation
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
@@ -47,6 +47,8 @@ app.include_router(model_quality.router)
 app.include_router(fields.router)
 app.include_router(model_relation_group.router)
 app.include_router(model_relation.router)
+app.include_router(model_resource.router)
+app.include_router(model_resource_attitude.router)
 
 @app.on_event('startup')
 async def on_startup():

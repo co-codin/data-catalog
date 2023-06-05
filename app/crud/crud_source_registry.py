@@ -10,15 +10,19 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, or_, and_
 from sqlalchemy.orm import selectinload, joinedload, load_only
+
 from app.models.model import Model
 
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut, SourceRegistrySynch
 )
 from app.models.sources import SourceRegister, Tag, Status, Object, Field
 from app.services.crypto import encrypt, decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
-from app.errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
+
+from app.errors.source_registry_errors import ConnStringAlreadyExist, SourceRegistryNameAlreadyExist
+from app.errors.source_registry_errors import SourceRegistryIsNotOnError
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -102,25 +106,26 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     if not source_registry_model:
         return
 
-    await update_tags(source_registry_model, source_registry_update_in.tags, session)
+    await update_tags(source_registry_model, session, source_registry_update_in.tags)
 
     session.add(source_registry_model)
     await session.commit()
 
 
 async def update_tags(
-        tags_like_model: Union[SourceRegister, Object, Model, Field], tags_update_in: List[str], session: AsyncSession
+        tags_like_model: Union[SourceRegister, Object, Model, Field], session: AsyncSession, tags_update_in: List[str] | None
 ):
-    tags_update_in_set = {tag for tag in tags_update_in}
-    tags_model_set = {tag.name for tag in tags_like_model.tags}
-    tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
+    if tags_update_in is not None:
+        tags_update_in_set = {tag for tag in tags_update_in}
+        tags_model_set = {tag.name for tag in tags_like_model.tags}
+        tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
 
-    tags_to_delete = tags_model_set - tags_update_in_set
-    for tag in tags_to_delete:
-        tags_like_model.tags.remove(tags_model_dict[tag])
+        tags_to_delete = tags_model_set - tags_update_in_set
+        for tag in tags_to_delete:
+            tags_like_model.tags.remove(tags_model_dict[tag])
 
-    tags_to_create = tags_update_in_set - tags_model_set
-    await add_tags(tags_like_model, tags_to_create, session)
+        tags_to_create = tags_update_in_set - tags_model_set
+        await add_tags(tags_like_model, tags_to_create, session)
 
 
 async def set_source_registry_status(guid: str, status_in: Status, session: AsyncSession):
@@ -196,6 +201,28 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         _set_author_data(source_registry_out.comments, authors_data)
 
     return source_registry_out
+
+
+async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> SourceRegistrySynch:
+    source_registry = await session.execute(
+        select(SourceRegister)
+        .where(SourceRegister.guid == guid)
+    )
+
+    source_registry = source_registry.scalars().first()
+    if not source_registry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    elif source_registry.status != Status.ON:
+        raise SourceRegistryIsNotOnError(source_registry.status)
+
+    source_registry.status = Status.SYNCHRONIZING
+    session.add(source_registry)
+
+    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    source_registry_synch = SourceRegistrySynch(
+        source_registry_guid=source_registry.guid, conn_string=decrypted_conn_string
+    )
+    return source_registry_synch
 
 
 def _get_authors_data_by_guids(guids: Iterable[str], token: str) -> Dict[str, Dict[str, str]]:

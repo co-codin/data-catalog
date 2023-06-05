@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 
 
+class MigrationPattern(BaseModel):
+    pk_pattern: str = "hash_key"
+
+    fk_table: str = f"^(\w+)$"
+    fk_pattern: str = f"^(?:id)?(\w*)_hash_fkey$"
+
+
 class FieldToCreate(BaseModel):
     is_key: bool | None
     name: str
