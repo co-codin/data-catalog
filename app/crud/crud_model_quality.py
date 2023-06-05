@@ -11,9 +11,10 @@ from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
-async def read_all(session: AsyncSession):
+async def read_all(model_version_id: str, session: AsyncSession):
     model_qualities = await session.execute(
         select(ModelQuality)
+        .filter(ModelQuality.model_version_id == model_version_id)
     )
     model_qualities = model_qualities.scalars().all()
 

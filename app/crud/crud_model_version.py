@@ -12,9 +12,10 @@ from sqlalchemy.orm import selectinload, joinedload
 from datetime import datetime
 
 
-async def read_all(session: AsyncSession):
+async def read_all(model_id: str, session: AsyncSession):
     model_versions = await session.execute(
         select(ModelVersion)
+        .filter(ModelVersion.model_id == model_id)
         .options(selectinload(ModelVersion.comments))
     )
     model_versions = model_versions.scalars().all()
