@@ -29,8 +29,7 @@ class PostgresExtractor(MetadataExtractor):
                 await cursor.execute(
                     "select table_name "
                     "from information_schema.tables "
-                    "where table_schema = %s;",
-                    ('dv_raw',)
+                    "where table_type = 'BASE TABLE' and table_schema not in ('pg_catalog', 'information_schema');",
                 )
                 table_names = await cursor.fetchall()
                 return {res[0] for res in table_names}

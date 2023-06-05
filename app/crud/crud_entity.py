@@ -4,7 +4,7 @@ from neo4j import AsyncSession, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
 
 from app.crud.crud_link import _remove_link_tx
-from app.errors import NoNodeUUIDError, NodeNameAlreadyExists, NodeUUIDAlreadyExists
+from app.errors.errors import NoNodeUUIDError, NodeNameAlreadyExists, NodeUUIDAlreadyExists
 from app.schemas.entity import EntityIn, EntityUpdateIn
 from app.crud.common import edit_node_fields
 from app.cql_queries.entity_queries import *

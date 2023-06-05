@@ -89,3 +89,8 @@ class SourceRegistryManyOut(SourceRegistryOutCommon, SourceRegistryCommon):
 
     class Config:
         orm_mode = True
+
+
+class SourceRegistrySynch(BaseModel):
+    source_registry_guid: str
+    conn_string: str
