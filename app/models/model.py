@@ -123,6 +123,7 @@ class ModelQuality(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_qualities')
     tags = relationship('Tag', secondary=model_quality_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
 
 
 class ModelRelationGroup(Base):
@@ -182,6 +183,20 @@ class ModelResource(Base):
                         server_onupdate=func.now())
 
     model_version = relationship('ModelVersion', back_populates='model_resources')
+    model_attitudes = relationship('ModelAttitude', back_populates='model_resources')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
-    
+
+
+class ModelAttitude(Base):
+    __tablename__ = 'model_attitudes'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_resources = relationship('ModelResource', back_populates='model_attitudes')
