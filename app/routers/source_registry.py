@@ -35,7 +35,7 @@ async def add_source_registry(
     return {'guid': source_registry_model.guid}
 
 
-@router.post('/{guid}')
+@router.post('/{guid}/synchronize')
 async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), _=Depends(get_user)):
     source_registry_synch = await read_source_registry_by_guid(guid, session)
     await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern)
