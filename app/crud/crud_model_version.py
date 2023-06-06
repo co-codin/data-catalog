@@ -1,15 +1,17 @@
 import asyncio
 import uuid
-from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
-from sqlalchemy import select, update, delete, func
 
+from datetime import datetime
+
+from fastapi import HTTPException, status
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete
+from sqlalchemy.orm import selectinload, joinedload
+
+from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
 from app.models.model import ModelVersion
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
-
-from sqlalchemy.orm import selectinload, joinedload
-from datetime import datetime
 
 
 async def read_all(model_id: str, session: AsyncSession):
@@ -38,7 +40,6 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
 
 
 async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
-
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
@@ -47,22 +48,18 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     model_version = model_version.scalars().first()
 
     approved_model_version = await session.execute(
-        select(func.count())
-        .select_from(ModelVersion)
+        select(ModelVersion)
         .filter(ModelVersion.model_id == model_version.model_id)
         .filter(ModelVersion.status == 'approved')
+        .order_by(ModelVersion.id)
     )
-
-    approved_model_version_count: int = approved_model_version.scalar()
+    approved_model_version = approved_model_version.scalars().first()
 
     if not model_version.status == 'draft':
         model_version_update_in.status = model_version.status
-
-    elif approved_model_version_count > 1 and model_version_update_in.status == 'approved':
-        model_version_update_in.status = 'archive'
-
-    elif model_version_update_in.status == 'confirmed':
-        model_version_update_in.confirmed_at = datetime.now()
+    elif model_version.status == 'draft' and approved_model_version and model_version_update_in.status == 'approved':
+        approved_model_version.status = 'archive'
+        model_version.confirmed_at = datetime.now()
 
     model_version_update_in_data = {
         key: value for key, value in model_version_update_in.dict(exclude={'tags'}).items()
@@ -79,13 +76,6 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
             **model_version_update_in_data,
         )
     )
-
-    model_version = await session.execute(
-        select(ModelVersion)
-        .options(selectinload(ModelVersion.tags))
-        .filter(ModelVersion.guid == guid)
-    )
-    model_version = model_version.scalars().first()
 
     await update_tags(model_version, session, model_version_update_in.tags)
 
