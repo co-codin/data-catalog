@@ -1,5 +1,4 @@
-import uuid
-import json
+import json, os
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,14 +6,14 @@ from app.models.model import ModelDataType
 
 
 def read_json(file_name: str):
-    with open('data_types_provider_source/' + file_name) as f:
+    with open(os.getcwd() + '/app/services/data_types_provider_source/' + file_name) as f:
         data = json.load(f),
 
     return data
 
 
 def read_xml(file_name: str):
-    with open('data_types_provider_source/' + file_name) as f:
+    with open(os.getcwd() + '/app/services/data_types_provider_source/' + file_name) as f:
         data = f.readlines()
 
     return data
@@ -75,11 +74,8 @@ async def fill_table(session: AsyncSession):
     ]
 
     for data in dataset:
-        guid = str(uuid.uuid4())
-
         model_data_type = ModelDataType(
-            **data,
-            guid=guid
+            **data
         )
 
         session.add(model_data_type)
