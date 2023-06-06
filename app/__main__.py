@@ -17,7 +17,7 @@ from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
 from app.services.synchronizer import update_data_catalog_data
-from app.services.data_types_provide import fill_table
+from app.services.data_types_provider import fill_table
 
 config_logger()
 
@@ -56,7 +56,7 @@ app.include_router(model_resource_attitude.router)
 async def on_startup():
     await load_jwks()
 
-    #await fill_table(session=Depends(db_session))
+    await fill_table(session=Depends(db_session))
 
     async with create_channel() as channel:
         await channel.exchange_declare(settings.migration_exchange, 'direct')
