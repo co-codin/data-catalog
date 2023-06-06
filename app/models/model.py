@@ -103,6 +103,9 @@ class ModelDataType(Base):
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
 
+    additional = Column(JSONB, nullable=True)
+    comments = Column(Text, nullable=True)
+
 
 class ModelQuality(Base):
     __tablename__ = 'model_qualities'
