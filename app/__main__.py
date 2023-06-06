@@ -1,11 +1,10 @@
 import asyncio
 import logging
 
-from fastapi import FastAPI, Request, Response, Depends
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.dependencies import db_session
 from app.logger_config import config_logger
 from app.mq import create_channel
 from app.routers import (
@@ -22,7 +21,6 @@ from app.services.data_types_provider import fill_table
 config_logger()
 
 logger = logging.getLogger(__name__)
-
 
 app = FastAPI()
 
@@ -52,11 +50,12 @@ app.include_router(model_relation.router)
 app.include_router(model_resource.router)
 app.include_router(model_resource_attitude.router)
 
+
 @app.on_event('startup')
 async def on_startup():
     await load_jwks()
 
-    await fill_table(session=Depends(db_session))
+    await fill_table()
 
     async with create_channel() as channel:
         await channel.exchange_declare(settings.migration_exchange, 'direct')
@@ -119,4 +118,5 @@ async def consume(query, func):
 
 if __name__ == '__main__':
     import uvicorn
+
     uvicorn.run(app, host='0.0.0.0', port=settings.port)

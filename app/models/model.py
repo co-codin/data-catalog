@@ -98,7 +98,7 @@ class ModelDataType(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String(100), nullable=False)
-    desc = Column(String(500), nullable=True)
+    desc = Column(Text, nullable=True)
 
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
