@@ -98,10 +98,10 @@ class ModelDataType(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String(100), nullable=False)
-    desc = Column(String(500))
+    desc = Column(String(500), nullable=True)
 
-    json = Column(JSONB)
-    xml = Column(Text)
+    json = Column(JSONB, nullable=True)
+    xml = Column(Text, nullable=True)
 
 
 class ModelQuality(Base):
