@@ -4,7 +4,7 @@ from neo4j import AsyncSession, AsyncManagedTransaction
 from neo4j.exceptions import ConstraintError
 
 from app.schemas.sat import SatIn, SatUpdateIn
-from app.errors import NoNodeUUIDError, NodeUUIDAlreadyExists
+from app.errors.errors import NoNodeUUIDError, NodeUUIDAlreadyExists
 from app.crud.common import edit_node_fields
 from app.cql_queries.sat_queries import *
 

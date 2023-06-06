@@ -3,38 +3,43 @@ import uuid
 
 from datetime import datetime
 
-from sqlalchemy import select, delete
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, delete, and_
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from app.crud.crud_source_registry import remove_redundant_tags
 from app.models import SourceRegister, Object, Field, Status
 from app.mq import create_channel
-from app.schemas.migration import MigrationOut, FieldToCreate
+from app.schemas.migration import MigrationOut, FieldToCreate, MigrationPattern
 from app.database import db_session
 from app.config import settings
 
 
-async def send_for_synchronization(source_registry_guid: str, conn_string: str):
-    migration_pattern = {
-        "pk_pattern": r"_?hash_key",
-        "fk_table": r"^(\w+)$",
-        "fk_pattern": r"^(?:id)?(\w*)_hash_fkey$"
-    }
+async def send_for_synchronization(
+        source_registry_guid: str, conn_string: str, migration_pattern: MigrationPattern,
+        object_name: str = None
+):
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
+
+    if object_name:
+        migration_name = f'{datetime.now().strftime("%Y-%m-%d")}.{db_source}.{object_name}'
+    else:
+        migration_name = f'{datetime.now().strftime("%Y-%m-%d")}.{db_source}'
+
+    params = {
+        'name': migration_name,
+        'conn_string': conn_string,
+        'migration_pattern': migration_pattern.dict(),
+        'source_registry_guid': source_registry_guid,
+        'object_name': object_name
+    }
+
     async with create_channel() as channel:
         await channel.basic_publish(
             exchange=settings.migration_exchange,
             routing_key='task',
-            body=json.dumps(
-                {
-                    'name': f'{datetime.now().strftime("%Y-%m-%d")}.{db_source}',
-                    'conn_string': conn_string,
-                    'migration_pattern': migration_pattern,
-                    'source_registry_guid': source_registry_guid
-                }
-            )
+            body=json.dumps(params)
         )
 
 
@@ -45,40 +50,64 @@ async def update_data_catalog_data(graph_migration: str):
         applied_migration = MigrationOut(**graph_migration['graph_migration'])
         source_registry_guid = graph_migration['source_registry_guid']
         conn_string = graph_migration['conn_string']
+        object_name = graph_migration['object_name']
 
         async with db_session() as session:
-            registry = await session.execute(
-                select(SourceRegister)
-                .options(selectinload(SourceRegister.objects))
-                .where(SourceRegister.guid == source_registry_guid)
-            )
-            registry = registry.scalars().first()
-
+            registry = await get_source_registry(source_registry_guid, session)
             db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
             await add_objects(applied_migration, db_source, registry, session)
             await delete_objects(applied_migration, db_source, session)
             await alter_objects(applied_migration, db_source, registry, session)
-            await set_synchronized_at(registry)
 
-            registry.status = Status.ON
-            registry.synchronized_at = datetime.now()
+            if object_name:
+                object_ = await get_object(source_registry_guid, object_name, session)
+                await set_object_synchronized_at(object_)
+            else:
+                await set_synchronized_at(registry)
+                registry.status = Status.ON
 
             await session.commit()
 
             await remove_redundant_tags(session)
 
 
+async def get_source_registry(source_registry_guid: str, session: AsyncSession) -> SourceRegister:
+    registry = await session.execute(
+        select(SourceRegister)
+        .options(selectinload(SourceRegister.objects))
+        .where(SourceRegister.guid == source_registry_guid)
+    )
+    registry = registry.scalars().first()
+    return registry
+
+
+async def get_object(source_registry_guid: str, object_name: str, session: AsyncSession):
+    object_ = await session.execute(
+        select(Object)
+        .options(joinedload(Object.source))
+        .options(selectinload(Object.fields))
+        .where(
+            and_(
+                Object.source_registry_guid == source_registry_guid,
+                Object.name == object_name
+            )
+        )
+    )
+    object_ = object_.scalars().first()
+    return object_
+
+
 async def add_objects(
         applied_migration: MigrationOut, db_source: str, source_registry: SourceRegister, session: AsyncSession
 ):
-    objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry.owner)
+    objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry.owner, session)
     source_registry.objects.extend(objects)
 
-    session.add(source_registry)
 
-
-async def create_objects_from_migration_out(migration: MigrationOut, db_source: str, owner: str) -> list[Object]:
+async def create_objects_from_migration_out(
+        migration: MigrationOut, db_source: str, owner: str, session: AsyncSession
+) -> list[Object]:
     tables = []
     for schema in migration.schemas:
         for table in schema.tables_to_create:
@@ -89,6 +118,7 @@ async def create_objects_from_migration_out(migration: MigrationOut, db_source: 
                 name=table.name, owner=owner, db_path=object_db_path, source_created_at=now, guid=guid,
                 source_updated_at=now, local_updated_at=now, synchronized_at=now, is_synchronized=True
             )
+            session.add(object_)
             for field in table.fields:
                 field_db_path = f'{object_db_path}.{field.name}'
                 guid = str(uuid.uuid4())
@@ -97,6 +127,7 @@ async def create_objects_from_migration_out(migration: MigrationOut, db_source: 
                     owner=owner, source_created_at=now, source_updated_at=now, local_updated_at=now,
                     synchronized_at=now, length=len(field.name)
                 )
+                session.add(field_model)
                 object_.fields.append(field_model)
             tables.append(object_)
     return tables
@@ -129,7 +160,9 @@ async def alter_objects(
     for schema in applied_migration.schemas:
         for table in schema.tables_to_alter:
             table_db_path = f'{db_source}.{schema.name}.{table.name}'
-            fields_to_create = await create_fields(table.fields_to_create, table_db_path, source_registry.owner)
+            fields_to_create = await create_fields(
+                table.fields_to_create, table_db_path, source_registry.owner, session
+            )
 
             curr_object = object_db_path_to_object[table_db_path]
             curr_object.fields.extend(fields_to_create)
@@ -144,8 +177,6 @@ async def alter_objects(
                 field_to_alter_model.type = field.new_type
                 field.source_updated_at = now
 
-            session.add(curr_object)
-
             for field in table.fields_to_delete:
                 field_db_path = f'{table_db_path}.{field}'
                 fields_to_delete.append(field_db_path)
@@ -157,7 +188,9 @@ async def alter_objects(
         )
 
 
-async def create_fields(fields_to_create: list[FieldToCreate], table_db_path: str, owner: str) -> list[Field]:
+async def create_fields(
+        fields_to_create: list[FieldToCreate], table_db_path: str, owner: str, session: AsyncSession
+) -> list[Field]:
     fields = []
     now = datetime.now()
     for field in fields_to_create:
@@ -167,13 +200,19 @@ async def create_fields(fields_to_create: list[FieldToCreate], table_db_path: st
             db_path=f'{table_db_path}.{field.name}', owner=owner, source_created_at=now, source_updated_at=now,
             local_updated_at=now, synchronized_at=now, length=len(field.name)
         )
+        session.add(field_model)
         fields.append(field_model)
     return fields
 
 
 async def set_synchronized_at(source_registry: SourceRegister):
-    now = datetime.now()
     for object_ in source_registry.objects:
-        object_.synchronized_at = now
-        for field in object_.fields:
-            field.synchronized_at = now
+        await set_object_synchronized_at(object_)
+    source_registry.synchronized_at = datetime.now()
+
+
+async def set_object_synchronized_at(object_: Object):
+    now = datetime.now()
+    object_.synchronized_at = now
+    for field in object_.fields:
+        field.synchronized_at = now

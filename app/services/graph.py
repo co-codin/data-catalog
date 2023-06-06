@@ -5,7 +5,7 @@ import logging
 from neo4j import AsyncSession
 from collections import deque
 
-from app.errors import (
+from app.errors.errors import (
     NoNodeNameError, UnknownRelationTypeError, NoDBTableError,
     NoDBFieldError, CyclicPathError
 )

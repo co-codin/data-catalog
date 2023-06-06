@@ -9,18 +9,18 @@ from app.logger_config import config_logger
 from app.mq import create_channel
 from app.routers import (
     db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects,
-    model_data_type, model_quality, fields
+    model_data_type, model_quality, fields, model_relation_group, model_relation, model_resource,
+    model_resource_attitude
 )
-from app.routers import db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects, model_data_type, model_quality, model_relation_group, model_relation, model_resource
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
 from app.services.synchronizer import update_data_catalog_data
+from app.services.data_types_provider import fill_table
 
 config_logger()
 
 logger = logging.getLogger(__name__)
-
 
 app = FastAPI()
 
@@ -48,10 +48,14 @@ app.include_router(fields.router)
 app.include_router(model_relation_group.router)
 app.include_router(model_relation.router)
 app.include_router(model_resource.router)
+app.include_router(model_resource_attitude.router)
+
 
 @app.on_event('startup')
 async def on_startup():
     await load_jwks()
+
+    await fill_table()
 
     async with create_channel() as channel:
         await channel.exchange_declare(settings.migration_exchange, 'direct')
@@ -114,4 +118,5 @@ async def consume(query, func):
 
 if __name__ == '__main__':
     import uvicorn
+
     uvicorn.run(app, host='0.0.0.0', port=settings.port)

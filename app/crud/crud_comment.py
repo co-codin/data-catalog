@@ -17,6 +17,7 @@ class CommentOwnerTypes(enum.Enum):
     model_version = 3
     field = 4
     model_resource = 5
+    model_quality = 6
 
 
 async def create_comment(
@@ -32,6 +33,8 @@ async def create_comment(
         comment = Comment(**comment.dict(), author_guid=author_guid, field_guid=guid)
     elif comment_owner == CommentOwnerTypes.model_resource:
         comment = Comment(**comment.dict(), author_guid=author_guid, resource_guid=guid)
+    elif comment_owner == CommentOwnerTypes.model_quality:
+        comment = Comment(**comment.dict(), author_guid=author_guid, quality_guid=guid)
     else:
         comment = Comment(**comment.dict(), author_guid=author_guid, object_guid=guid)
 
