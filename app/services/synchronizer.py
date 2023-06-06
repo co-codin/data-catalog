@@ -63,12 +63,10 @@ async def update_data_catalog_data(graph_migration: str):
             if object_name:
                 object_ = await get_object(source_registry_guid, object_name, session)
                 await set_object_synchronized_at(object_)
-                session.add(object_)
             else:
                 await set_synchronized_at(registry)
                 registry.status = Status.ON
 
-            session.add(registry)
             await session.commit()
 
             await remove_redundant_tags(session)
@@ -103,11 +101,13 @@ async def get_object(source_registry_guid: str, object_name: str, session: Async
 async def add_objects(
         applied_migration: MigrationOut, db_source: str, source_registry: SourceRegister, session: AsyncSession
 ):
-    objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry.owner)
+    objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry.owner, session)
     source_registry.objects.extend(objects)
 
 
-async def create_objects_from_migration_out(migration: MigrationOut, db_source: str, owner: str) -> list[Object]:
+async def create_objects_from_migration_out(
+        migration: MigrationOut, db_source: str, owner: str, session: AsyncSession
+) -> list[Object]:
     tables = []
     for schema in migration.schemas:
         for table in schema.tables_to_create:
@@ -118,6 +118,7 @@ async def create_objects_from_migration_out(migration: MigrationOut, db_source: 
                 name=table.name, owner=owner, db_path=object_db_path, source_created_at=now, guid=guid,
                 source_updated_at=now, local_updated_at=now, synchronized_at=now, is_synchronized=True
             )
+            session.add(object_)
             for field in table.fields:
                 field_db_path = f'{object_db_path}.{field.name}'
                 guid = str(uuid.uuid4())
@@ -126,6 +127,7 @@ async def create_objects_from_migration_out(migration: MigrationOut, db_source: 
                     owner=owner, source_created_at=now, source_updated_at=now, local_updated_at=now,
                     synchronized_at=now, length=len(field.name)
                 )
+                session.add(field_model)
                 object_.fields.append(field_model)
             tables.append(object_)
     return tables
@@ -158,7 +160,9 @@ async def alter_objects(
     for schema in applied_migration.schemas:
         for table in schema.tables_to_alter:
             table_db_path = f'{db_source}.{schema.name}.{table.name}'
-            fields_to_create = await create_fields(table.fields_to_create, table_db_path, source_registry.owner)
+            fields_to_create = await create_fields(
+                table.fields_to_create, table_db_path, source_registry.owner, session
+            )
 
             curr_object = object_db_path_to_object[table_db_path]
             curr_object.fields.extend(fields_to_create)
@@ -173,8 +177,6 @@ async def alter_objects(
                 field_to_alter_model.type = field.new_type
                 field.source_updated_at = now
 
-            session.add(curr_object)
-
             for field in table.fields_to_delete:
                 field_db_path = f'{table_db_path}.{field}'
                 fields_to_delete.append(field_db_path)
@@ -186,7 +188,9 @@ async def alter_objects(
         )
 
 
-async def create_fields(fields_to_create: list[FieldToCreate], table_db_path: str, owner: str) -> list[Field]:
+async def create_fields(
+        fields_to_create: list[FieldToCreate], table_db_path: str, owner: str, session: AsyncSession
+) -> list[Field]:
     fields = []
     now = datetime.now()
     for field in fields_to_create:
@@ -196,6 +200,7 @@ async def create_fields(fields_to_create: list[FieldToCreate], table_db_path: st
             db_path=f'{table_db_path}.{field.name}', owner=owner, source_created_at=now, source_updated_at=now,
             local_updated_at=now, synchronized_at=now, length=len(field.name)
         )
+        session.add(field_model)
         fields.append(field_model)
     return fields
 
