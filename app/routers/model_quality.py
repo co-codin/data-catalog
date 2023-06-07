@@ -25,7 +25,7 @@ async def create_model_quality(model_quality_in: ModelQualityIn, session=Depends
 
 
 @router.put('/{guid}')
-async def update_model_quality(guid: int, model_quality_update_in: ModelQualityUpdateIn, session=Depends(db_session), user=Depends(get_user)):
+async def update_model_quality(guid: str, model_quality_update_in: ModelQualityUpdateIn, session=Depends(db_session), user=Depends(get_user)):
     return await update_by_guid(guid, model_quality_update_in, session)
 
 
