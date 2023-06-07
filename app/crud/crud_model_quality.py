@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.model import ModelQuality
 from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
-from app.errors.model_quality import ModelQualityErrorAlreadyExist
+from app.errors.model_quality import ModelQualityNameAlreadyExist
 
 
 async def read_all(model_version_id: str, session: AsyncSession):
@@ -62,7 +62,7 @@ async def check_on_model_quality_uniqueness(
 
     for model_quality in model_qualities:
         if model_quality.name == name and model_quality.guid != guid:
-            raise ModelQualityErrorAlreadyExist(name)
+            raise ModelQualityNameAlreadyExist(name)
 
 
 async def update_by_guid(guid: str, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):

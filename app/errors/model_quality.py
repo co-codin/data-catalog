@@ -3,9 +3,9 @@ from fastapi import status
 from app.errors import APIError
 
 
-class ModelQualityErrorAlreadyExist(APIError):
+class ModelQualityNameAlreadyExist(APIError):
     def __init__(self, name: str):
-        self.status_code = status.HTTP_400_BAD_REQUEST
+        self.status_code = status.HTTP_409_CONFLICT
         self._name = name
 
     def __str__(self):
