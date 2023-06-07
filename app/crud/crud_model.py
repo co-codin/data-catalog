@@ -1,14 +1,17 @@
-from typing import Optional
 import uuid
+import asyncio
+
+from typing import Optional
 from fastapi import HTTPException, status
+
+from sqlalchemy import select, update, delete
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
 from app.errors.errors import ModelNameAlreadyExist
-from app.models.model import Model, ModelVersion
-from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload, load_only, joinedload
+from app.models.model import Model
 from app.schemas.model import ModelIn, ModelUpdateIn
-import asyncio
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
@@ -26,14 +29,10 @@ async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
     return guid
 
 
-
 async def check_on_model_uniqueness(name: str, session: AsyncSession, guid: Optional[str] = None):
     models = await session.execute(
         select(Model)
-        .options(load_only(Model.name))
-        .filter(
-            Model.name == name
-        )
+        .where(Model.name == name)
     )
     models = models.scalars().all()
     for model in models:
