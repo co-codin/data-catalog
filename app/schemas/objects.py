@@ -110,7 +110,7 @@ class SourceOut(SourceManyOut):
 class ObjectOut(ObjectCommon):
     guid: str
     name: str
-    db_path: str
+    db_path: str | None
     is_synchronized: bool
 
     synchronized_at: datetime | None
