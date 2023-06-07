@@ -1,14 +1,15 @@
 import uuid
+
 from fastapi import HTTPException, status
+
+from sqlalchemy import select, update, delete, and_
+from sqlalchemy.orm import selectinload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.model import ModelQuality
-
-from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload
-
 from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
+from app.errors.model_quality import ModelQualityNameAlreadyExist
 
 
 async def read_all(model_version_id: str, session: AsyncSession):
@@ -35,6 +36,33 @@ async def create(model_quality_in: ModelQualityIn, session: AsyncSession):
     await session.commit()
 
     return model_quality.guid
+
+
+async def check_on_model_quality_uniqueness(
+        name: str, session: AsyncSession, model_version_id: int = None, guid: str = None
+):
+    if not model_version_id:
+        model_quality = await session.execute(
+            select(ModelQuality)
+            .where(ModelQuality.guid == guid)
+        )
+        model_quality = model_quality.scalars().first()
+        model_version_id = model_quality.model_version_id
+
+    model_qualities = await session.execute(
+        select(ModelQuality)
+        .where(
+            and_(
+                ModelQuality.model_version_id == model_version_id,
+                ModelQuality.name == name
+            )
+        )
+    )
+    model_qualities = model_qualities.scalars().all()
+
+    for model_quality in model_qualities:
+        if model_quality.name == name and model_quality.guid != guid:
+            raise ModelQualityNameAlreadyExist(name)
 
 
 async def update_by_guid(guid: str, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
