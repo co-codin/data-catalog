@@ -15,6 +15,7 @@ async def read_all(model_version_id: str, session: AsyncSession):
     model_qualities = await session.execute(
         select(ModelQuality)
         .filter(ModelQuality.model_version_id == model_version_id)
+        .options(selectinload(ModelQuality.comments))
     )
     model_qualities = model_qualities.scalars().all()
 
@@ -36,7 +37,7 @@ async def create(model_quality_in: ModelQualityIn, session: AsyncSession):
     return model_quality.guid
 
 
-async def update_by_guid(guid: int, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
+async def update_by_guid(guid: str, model_quality_update_in: ModelQualityUpdateIn, session: AsyncSession):
     model_quality = await session.execute(
         select(ModelQuality)
         .options(selectinload(ModelQuality.tags))
@@ -67,6 +68,7 @@ async def read_by_guid(guid: str, session: AsyncSession):
     model_quality = await session.execute(
         select(ModelQuality)
         .filter(ModelQuality.guid == guid)
+        .options(selectinload(ModelQuality.comments))
     )
 
     model_quality = model_quality.scalars().first()
