@@ -105,18 +105,7 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
     await session.commit()
 
 
-
 async def delete_by_guid(guid: str, session: AsyncSession):
-    model = await session.execute(
-        select(Model)
-        .filter(Model.guid == guid)
-    )
-    model = model.scalars().first()
-
-    await session.execute(
-        delete(ModelVersion)
-        .where(ModelVersion.model_id == model.id)
-    )
     await session.execute(
         delete(Model)
         .where(Model.guid == guid)

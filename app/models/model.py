@@ -73,7 +73,7 @@ class ModelVersion(Base):
 
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
-    model_id = Column(BigInteger, ForeignKey(Model.id))
+    model_id = Column(BigInteger, ForeignKey(Model.id, ondelete='CASCADE'))
     status = Column(String, nullable=False, default='draft')
     version = Column(String(100), nullable=True)
     owner = Column(String(36*4), nullable=False)
