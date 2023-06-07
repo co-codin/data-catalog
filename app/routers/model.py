@@ -1,9 +1,11 @@
+from fastapi import APIRouter, Depends
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.crud.crud_model import check_on_model_uniqueness, create_model, delete_by_guid, edit_model, read_all, read_by_guid
-from app.dependencies import db_session, get_token, get_user
+from app.crud.crud_model import (
+    check_on_model_uniqueness, create_model, delete_by_guid, edit_model, read_all, read_by_guid
+)
 
-from fastapi import APIRouter, Depends, HTTPException
+from app.dependencies import db_session, get_token, get_user
 
 from app.schemas.model import ModelIn, ModelUpdateIn
 from app.schemas.source_registry import CommentIn
@@ -13,8 +15,9 @@ router = APIRouter(
     tags=['model']
 )
 
+
 @router.get('/')
-async def read_models(session=Depends(db_session), user=Depends(get_user)):
+async def read_models(session=Depends(db_session), _=Depends(get_user)):
     return await read_all(session)
 
 
@@ -24,24 +27,21 @@ async def get_model(guid: str, session=Depends(db_session), token=Depends(get_to
 
 
 @router.put('/{guid}')
-async def update_model(guid: str, model_in: ModelUpdateIn, session=Depends(db_session), user=Depends(get_user)):
+async def update_model(guid: str, model_in: ModelUpdateIn, session=Depends(db_session), _=Depends(get_user)):
+    await check_on_model_uniqueness(name=model_in.name, session=session, guid=guid)
     await edit_model(guid, model_in, session)
     # await remove_redundant_tags(session)
 
 
-
 @router.post('/')
-async def add_model(model_in: ModelIn, session=Depends(db_session), user=Depends(get_user)):
-    try:
-        await check_on_model_uniqueness(name=model_in.name, session=session)
-        guid = await create_model(model_in, session)
-        return {'guid': guid}
-    except:
-        raise HTTPException(status_code=400, detail="Модель уже существует")
+async def add_model(model_in: ModelIn, session=Depends(db_session), _=Depends(get_user)):
+    await check_on_model_uniqueness(name=model_in.name, session=session)
+    guid = await create_model(model_in, session)
+    return {'guid': guid}
 
 
 @router.delete('/{guid}')
-async def delete_model(guid: str, session=Depends(db_session), user=Depends(get_user)):
+async def delete_model(guid: str, session=Depends(db_session), _=Depends(get_user)):
     await delete_by_guid(guid, session)
 
 
