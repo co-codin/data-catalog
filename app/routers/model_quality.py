@@ -1,8 +1,9 @@
-
 from fastapi import APIRouter, Depends
 
 from app.dependencies import db_session, get_user
-from app.crud.crud_model_quality import read_all, create, update_by_guid, read_by_guid, delete_by_guid
+from app.crud.crud_model_quality import (
+    read_all, create, update_by_guid, read_by_guid, delete_by_guid, check_on_model_quality_uniqueness
+)
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
 from app.schemas.source_registry import CommentIn
@@ -19,13 +20,19 @@ router = APIRouter(
 
 
 @router.post('/')
-async def create_model_quality(model_quality_in: ModelQualityIn, session=Depends(db_session), user=Depends(get_user)):
+async def create_model_quality(model_quality_in: ModelQualityIn, session=Depends(db_session), _=Depends(get_user)):
+    await check_on_model_quality_uniqueness(
+        model_quality_in.name, session, model_version_id=model_quality_in.model_version_id
+    )
     guid = await create(model_quality_in, session)
     return {'guid': guid}
 
 
 @router.put('/{guid}')
-async def update_model_quality(guid: str, model_quality_update_in: ModelQualityUpdateIn, session=Depends(db_session), user=Depends(get_user)):
+async def update_model_quality(
+        guid: str, model_quality_update_in: ModelQualityUpdateIn, session=Depends(db_session), _=Depends(get_user)
+):
+    await check_on_model_quality_uniqueness(model_quality_update_in.name, session, guid=guid)
     return await update_by_guid(guid, model_quality_update_in, session)
 
 
