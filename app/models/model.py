@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean, Integer
 from sqlalchemy.sql import func
-from app.database import Base
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
+
+from app.database import Base
 
 model_tags = Table(
     "model_tags",
@@ -48,13 +49,22 @@ model_resource_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_resource_attribute_tags = Table(
+    "model_resource_attribute_tags",
+    Base.metadata,
+    Column("model_resource_attribute_tags", ForeignKey("model_resource_attributes.id", ondelete='CASCADE'),
+           primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+
 class Model(Base):
     __tablename__ = 'models'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
     name = Column(String(100), nullable=False)
-    owner = Column(String(36*4), nullable=False)
+    owner = Column(String(36 * 4), nullable=False)
     short_desc = Column(Text)
     business_desc = Column(Text)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -76,7 +86,7 @@ class ModelVersion(Base):
     model_id = Column(BigInteger, ForeignKey(Model.id, ondelete='CASCADE'))
     status = Column(String, nullable=False, default='draft')
     version = Column(String(100), nullable=True)
-    owner = Column(String(36*4), nullable=False)
+    owner = Column(String(36 * 4), nullable=False)
 
     desc = Column(String(500))
 
@@ -114,7 +124,7 @@ class ModelQuality(Base):
     model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
 
     name = Column(String(100), nullable=False)
-    owner = Column(String(36*4), nullable=False)
+    owner = Column(String(36 * 4), nullable=False)
 
     desc = Column(Text, nullable=True)
     function = Column(Text, nullable=True)
@@ -167,6 +177,7 @@ class ModelRelation(Base):
     model_relation_group = relationship('ModelRelationGroup', back_populates='model_relations')
     tags = relationship('Tag', secondary=model_relation_tags, order_by='Tag.id')
 
+
 class ModelResource(Base):
     __tablename__ = 'model_resources'
 
@@ -179,6 +190,8 @@ class ModelResource(Base):
     desc = Column(String(500))
     type = Column(String(500))
     db_link = Column(String(500))
+    json = Column(JSONB, nullable=True)
+    xml = Column(Text, nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -186,6 +199,7 @@ class ModelResource(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_resources')
     model_attitudes = relationship('ModelAttitude', back_populates='model_resources')
+    attributes = relationship('ModelResourceAttribute', back_populates='model_resources')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
 
@@ -202,3 +216,30 @@ class ModelAttitude(Base):
                         server_onupdate=func.now())
 
     model_resources = relationship('ModelResource', back_populates='model_attitudes')
+
+
+class ModelResourceAttribute(Base):
+    __tablename__ = 'model_resource_attributes'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
+
+    name = Column(String(100), nullable=False)
+    key = Column(Boolean, index=True, nullable=True)
+    db_link = Column(String(500))
+    desc = Column(String(1000))
+
+    data_type_id = Column(BigInteger, index=True, nullable=True)
+    data_type_flag = Column(Integer, nullable=True)
+
+    cardinality = Column(String(100), nullable=False)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_resources = relationship('ModelResource', back_populates='attributes')
+    tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
+
+    parent_id = Column(BigInteger, nullable=True)
