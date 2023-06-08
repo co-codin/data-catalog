@@ -1,8 +1,7 @@
 
 from fastapi import APIRouter, Depends
 
-from app.database import db_session
-from app.dependencies import get_user
+from app.dependencies import db_session, get_user
 from app.crud.crud_model_data_type import read_all, read_by_id
 
 router = APIRouter(

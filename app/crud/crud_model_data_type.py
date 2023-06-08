@@ -11,8 +11,6 @@ async def read_all(session: AsyncSession):
         select(ModelDataType)
     )
     model_data_types = model_data_types.scalars().all()
-    if not model_data_types:
-        return
 
     return model_data_types
 
