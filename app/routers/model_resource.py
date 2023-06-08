@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends
 from app.dependencies import db_session, get_user, get_token
 from app.crud.crud_model_resource import read_resources_by_version_id, read_resources_by_guid, create_model_resource, \
-    update_model_resource, delete_model_resource
+    update_model_resource, delete_model_resource, create_attribute, edit_attribute, remove_attribute
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
+from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn, ResourceAttributeIn, \
+    ResourceAttributeUpdateIn
 from app.schemas.source_registry import CommentIn
 
 router = APIRouter(
@@ -58,3 +59,21 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
+
+
+@router.post('/attributes')
+async def add_attribute(attribute_in: ResourceAttributeIn, session=Depends(db_session)):
+    resource_attribute_guid = await create_attribute(attribute_in, session)
+    return {'guid': resource_attribute_guid}
+
+
+@router.put('/attributes/{guid}')
+async def update_attribute(guid: str, attribute_update_in: ResourceAttributeUpdateIn, session=Depends(db_session)):
+    await edit_attribute(guid, attribute_update_in, session)
+    return {'msg': 'attribute has been updated'}
+
+
+@router.delete('/attributes/{guid}')
+async def delete_attribute(guid: str, session=Depends(db_session)):
+    await remove_attribute(guid, session)
+    return {'msg': 'attribute has been deleted'}
