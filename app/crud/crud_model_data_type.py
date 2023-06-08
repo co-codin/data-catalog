@@ -15,7 +15,7 @@ async def read_all(session: AsyncSession):
     return model_data_types
 
 
-async def read_by_id(id: str, session: AsyncSession):
+async def read_by_id(id: int, session: AsyncSession):
     model_data_type = await session.execute(
         select(ModelDataType)
         .filter(ModelDataType.id == id)

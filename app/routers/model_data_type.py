@@ -16,5 +16,5 @@ async def get_all(session=Depends(db_session), user=Depends(get_user)):
 
 
 @router.get('/{id}')
-async def get_model_data_type(id: str, session=Depends(db_session), user=Depends(get_user)):
+async def get_model_data_type(id: int, session=Depends(db_session), user=Depends(get_user)):
     return await read_by_id(id, session)
