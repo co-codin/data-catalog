@@ -5,13 +5,18 @@ from typing import List
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, and_
 from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
-from app.crud.crud_source_registry import add_tags, _get_authors_data_by_guids, _set_author_data, update_tags
+from app.constants.data_types import SYS_DATA_TYPE_TO_ID, ID_TO_SYS_DATA_TYPE
+from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_tag import add_tags, update_tags
 from app.models.sources import Object, SourceRegister, Field, Status
+from app.models.models import ModelDataType
+from app.schemas.comment import CommentIn
 from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut, ObjectSynch
+from app.schemas.tag import TagOut
 from app.services.crypto import decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 from app.errors.source_registry_errors import SourceRegistryIsNotOnError
@@ -53,7 +58,7 @@ async def select_created_at_updated_at_from_source(source_registry_guid: str, ta
 async def read_all(session: AsyncSession) -> List[ObjectManyOut]:
     objects = await session.execute(
         select(Object)
-        .options(joinedload(Object.source))
+        .options(joinedload(Object.source, innerjoin=True))
         .options(selectinload(Object.tags))
         .options(selectinload(Object.comments))
     )
@@ -76,9 +81,9 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ObjectOu
     if object_out.comments:
         author_guids = {comment.author_guid for comment in object_out.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
-            None, _get_authors_data_by_guids, author_guids, token
+            None, get_authors_data_by_guids, author_guids, token
         )
-        _set_author_data(object_out.comments, authors_data)
+        set_author_data(object_out.comments, authors_data)
 
     return object_out
 
@@ -123,13 +128,24 @@ async def select_object_fields(guid: str, session: AsyncSession) -> list[FieldMa
         .where(Field.object_guid == guid)
     )
     fields = fields.scalars().all()
-    return [FieldManyOut.from_orm(field) for field in fields]
+
+    return [
+        FieldManyOut(
+            guid=field.guid, is_key=field.is_key, name=field.name,
+            type=ID_TO_SYS_DATA_TYPE.get(field.data_type_id, None), length=len(field.name), owner=field.owner,
+            desc=field.desc, local_updated_at=field.local_updated_at, synchronized_at=field.synchronized_at,
+            source_updated_at=field.source_updated_at,
+            tags=[TagOut.from_orm(tag) for tag in field.tags],
+            comments=[CommentIn.from_orm(comment) for comment in field.comments]
+        )
+        for field in fields
+    ]
 
 
 async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
     object_ = await session.execute(
         select(Object)
-        .options(joinedload(Object.source))
+        .options(joinedload(Object.source, innerjoin=True))
         .where(Object.guid == guid)
     )
     object_ = object_.scalars().first()
@@ -139,7 +155,6 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
         raise SourceRegistryIsNotOnError(object_.source.status)
 
     object_.is_synchronized = False
-    session.add(object_)
 
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(

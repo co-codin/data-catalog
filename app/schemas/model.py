@@ -1,4 +1,3 @@
-
 from typing import List
 from pydantic import Field
 
@@ -6,12 +5,15 @@ from pydantic import BaseModel
 from typing import Optional
 
 
-class ModelIn(BaseModel):
+class ModelCommon(BaseModel):
     name: str = Field(..., max_length=100)
+    short_desc: str | None = Field(None, max_length=500)
+    business_desc: str | None = Field(None, max_length=500)
+    tags: list[str] = []
+
+
+class ModelIn(ModelCommon):
     owner: str = Field(..., max_length=36*4)
-    short_desc: Optional[str] = Field(None, max_length=500)
-    business_desc: Optional[str] = Field(None, max_length=500)
-    tags: Optional[List[str]] = []
 
 
 class ModelUpdateIn(BaseModel):

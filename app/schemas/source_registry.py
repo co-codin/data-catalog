@@ -4,13 +4,8 @@ from datetime import datetime
 from pydantic import BaseModel, Field, validator
 
 from app.models.sources import Origin, WorkingMode, Status
-
-
-class CommentIn(BaseModel):
-    msg: str = Field(..., max_length=10_000)
-
-    class Config:
-        orm_mode = True
+from app.schemas.tag import TagOut
+from app.schemas.comment import CommentIn, CommentOut
 
 
 class SourceRegistryCommon(BaseModel):
@@ -35,29 +30,6 @@ class SourceRegistryIn(SourceRegistryCommon):
 
 class SourceRegistryUpdateIn(SourceRegistryIn):
     synchronized_at: Optional[datetime] = None
-
-
-class TagOut(BaseModel):
-    name: str
-
-    class Config:
-        orm_mode = True
-
-
-class CommentOut(CommentIn):
-    id: int
-    author_guid: str
-
-    author_first_name: Optional[str] = None
-    author_last_name: Optional[str] = None
-    author_middle_name: Optional[str] = None
-    author_email: Optional[str] = None
-
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        orm_mode = True
 
 
 class SourceRegistryOutCommon(BaseModel):

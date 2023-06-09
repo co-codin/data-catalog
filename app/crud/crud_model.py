@@ -8,13 +8,15 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
+from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_tag import add_tags, update_tags
+
 from app.errors.errors import ModelNameAlreadyExist
-from app.models.model import Model
+from app.models.models import Model
 from app.schemas.model import ModelIn, ModelUpdateIn
 
 
-async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
+async def create_model(model_in: ModelIn, session: AsyncSession) -> Model:
     guid = str(uuid.uuid4())
 
     model = Model(
@@ -24,9 +26,7 @@ async def create_model(model_in: ModelIn, session: AsyncSession) -> str:
     await add_tags(model, model_in.tags, session)
 
     session.add(model)
-    await session.commit()
-
-    return guid
+    return model
 
 
 async def check_on_model_uniqueness(name: str, session: AsyncSession, guid: Optional[str] = None):
@@ -68,9 +68,9 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession):
     if model.comments:
         author_guids = {comment.author_guid for comment in model.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
-            None, _get_authors_data_by_guids, author_guids, token
+            None, get_authors_data_by_guids, author_guids, token
         )
-        _set_author_data(model.comments, authors_data)
+        set_author_data(model.comments, authors_data)
 
     return model
 

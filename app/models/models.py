@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean, Integer
 from sqlalchemy.sql import func
@@ -6,13 +7,13 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.database import Base
+from app.models.sources import Model
 
-model_tags = Table(
-    "model_tags",
-    Base.metadata,
-    Column("model_tags", ForeignKey("models.id", ondelete='CASCADE'), primary_key=True),
-    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
-)
+
+class Cardinality(Enum):
+    ZERO_TO_ONE = '0..1'
+    ONE_TO_ONE = '1..1'
+
 
 model_version_tags = Table(
     "model_version_tags",
@@ -56,24 +57,6 @@ model_resource_attribute_tags = Table(
            primary_key=True),
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
-
-
-class Model(Base):
-    __tablename__ = 'models'
-
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
-    name = Column(String(100), nullable=False)
-    owner = Column(String(36 * 4), nullable=False)
-    short_desc = Column(Text)
-    business_desc = Column(Text)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                        server_onupdate=func.now())
-
-    tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
-    model_versions = relationship('ModelVersion', back_populates='model')
-    comments = relationship('Comment', order_by='Comment.id')
 
 
 class ModelVersion(Base):

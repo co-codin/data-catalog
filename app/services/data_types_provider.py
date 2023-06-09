@@ -3,7 +3,7 @@ import json, os
 from sqlalchemy import select, func
 
 from app.database import db_session
-from app.models.model import ModelDataType
+from app.models.models import ModelDataType
 
 
 def read_json(file_name: str):
