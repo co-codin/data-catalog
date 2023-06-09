@@ -43,6 +43,7 @@ deploy:
   rules:
     - if: $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE != "merge_request_event" 
     - when: never
+  retry: 2
   before_script:
     - mkdir -p /root/.kube
     - echo $KUBE_CONFIG | base64 -d > /root/.kube/config
