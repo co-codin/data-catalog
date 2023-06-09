@@ -123,7 +123,7 @@ class ModelQuality(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
     model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
 
-    name = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
 
     desc = Column(Text, nullable=True)
