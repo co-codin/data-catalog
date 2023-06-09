@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.comment import CommentOut
+from app.schemas.comment import CommentOut, CommentIn
 from app.schemas.model_quality import ModelQualityManyOut
 from app.schemas.tag import TagOut
 
@@ -37,6 +37,22 @@ class ModelVersionOut(BaseModel):
     model_qualities: list[ModelQualityManyOut] = []
     tags: list[TagOut] = []
     comments: list[CommentOut] = []
+
+    class Config:
+        orm_mode = True
+
+
+class ModelVersionManyOut(BaseModel):
+    id: str
+    guid: str
+    model_id: int
+    owner: str
+    desc: str | None
+    status: str
+    version: str | None
+
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True
