@@ -36,8 +36,8 @@ async def update_model(guid: str, model_in: ModelUpdateIn, session=Depends(db_se
 @router.post('/')
 async def add_model(model_in: ModelIn, session=Depends(db_session), _=Depends(get_user)):
     await check_on_model_uniqueness(name=model_in.name, session=session)
-    guid = await create_model(model_in, session)
-    return {'guid': guid}
+    model = await create_model(model_in, session)
+    return {'guid': model.guid}
 
 
 @router.delete('/{guid}')

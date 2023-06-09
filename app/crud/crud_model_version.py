@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, joinedload
 
-from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, add_tags, update_tags
-from app.models.model import ModelVersion
+from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_tag import add_tags, update_tags
+from app.models.models import ModelVersion
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 
 
@@ -24,7 +25,7 @@ async def read_all(model_id: str, session: AsyncSession):
     return model_versions
 
 
-async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> str:
+async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> ModelVersion:
     guid = str(uuid.uuid4())
     
     model_version = ModelVersion(
@@ -34,9 +35,7 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
     await add_tags(model_version, model_version_in.tags, session)
 
     session.add(model_version)
-    await session.commit()
-
-    return model_version.guid
+    return model_version
 
 
 async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
@@ -100,10 +99,9 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession):
     if model_version.comments:
         author_guids = {comment.author_guid for comment in model_version.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
-            None, _get_authors_data_by_guids, author_guids, token
+            None, get_authors_data_by_guids, author_guids, token
         )
-        _set_author_data(model_version.comments, authors_data)
-
+        set_author_data(model_version.comments, authors_data)
 
     return model_version
 
