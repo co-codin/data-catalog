@@ -96,6 +96,7 @@ async def read_by_guid(guid: str, session: AsyncSession):
     model_quality = await session.execute(
         select(ModelQuality)
         .filter(ModelQuality.guid == guid)
+        .options(selectinload(ModelQuality.tags))
         .options(selectinload(ModelQuality.comments))
     )
 
