@@ -7,7 +7,7 @@ from sqlalchemy import select, update, delete
 
 from app.schemas.source_registry import CommentIn
 
-from app.models.sources import Comment
+from app.models.comments import Comment
 
 
 class CommentOwnerTypes(enum.Enum):

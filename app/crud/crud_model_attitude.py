@@ -4,7 +4,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from app.models.model import ModelAttitude
+from app.models.models import ModelAttitude
 from app.schemas.model_attitude import ModelAttitudeIn
 
 

@@ -1,9 +1,11 @@
+from datetime import datetime
+from typing import List, Optional
 
-from typing import List
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from pydantic import BaseModel
-from typing import Optional
+from app.schemas.comment import CommentOut, CommentIn
+from app.schemas.model_quality import ModelQualityManyOut
+from app.schemas.tag import TagOut
 
 
 class ModelVersionIn(BaseModel):
@@ -18,3 +20,39 @@ class ModelVersionUpdateIn(BaseModel):
     owner: Optional[str] = Field(None, max_length=36*4)
     desc: Optional[str] = Field(None, max_length=500)
     tags: Optional[List[str]] = None
+
+
+class ModelVersionOut(BaseModel):
+    id: str
+    guid: str
+    model_id: int
+    owner: str
+    desc: str | None
+    status: str
+    version: str | None
+
+    created_at: datetime
+    updated_at: datetime
+
+    model_qualities: list[ModelQualityManyOut] = []
+    tags: list[TagOut] = []
+    comments: list[CommentOut] = []
+
+    class Config:
+        orm_mode = True
+
+
+class ModelVersionManyOut(BaseModel):
+    id: str
+    guid: str
+    model_id: int
+    owner: str
+    desc: str | None
+    status: str
+    version: str | None
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True

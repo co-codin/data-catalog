@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from app.models.model import ModelResource, ModelResourceAttribute
-from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn, ResourceAttributeIn, \
-    ResourceAttributeUpdateIn
+from app.models.models import ModelResource, ModelResourceAttribute
+from app.schemas.model_resource import (
+    ModelResourceIn, ModelResourceUpdateIn, ResourceAttributeIn, ResourceAttributeUpdateIn
+)
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
@@ -86,7 +87,7 @@ async def delete_model_resource(guid: str, session: AsyncSession):
     await session.commit()
 
 
-async def create_attribute(attribute_in: ResourceAttributeIn, session=AsyncSession):
+async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSession):
     guid = str(uuid.uuid4())
 
     model_resource_attribute = ModelResourceAttribute(
@@ -102,7 +103,7 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session=AsyncSessi
     return model_resource_attribute.guid
 
 
-async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdateIn, session=AsyncSession):
+async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdateIn, session: AsyncSession):
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.tags))
