@@ -98,6 +98,7 @@ async def update_by_guid(guid: str, model_quality_update_in: ModelQualityUpdateI
 async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelQualityOut:
     model_quality = await session.execute(
         select(ModelQuality)
+        .options(selectinload(ModelQuality.tags))
         .options(selectinload(ModelQuality.comments))
         .where(ModelQuality.guid == guid)
     )

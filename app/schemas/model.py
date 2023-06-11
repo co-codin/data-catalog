@@ -1,8 +1,11 @@
-from typing import List
-from pydantic import Field
+from datetime import datetime
+from typing import List, Optional
 
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+
+from app.schemas.comment import CommentIn, CommentOut
+from app.schemas.model_version import ModelVersionOut, ModelVersionManyOut
+from app.schemas.tag import TagOut
 
 
 class ModelCommon(BaseModel):
@@ -22,3 +25,44 @@ class ModelUpdateIn(BaseModel):
     short_desc: Optional[str] = None
     business_desc: Optional[str] = None
     tags: Optional[List[str]] = None
+
+
+class ModelManyOut(BaseModel):
+    id: int
+    guid: str
+    source_registry_id: int
+
+    name: str
+    owner: str
+    short_desc: str | None
+    business_desc: str | None
+
+    created_at: datetime
+    updated_at: datetime
+
+    tags: list[TagOut] = []
+    comments: list[CommentIn] = []
+
+    class Config:
+        orm_mode = True
+
+
+class ModelOut(BaseModel):
+    id: int
+    guid: str
+    source_registry_id: int
+
+    name: str
+    owner: str
+    short_desc: str | None
+    business_desc: str | None
+
+    created_at: datetime
+    updated_at: datetime
+
+    tags: list[TagOut] = []
+    comments: list[CommentOut] = []
+    model_versions: list[ModelVersionManyOut] = []
+
+    class Config:
+        orm_mode = True

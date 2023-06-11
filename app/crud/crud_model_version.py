@@ -11,8 +11,8 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
-from app.models.models import ModelVersion
-from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
+from app.models.models import ModelVersion, ModelQuality
+from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
 
 
 async def read_all(model_id: str, session: AsyncSession):
@@ -82,12 +82,13 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     await session.commit()
 
 
-async def read_by_guid(guid: str, token: str, session: AsyncSession):
+async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelVersionOut:
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
         .options(selectinload(ModelVersion.comments))
-        .options(joinedload(ModelVersion.model_qualities))
+        .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.tags))
+        .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.comments))
         .filter(ModelVersion.guid == guid)
     )
 
@@ -96,14 +97,16 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession):
     if not model_version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    model_version_out = ModelVersionOut.from_orm(model_version)
+
     if model_version.comments:
         author_guids = {comment.author_guid for comment in model_version.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
             None, get_authors_data_by_guids, author_guids, token
         )
-        set_author_data(model_version.comments, authors_data)
+        set_author_data(model_version_out.comments, authors_data)
 
-    return model_version
+    return model_version_out
 
 
 async def delete_model_version(guid: str, session: AsyncSession):

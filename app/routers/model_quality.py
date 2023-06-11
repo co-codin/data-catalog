@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.dependencies import db_session, get_user
+from app.dependencies import db_session, get_user, get_token
 from app.crud.crud_model_quality import (
     read_all, create, update_by_guid, read_by_guid, delete_by_guid, check_on_model_quality_uniqueness
 )
@@ -37,8 +37,8 @@ async def update_model_quality(
 
 
 @router.get('/{guid}')
-async def get_model_quality(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    return await read_by_guid(guid, session)
+async def get_model_quality(guid: str, session=Depends(db_session), token=Depends(get_token)):
+    return await read_by_guid(guid, token, session)
 
 
 @router.delete('/{guid}')
