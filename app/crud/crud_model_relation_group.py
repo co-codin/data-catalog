@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from app.models.model import ModelRelationGroup, ModelRelation
+from app.models.models import ModelRelationGroup, ModelRelation
 from app.schemas.model_relation_group import ModelRelationGroupIn, ModelRelationGroupUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 

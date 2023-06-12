@@ -6,9 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from app.crud.crud_source_registry import _get_authors_data_by_guids, _set_author_data, update_tags
+from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_tag import update_tags
 from app.models.sources import Field
+from app.schemas.comment import CommentOut
 from app.schemas.objects import FieldOut, FieldUpdateIn
+from app.constants.data_types import ID_TO_SYS_DATA_TYPE
+from app.schemas.tag import TagOut
 
 
 async def select_field(field_guid: str, token: str, session: AsyncSession) -> FieldOut:
@@ -24,11 +28,20 @@ async def select_field(field_guid: str, token: str, session: AsyncSession) -> Fi
     if field.comments:
         author_guids = {comment.author_guid for comment in field.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
-            None, _get_authors_data_by_guids, author_guids, token
+            None, get_authors_data_by_guids, author_guids, token
         )
-        _set_author_data(field.comments, authors_data)
+        set_author_data(field.comments, authors_data)
 
-    return FieldOut.from_orm(field)
+    field = FieldOut(
+        guid=field.guid, is_key=field.is_key, name=field.name,
+        type=ID_TO_SYS_DATA_TYPE.get(field.data_type_id, None), length=len(field.name), owner=field.owner,
+        desc=field.desc, local_updated_at=field.local_updated_at, synchronized_at=field.synchronized_at,
+        source_updated_at=field.source_updated_at, source_created_at=field.source_created_at, db_path=field.db_path,
+        tags=[TagOut.from_orm(tag) for tag in field.tags],
+        comments=[CommentOut.from_orm(comment) for comment in field.comments]
+    )
+
+    return field
 
 
 async def alter_field(field_guid: str, field_update: FieldUpdateIn, session: AsyncSession):

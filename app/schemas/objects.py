@@ -1,25 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 from app.models.sources import Origin, Status
-from app.schemas.source_registry import CommentIn, TagOut
-
-
-class CommentOut(CommentIn):
-    id: int
-    author_guid: str
-
-    author_first_name: Optional[str] = None
-    author_last_name: Optional[str] = None
-    author_middle_name: Optional[str] = None
-    author_email: Optional[str] = None
-
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        orm_mode = True
+from app.schemas.tag import TagOut
+from app.schemas.comment import CommentIn, CommentOut
 
 
 class ObjectCommon(BaseModel):
@@ -50,7 +36,7 @@ class FieldManyOut(BaseModel):
     guid: str
     is_key: bool
     name: str
-    type: str
+    type: str | None
     length: int
     owner: str
     desc: str | None
@@ -68,7 +54,6 @@ class FieldManyOut(BaseModel):
 
 class FieldOut(FieldManyOut):
     source_created_at: datetime | None
-    type: str
     db_path: str
     desc: str | None
 

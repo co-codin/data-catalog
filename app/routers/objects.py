@@ -7,7 +7,7 @@ from app.crud.crud_object import (
     create_object, read_all, read_by_guid, edit_object, edit_is_synchronized, select_object_fields, read_object_by_guid
 )
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
-from app.crud.crud_source_registry import remove_redundant_tags
+from app.crud.crud_tag import remove_redundant_tags
 
 from app.dependencies import db_session, get_user, get_token
 

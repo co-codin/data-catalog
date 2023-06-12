@@ -1,22 +1,23 @@
 import uuid
 import logging
-import requests
 import asyncio
 
-from typing import List, Dict, Iterable, Optional, Set, Union
+from typing import List, Optional, Set
 
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, or_, and_
-from sqlalchemy.orm import selectinload, joinedload, load_only
+from sqlalchemy import select, update, or_
+from sqlalchemy.orm import selectinload, load_only
 
-from app.models.model import Model
+from app.crud.crud_tag import add_tags, update_tags
+from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.models.sources import SourceRegister, Status
 
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentOut, SourceRegistryManyOut, SourceRegistrySynch
+    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, SourceRegistryManyOut, SourceRegistrySynch
 )
-from app.models.sources import SourceRegister, Tag, Status, Object, Field
+
 from app.services.crypto import encrypt, decrypt
 from app.services.metadata_extractor import MetaDataExtractorFactory
 
@@ -42,7 +43,6 @@ async def create_source_registry(source_registry_in: SourceRegistryIn, session: 
 
     session.add(source_registry_model)
     await session.commit()
-
     return source_registry_model
 
 
@@ -65,23 +65,6 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
             decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
             if conn_string == decrypted_conn_string and source_registry.guid != guid:
                 raise ConnStringAlreadyExist(conn_string)
-
-
-async def add_tags(tags_like_model: Union[SourceRegister, Object, Model], tags_in: Iterable[str], session: AsyncSession):
-    if not tags_in:
-        return
-
-    tag_models = await session.execute(
-        select(Tag)
-        .filter(Tag.name.in_(tags_in))
-    )
-    tag_models = tag_models.scalars().all()
-    tag_models_set = {tag.name for tag in tag_models}
-
-    tags_like_model.tags.extend(tag_models)
-    tags_like_model.tags.extend(
-        (Tag(name=tag) for tag in tags_in if tag not in tag_models_set)
-    )
 
 
 async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryUpdateIn, session: AsyncSession):
@@ -112,52 +95,11 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
     await session.commit()
 
 
-async def update_tags(
-        tags_like_model: Union[SourceRegister, Object, Model, Field], session: AsyncSession, tags_update_in: List[str] | None
-):
-    if tags_update_in is not None:
-        tags_update_in_set = {tag for tag in tags_update_in}
-        tags_model_set = {tag.name for tag in tags_like_model.tags}
-        tags_model_dict = {tag.name: tag for tag in tags_like_model.tags}
-
-        tags_to_delete = tags_model_set - tags_update_in_set
-        for tag in tags_to_delete:
-            tags_like_model.tags.remove(tags_model_dict[tag])
-
-        tags_to_create = tags_update_in_set - tags_model_set
-        await add_tags(tags_like_model, tags_to_create, session)
-
-
 async def set_source_registry_status(guid: str, status_in: Status, session: AsyncSession):
     await session.execute(
         update(SourceRegister)
         .where(SourceRegister.guid == guid)
         .values(status=status_in)
-    )
-    await session.commit()
-
-
-async def remove_redundant_tags(session: AsyncSession):
-    tags = await session.execute(
-        select(Tag)
-        .options(load_only(Tag.id), joinedload(Tag.source_registries), joinedload(Tag.objects), joinedload(Tag.models))
-        .where(
-            and_(
-                ~Tag.source_registries.any(),
-                ~Tag.objects.any(),
-                ~Tag.models.any()
-            )
-        )
-    )
-
-    tags = tags.scalars().unique()
-    if not tags:
-        return
-
-    tag_ids = [tag.id for tag in tags]
-    await session.execute(
-        delete(Tag)
-        .where(Tag.id.in_(tag_ids))
     )
     await session.commit()
 
@@ -196,9 +138,9 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
     if source_registry_out.comments:
         author_guids = {comment.author_guid for comment in source_registry.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
-            None, _get_authors_data_by_guids, author_guids, token
+            None, get_authors_data_by_guids, author_guids, token
         )
-        _set_author_data(source_registry_out.comments, authors_data)
+        set_author_data(source_registry_out.comments, authors_data)
 
     return source_registry_out
 
@@ -223,24 +165,6 @@ async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> Sour
         source_registry_guid=source_registry.guid, conn_string=decrypted_conn_string
     )
     return source_registry_synch
-
-
-def _get_authors_data_by_guids(guids: Iterable[str], token: str) -> Dict[str, Dict[str, str]]:
-    response = requests.get(
-        f'{settings.api_iam}/internal/users/',
-        json={'guids': tuple(guids)},
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    authors_data = response.json()
-    return authors_data
-
-
-def _set_author_data(comments: Iterable[CommentOut], authors_data: Dict[str, Dict[str, str]]):
-    for comment in comments:
-        comment.author_first_name = authors_data[comment.author_guid]['first_name']
-        comment.author_last_name = authors_data[comment.author_guid]['last_name']
-        comment.author_middle_name = authors_data[comment.author_guid]['middle_name']
-        comment.author_email = authors_data[comment.author_guid]['email']
 
 
 async def read_names_by_status(status_in: Status, session: AsyncSession):

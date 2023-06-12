@@ -5,7 +5,6 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.models.model import Model, ModelVersion, model_tags, model_version_tags, ModelResource, ModelQuality
 
 from app.database import Base
 
@@ -49,6 +48,13 @@ fields_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_tags = Table(
+    "model_tags",
+    Base.metadata,
+    Column("model_tags", ForeignKey("models.id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 
 class SourceRegister(Base):
     __tablename__ = 'source_registers'
@@ -71,6 +77,7 @@ class SourceRegister(Base):
                         server_onupdate=func.now())
     synchronized_at = Column(DateTime)
 
+    models = relationship('Model')
     tags = relationship('Tag', secondary=source_registry_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
     objects = relationship('Object')
@@ -123,7 +130,8 @@ class Field(Base):
     object_guid = Column(String, ForeignKey(Object.guid))
 
     name = Column(String, nullable=False)
-    type = Column(String, nullable=False)
+    data_type_id = Column(BigInteger, index=True, nullable=True)
+
     length = Column(Integer, nullable=False)
     is_key = Column(Boolean, nullable=False)
     db_path = Column(String, nullable=False)
@@ -141,33 +149,22 @@ class Field(Base):
     comments = relationship('Comment', order_by='Comment.id')
 
 
-class Tag(Base):
-    __tablename__ = 'tags'
+class Model(Base):
+    __tablename__ = 'models'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    name = Column(String(100), unique=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    source_registry_id = Column(BigInteger, ForeignKey(SourceRegister.id, ondelete='CASCADE'))
 
-    source_registries = relationship('SourceRegister', secondary=source_registry_tags)
-    objects = relationship('Object', secondary=objects_tags)
-    models = relationship('Model', secondary=model_tags)
-    model_versions = relationship('ModelVersion', secondary=model_version_tags)
-
-
-class Comment(Base):
-    __tablename__ = 'comments'
-
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    author_guid = Column(String(36), nullable=False)
-    msg = Column(String(10_000), nullable=False)
+    name = Column(String(100), nullable=False)
+    owner = Column(String(36*4), nullable=False)
+    short_desc = Column(Text)
+    business_desc = Column(Text)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
-    source_guid = Column(String(36), ForeignKey(SourceRegister.guid, ondelete='CASCADE'))
-    object_guid = Column(String(36), ForeignKey(Object.guid, ondelete='CASCADE'))
-    model_guid = Column(String(36), ForeignKey(Model.guid, ondelete='CASCADE'))
-    model_version_guid = Column(String(36), ForeignKey(ModelVersion.guid, ondelete='CASCADE'))
-    field_guid = Column(String(36), ForeignKey(Field.guid, ondelete='CASCADE'))
-    resource_guid = Column(String(36), ForeignKey(ModelResource.guid, ondelete='CASCADE'))
-    quality_guid = Column(String(36), ForeignKey(ModelQuality.guid, ondelete='CASCADE'))
+    tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
+    model_versions = relationship('ModelVersion', back_populates='model')
+    comments = relationship('Comment', order_by='Comment.id')
