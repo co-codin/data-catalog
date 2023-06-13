@@ -13,7 +13,6 @@ from app.crud.crud_source_registry import add_tags, update_tags
 
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
-    print(1)
     model_resource = await session.execute(
         select(ModelResource)
         .filter(ModelResource.model_version_id == version_id)
