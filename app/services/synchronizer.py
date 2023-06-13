@@ -2,8 +2,9 @@ import json
 import uuid
 
 from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import select, delete, and_
+from sqlalchemy import select, delete, update, and_
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +19,11 @@ from app.schemas.model import ModelCommon
 from app.database import db_session
 from app.constants.data_types import SYS_DATA_TYPE_TO_ID
 from app.config import settings
+
+
+class MigrationRequestStatus(Enum):
+    SUCCESS = 'success'
+    FAILURE = 'failure'
 
 
 async def send_for_synchronization(
@@ -50,7 +56,14 @@ async def send_for_synchronization(
 
 async def update_data_catalog_data(graph_migration: str):
     graph_migration = json.loads(graph_migration)
+    match graph_migration['status']:
+        case MigrationRequestStatus.SUCCESS.value:
+            await process_graph_migration_success(graph_migration)
+        case MigrationRequestStatus.FAILURE.value:
+            await process_graph_migration_failure(graph_migration)
 
+
+async def process_graph_migration_success(graph_migration: dict):
     if graph_migration:
         applied_migration = MigrationOut(**graph_migration['graph_migration'])
         source_registry_guid = graph_migration['source_registry_guid']
@@ -89,6 +102,17 @@ async def update_data_catalog_data(graph_migration: str):
             await remove_redundant_tags(session)
 
 
+async def process_graph_migration_failure(graph_migration: dict):
+    source_registry_guid = graph_migration['source_registry_guid']
+
+    async with db_session() as session:
+        await session.execute(
+            update(SourceRegister)
+            .where(SourceRegister.guid == source_registry_guid)
+            .values(status=Status.ON)
+        )
+
+
 async def add_model_version_resources(
         migration: MigrationOut, db_source: str, model_version: ModelVersion, model_name: str
 ):
@@ -118,7 +142,7 @@ async def add_model_version_resources(
 async def get_source_registry(source_registry_guid: str, session: AsyncSession) -> SourceRegister:
     registry = await session.execute(
         select(SourceRegister)
-        .options(selectinload(SourceRegister.objects))
+        .options(selectinload(SourceRegister.objects).selectinload(Object.fields))
         .options(selectinload(SourceRegister.models))
         .where(SourceRegister.guid == source_registry_guid)
     )
@@ -257,6 +281,9 @@ async def set_synchronized_at(source_registry: SourceRegister):
 
 async def set_object_synchronized_at(object_: Object):
     now = datetime.now()
+
     object_.synchronized_at = now
+    object_.is_synchronized = True
+
     for field in object_.fields:
         field.synchronized_at = now
