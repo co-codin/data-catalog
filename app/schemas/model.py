@@ -50,7 +50,7 @@ class ModelManyOut(BaseModel):
 class ModelOut(BaseModel):
     id: int
     guid: str
-    source_registry_id: int
+    source_registry_id: int | None
 
     name: str
     owner: str
