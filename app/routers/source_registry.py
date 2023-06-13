@@ -29,12 +29,12 @@ router = APIRouter(
 @router.post('/', response_model=Dict[str, str])
 async def add_source_registry(
         source_registry: SourceRegistryIn, migration_pattern: MigrationPattern,
-        model_common_in: ModelCommon = Body(None), session=Depends(db_session), _=Depends(get_user)
+        model_in: ModelCommon = Body(None), session=Depends(db_session), _=Depends(get_user)
 ):
     await check_on_uniqueness(name=source_registry.name, conn_string=source_registry.conn_string, session=session)
     source_registry_model = await create_source_registry(source_registry, session)
     await send_for_synchronization(
-        source_registry_model.guid, source_registry.conn_string, migration_pattern, model_common_in
+        source_registry_model.guid, source_registry.conn_string, migration_pattern, model_in
     )
     return {'guid': source_registry_model.guid}
 
