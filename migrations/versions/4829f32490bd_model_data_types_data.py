@@ -6,12 +6,13 @@ Create Date: 2023-06-13 13:39:44.114420
 
 """
 
-import os, json
-from alembic import op
+import json
+import os
+
 import sqlalchemy as sa
+from alembic import op
 
 from app.models.models import ModelDataType
-
 
 revision = '4829f32490bd'
 down_revision = '4829f32490bc'
@@ -33,19 +34,10 @@ def read_xml(file_name: str):
 
 
 def upgrade() -> None:
-    model_data_type = op.execute(
-        sa.select(sa.func.count())
-        .select_from(ModelDataType)
+    op.execute(
+        sa.delete(ModelDataType)
+        .where(ModelDataType.id <= 10)
     )
-    
-    if not model_data_type is None:
-        model_data_type_count: int = model_data_type.scalar()
-        if model_data_type_count != 0:
-            op.execute(
-                sa.delete(ModelDataType)
-                .where(ModelDataType.id <= 10)
-            )
-        
         
     dataset = [
         dict(
