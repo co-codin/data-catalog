@@ -18,6 +18,9 @@ metadata:
   name: {{ $fullName }}
   labels:
     {{- include "data-catalog.labels" . | nindent 4 }}
+    {{- if .Values.ingress.labels }}
+    {{- toYaml .Values.ingress.labels | nindent 4 }}
+    {{- end }}
     {{- if ne .Values.ciEnv "" }}
     environment: {{ .Values.ciEnv }}
     {{- end }}

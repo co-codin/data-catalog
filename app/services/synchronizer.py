@@ -37,7 +37,7 @@ async def send_for_synchronization(
         'migration_pattern': migration_pattern.dict(),
         'source_registry_guid': source_registry_guid,
         'object_name': object_name,
-        'model': model_in.dict()
+        'model': model_in.dict() if model_in else None
     }
 
     async with create_channel() as channel:
