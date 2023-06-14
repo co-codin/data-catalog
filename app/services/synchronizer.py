@@ -241,9 +241,10 @@ async def alter_objects(
             fields_to_alter = curr_object.field_db_path_to_field
             for field in table.fields_to_alter:
                 field_db_path = f'{table_db_path}.{field.name}'
+
                 field_to_alter_model = fields_to_alter[field_db_path]
                 field_to_alter_model.data_type_id = SYS_DATA_TYPE_TO_ID.get(field.new_type, None)
-                field.source_updated_at = now
+                field_to_alter_model.source_updated_at = now
 
             for field in table.fields_to_delete:
                 field_db_path = f'{table_db_path}.{field}'
