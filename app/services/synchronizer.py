@@ -235,7 +235,7 @@ async def alter_objects(
             curr_object = object_db_path_to_object[table_db_path]
             curr_object.fields.extend(fields_to_create)
 
-            now = datetime.now()
+            now = datetime.utcnow()
             curr_object.source_updated_at = now
 
             fields_to_alter = curr_object.field_db_path_to_field
@@ -261,7 +261,7 @@ async def create_fields(
         fields_to_create: list[FieldToCreate], table_db_path: str, owner: str, session: AsyncSession
 ) -> list[Field]:
     fields = []
-    now = datetime.now()
+    now = datetime.utcnow()
     for field in fields_to_create:
         guid = str(uuid.uuid4())
         field_model = Field(
@@ -277,11 +277,11 @@ async def create_fields(
 async def set_synchronized_at(source_registry: SourceRegister):
     for object_ in source_registry.objects:
         await set_object_synchronized_at(object_)
-    source_registry.synchronized_at = datetime.now()
+    source_registry.synchronized_at = datetime.utcnow()
 
 
 async def set_object_synchronized_at(object_: Object):
-    now = datetime.now()
+    now = datetime.utcnow()
 
     object_.synchronized_at = now
     object_.is_synchronized = True

@@ -73,8 +73,7 @@ class SourceRegister(Base):
     desc = Column(String(500))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                        server_onupdate=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     synchronized_at = Column(DateTime)
 
     models = relationship('Model')
@@ -101,8 +100,7 @@ class Object(Base):
 
     source_created_at = Column(DateTime)
     source_updated_at = Column(DateTime)
-    local_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                              server_onupdate=func.now())
+    local_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     synchronized_at = Column(DateTime)
 
     short_desc = Column(Text)
@@ -140,8 +138,7 @@ class Field(Base):
 
     source_created_at = Column(DateTime)
     source_updated_at = Column(DateTime)
-    local_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                              server_onupdate=func.now())
+    local_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     synchronized_at = Column(DateTime)
 
     object = relationship('Object')
