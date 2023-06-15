@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.comment import CommentOut, CommentIn
+from app.schemas.comment import CommentOut
 from app.schemas.model_quality import ModelQualityManyOut
 from app.schemas.tag import TagOut
 
