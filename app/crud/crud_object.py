@@ -2,18 +2,19 @@ import asyncio
 import uuid
 from typing import List
 
+from datetime import datetime
+
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, and_
+from sqlalchemy import select, update
 from sqlalchemy.orm import load_only, selectinload, joinedload
 
 from app.config import settings
-from app.constants.data_types import SYS_DATA_TYPE_TO_ID, ID_TO_SYS_DATA_TYPE
+from app.constants.data_types import ID_TO_SYS_DATA_TYPE
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 from app.models.sources import Object, SourceRegister, Field, Status
-from app.models.models import ModelDataType
 from app.schemas.comment import CommentIn
 from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut, ObjectSynch
 from app.schemas.tag import TagOut
@@ -24,17 +25,11 @@ from app.errors.source_registry_errors import SourceRegistryIsNotOnError
 
 async def create_object(object_in: ObjectIn, session: AsyncSession):
     guid = str(uuid.uuid4())
-    created_at, updated_at = await select_created_at_updated_at_from_source(
-        object_in.source_registry_guid, object_in.name, session
-    )
-    object_model = Object(
-        **object_in.dict(exclude={'tags'}),
-        guid=guid,
-        source_created_at=created_at,
-        source_updated_at=updated_at
-    )
+    object_model = Object(**object_in.dict(exclude={'tags'}), guid=guid)
+
     await add_tags(object_model, object_in.tags, session)
     session.add(object_model)
+
     await session.commit()
     return guid
 
@@ -94,6 +89,7 @@ async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: Asyn
         .where(Object.guid == guid)
         .values(
             **object_update_in.dict(exclude={'tags'}),
+            local_updated_at=datetime.utcnow()
         )
     )
 
@@ -158,6 +154,7 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
 
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(
-        object_name=object_.name, conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid
+        object_name=object_.name, conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid,
+        object_guid=object_.guid
     )
     return object_sync

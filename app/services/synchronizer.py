@@ -2,8 +2,9 @@ import json
 import uuid
 
 from datetime import datetime
+from enum import Enum
 
-from sqlalchemy import select, delete, and_
+from sqlalchemy import select, delete, update, and_
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,9 +21,14 @@ from app.constants.data_types import SYS_DATA_TYPE_TO_ID
 from app.config import settings
 
 
+class MigrationRequestStatus(Enum):
+    SUCCESS = 'success'
+    FAILURE = 'failure'
+
+
 async def send_for_synchronization(
         source_registry_guid: str, conn_string: str, migration_pattern: MigrationPattern,
-        model_in: ModelCommon = None, object_name: str = None
+        model_in: ModelCommon | None = None, object_name: str | None = None, object_guid: str | None = None
 ):
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
@@ -37,7 +43,8 @@ async def send_for_synchronization(
         'migration_pattern': migration_pattern.dict(),
         'source_registry_guid': source_registry_guid,
         'object_name': object_name,
-        'model': model_in.dict() if model_in else None
+        'model': model_in.dict() if model_in else None,
+        'object_guid': object_guid
     }
 
     async with create_channel() as channel:
@@ -50,7 +57,14 @@ async def send_for_synchronization(
 
 async def update_data_catalog_data(graph_migration: str):
     graph_migration = json.loads(graph_migration)
+    match graph_migration['status']:
+        case MigrationRequestStatus.SUCCESS.value:
+            await process_graph_migration_success(graph_migration)
+        case MigrationRequestStatus.FAILURE.value:
+            await process_graph_migration_failure(graph_migration)
 
+
+async def process_graph_migration_success(graph_migration: dict):
     if graph_migration:
         applied_migration = MigrationOut(**graph_migration['graph_migration'])
         source_registry_guid = graph_migration['source_registry_guid']
@@ -89,6 +103,24 @@ async def update_data_catalog_data(graph_migration: str):
             await remove_redundant_tags(session)
 
 
+async def process_graph_migration_failure(graph_migration: dict):
+    source_registry_guid = graph_migration['source_registry_guid']
+    object_guid = graph_migration['object_guid']
+
+    async with db_session() as session:
+        await session.execute(
+            update(SourceRegister)
+            .where(SourceRegister.guid == source_registry_guid)
+            .values(status=Status.ON)
+        )
+        if object_guid:
+            await session.execute(
+                update(Object)
+                .where(Object.guid == object_guid)
+                .values(is_synchronized=True)
+            )
+
+
 async def add_model_version_resources(
         migration: MigrationOut, db_source: str, model_version: ModelVersion, model_name: str
 ):
@@ -118,7 +150,7 @@ async def add_model_version_resources(
 async def get_source_registry(source_registry_guid: str, session: AsyncSession) -> SourceRegister:
     registry = await session.execute(
         select(SourceRegister)
-        .options(selectinload(SourceRegister.objects))
+        .options(selectinload(SourceRegister.objects).selectinload(Object.fields))
         .options(selectinload(SourceRegister.models))
         .where(SourceRegister.guid == source_registry_guid)
     )
@@ -211,15 +243,16 @@ async def alter_objects(
             curr_object = object_db_path_to_object[table_db_path]
             curr_object.fields.extend(fields_to_create)
 
-            now = datetime.now()
+            now = datetime.utcnow()
             curr_object.source_updated_at = now
 
             fields_to_alter = curr_object.field_db_path_to_field
             for field in table.fields_to_alter:
                 field_db_path = f'{table_db_path}.{field.name}'
+
                 field_to_alter_model = fields_to_alter[field_db_path]
                 field_to_alter_model.data_type_id = SYS_DATA_TYPE_TO_ID.get(field.new_type, None)
-                field.source_updated_at = now
+                field_to_alter_model.source_updated_at = now
 
             for field in table.fields_to_delete:
                 field_db_path = f'{table_db_path}.{field}'
@@ -236,7 +269,7 @@ async def create_fields(
         fields_to_create: list[FieldToCreate], table_db_path: str, owner: str, session: AsyncSession
 ) -> list[Field]:
     fields = []
-    now = datetime.now()
+    now = datetime.utcnow()
     for field in fields_to_create:
         guid = str(uuid.uuid4())
         field_model = Field(
@@ -252,11 +285,14 @@ async def create_fields(
 async def set_synchronized_at(source_registry: SourceRegister):
     for object_ in source_registry.objects:
         await set_object_synchronized_at(object_)
-    source_registry.synchronized_at = datetime.now()
+    source_registry.synchronized_at = datetime.utcnow()
 
 
 async def set_object_synchronized_at(object_: Object):
-    now = datetime.now()
+    now = datetime.utcnow()
+
     object_.synchronized_at = now
+    object_.is_synchronized = True
+
     for field in object_.fields:
         field.synchronized_at = now

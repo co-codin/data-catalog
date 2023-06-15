@@ -1,5 +1,7 @@
 import asyncio
 
+from datetime import datetime
+
 from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +57,9 @@ async def alter_field(field_guid: str, field_update: FieldUpdateIn, session: Asy
     await session.execute(
         update(Field)
         .where(Field.guid == field_guid)
-        .values(**field_update.dict(exclude={'tags'}))
+        .values(
+            **field_update.dict(exclude={'tags'}), local_updated_at=datetime.utcnow()
+        )
     )
 
     await update_tags(field_model, session, field_update.tags)

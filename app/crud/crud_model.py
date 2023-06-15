@@ -12,7 +12,7 @@ from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 
 from app.errors.errors import ModelNameAlreadyExist
-from app.models.models import Model
+from app.models.models import Model, ModelVersion
 from app.schemas.model import ModelIn, ModelUpdateIn, ModelManyOut, ModelOut
 
 
@@ -56,7 +56,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut
         select(Model)
         .options(selectinload(Model.tags))
         .options(selectinload(Model.comments))
-        .options(joinedload(Model.model_versions))
+        .options(joinedload(Model.model_versions).selectinload(ModelVersion.comments))
         .filter(Model.guid == guid)
     )
 
@@ -73,6 +73,15 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut
             None, get_authors_data_by_guids, author_guids, token
         )
         set_author_data(model_out.comments, authors_data)
+
+    if model.model_versions:
+        for idx, model_version in enumerate(model.model_versions):
+            if model_version.comments:
+                author_guids = {comment.author_guid for comment in model_version.comments}
+                authors_data = await asyncio.get_running_loop().run_in_executor(
+                    None, get_authors_data_by_guids, author_guids, token
+                )
+                set_author_data(model_out.model_versions[idx].comments, authors_data)
 
     return model_out
 

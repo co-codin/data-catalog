@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.schemas.comment import CommentIn, CommentOut
-from app.schemas.model_version import ModelVersionOut, ModelVersionManyOut
+from app.schemas.model_version import ModelVersionManyOut
 from app.schemas.tag import TagOut
 
 

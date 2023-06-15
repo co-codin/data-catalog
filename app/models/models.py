@@ -12,7 +12,9 @@ from app.models.sources import Model
 
 class Cardinality(Enum):
     ZERO_TO_ONE = '0..1'
+    ZERO_TO_MANY = '0..*'
     ONE_TO_ONE = '1..1'
+    ONE_TO_MANY = '1..*'
 
 
 model_version_tags = Table(

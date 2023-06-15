@@ -3,6 +3,7 @@ import logging
 import asyncio
 
 from typing import List, Optional, Set
+from datetime import datetime
 
 from fastapi import HTTPException, status
 
@@ -76,7 +77,8 @@ async def edit_source_registry(guid: str, source_registry_update_in: SourceRegis
         .values(
             **source_registry_update_in.dict(exclude={'tags', 'conn_string'}),
             type=driver,
-            conn_string=encrypted_conn_string
+            conn_string=encrypted_conn_string,
+            updated_at=datetime.utcnow()
         )
     )
 
