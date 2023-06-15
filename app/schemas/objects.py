@@ -120,3 +120,4 @@ class ObjectSynch(BaseModel):
     object_name: str
     conn_string: str
     source_registry_guid: str
+    object_guid: str
