@@ -50,6 +50,7 @@ class ModelVersionManyOut(BaseModel):
     desc: str | None
     status: str
     version: str | None
+    comments: list[CommentOut] = []
 
     created_at: datetime
     updated_at: datetime
