@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 
+from app.models.models import Cardinality
+
 
 class ModelResourceIn(BaseModel):
     model_version_id: int = Field()
@@ -20,6 +22,7 @@ class ModelResourceUpdateIn(BaseModel):
     desc: Optional[str] = Field(None, max_length=500)
     tags: Optional[List[str]] = None
 
+
 class ResourceAttributeIn(BaseModel):
     resource_id: int
     name: str = Field(None, max_length=100)
@@ -28,7 +31,7 @@ class ResourceAttributeIn(BaseModel):
     desc: Optional[str] = Field(None, max_length=1000)
     data_type_id: int = Field()
     data_type_flag: int
-    cardinality: str
+    cardinality: Cardinality
     parent_id: Optional[int] = Field(None)
     tags: Optional[List[str]] = []
 
@@ -37,14 +40,6 @@ class ResourceAttributeIn(BaseModel):
         accepted = [0, 1]
         if v not in accepted:
             raise ValueError('Invalid data_type_flag')
-
-        return v
-
-    @validator('cardinality')
-    def cardinality_validator(cls, v):
-        accepted = ["0..1", "1..1", "1..*", "0..*"]
-        if v not in accepted:
-            raise ValueError('Invalid cardinality')
 
         return v
 
