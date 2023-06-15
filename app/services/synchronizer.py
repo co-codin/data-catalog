@@ -28,7 +28,7 @@ class MigrationRequestStatus(Enum):
 
 async def send_for_synchronization(
         source_registry_guid: str, conn_string: str, migration_pattern: MigrationPattern,
-        model_in: ModelCommon = None, object_name: str = None
+        model_in: ModelCommon | None = None, object_name: str | None = None, object_guid: str | None = None
 ):
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
@@ -43,7 +43,8 @@ async def send_for_synchronization(
         'migration_pattern': migration_pattern.dict(),
         'source_registry_guid': source_registry_guid,
         'object_name': object_name,
-        'model': model_in.dict() if model_in else None
+        'model': model_in.dict() if model_in else None,
+        'object_guid': object_guid
     }
 
     async with create_channel() as channel:
@@ -104,6 +105,7 @@ async def process_graph_migration_success(graph_migration: dict):
 
 async def process_graph_migration_failure(graph_migration: dict):
     source_registry_guid = graph_migration['source_registry_guid']
+    object_guid = graph_migration['object_guid']
 
     async with db_session() as session:
         await session.execute(
@@ -111,6 +113,12 @@ async def process_graph_migration_failure(graph_migration: dict):
             .where(SourceRegister.guid == source_registry_guid)
             .values(status=Status.ON)
         )
+        if object_guid:
+            await session.execute(
+                update(Object)
+                .where(Object.guid == object_guid)
+                .values(is_synchronized=True)
+            )
 
 
 async def add_model_version_resources(
