@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 
 from app.crud.crud_object import (
-    create_object, read_all, read_by_guid, edit_object, edit_is_synchronized, select_object_fields, read_object_by_guid
+    create_object, read_all, read_by_guid, edit_object, edit_is_synchronizing, select_object_fields, read_object_by_guid
 )
 from app.crud.crud_comment import create_comment, verify_comment_owner, edit_comment, remove_comment, CommentOwnerTypes
 from app.crud.crud_tag import remove_redundant_tags
@@ -57,8 +57,8 @@ async def update_object(
 
 
 @router.put('/{guid}/')
-async def set_is_synchronized(guid: str, is_synchronized: bool, session=Depends(db_session), _=Depends(get_user)):
-    await edit_is_synchronized(guid, is_synchronized, session)
+async def set_is_synchronizing(guid: str, is_synchronizing: bool, session=Depends(db_session), _=Depends(get_user)):
+    await edit_is_synchronizing(guid, is_synchronizing, session)
     return {'msg': 'is_synchronized field has been set'}
 
 

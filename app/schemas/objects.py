@@ -72,7 +72,7 @@ class FieldUpdateIn(BaseModel):
 class ObjectManyOut(ObjectCommon):
     guid: str
     name: str
-    is_synchronized: bool
+    is_synchronizing: bool
     synchronized_at: datetime | None
     source: SourceManyOut
 
@@ -96,7 +96,7 @@ class ObjectOut(ObjectCommon):
     guid: str
     name: str
     db_path: str | None
-    is_synchronized: bool
+    is_synchronizing: bool
 
     synchronized_at: datetime | None
     local_updated_at: datetime

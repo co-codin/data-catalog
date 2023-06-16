@@ -108,11 +108,11 @@ async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: Asyn
     await session.commit()
 
 
-async def edit_is_synchronized(guid: str, is_synchronized: bool, session: AsyncSession):
+async def edit_is_synchronizing(guid: str, is_synchronizing: bool, session: AsyncSession):
     await session.execute(
         update(Object)
         .where(Object.guid == guid)
-        .values(is_synchronized=is_synchronized)
+        .values(is_synchronizing=is_synchronizing)
     )
     await session.commit()
 
@@ -150,7 +150,7 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
     elif object_.source.status != Status.ON:
         raise SourceRegistryIsNotOnError(object_.source.status)
 
-    object_.is_synchronized = False
+    object_.is_synchronizing = True
 
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(

@@ -33,9 +33,9 @@ async def send_for_synchronization(
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
     if object_name:
-        migration_name = f'{datetime.now().strftime("%Y-%m-%d")}.{db_source}.{object_name}'
+        migration_name = f'{datetime.utcnow().strftime("%Y-%m-%d")}.{db_source}.{object_name}'
     else:
-        migration_name = f'{datetime.now().strftime("%Y-%m-%d")}.{db_source}'
+        migration_name = f'{datetime.utcnow().strftime("%Y-%m-%d")}.{db_source}'
 
     params = {
         'name': migration_name,
@@ -117,7 +117,7 @@ async def process_graph_migration_failure(graph_migration: dict):
             await session.execute(
                 update(Object)
                 .where(Object.guid == object_guid)
-                .values(is_synchronized=True)
+                .values(is_synchronizing=False)
             )
 
 
@@ -188,11 +188,11 @@ async def create_objects_from_migration_out(
     for schema in migration.schemas:
         for table in schema.tables_to_create:
             object_db_path = f'{db_source}.{schema.name}.{table.name}'
-            now = datetime.now()
+            now = datetime.utcnow()
             guid = str(uuid.uuid4())
             object_ = Object(
                 name=table.name, owner=owner, db_path=object_db_path, source_created_at=now, guid=guid,
-                source_updated_at=now, local_updated_at=now, synchronized_at=now, is_synchronized=True
+                source_updated_at=now, local_updated_at=now, synchronized_at=now, is_synchronizing=False
             )
             session.add(object_)
             for field in table.fields:
@@ -292,7 +292,7 @@ async def set_object_synchronized_at(object_: Object):
     now = datetime.utcnow()
 
     object_.synchronized_at = now
-    object_.is_synchronized = True
+    object_.is_synchronizing = False
 
     for field in object_.fields:
         field.synchronized_at = now
