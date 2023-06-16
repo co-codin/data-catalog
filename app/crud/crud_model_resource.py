@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from sqlalchemy import select, update, delete
@@ -5,19 +6,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
+from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.models.models import ModelResource, ModelResourceAttribute
-from app.schemas.model_resource import (
-    ModelResourceIn, ModelResourceUpdateIn, ResourceAttributeIn, ResourceAttributeUpdateIn
-)
+from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn
+from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
     model_resource = await session.execute(
         select(ModelResource)
+        .options(selectinload(ModelResource.tags))
+        .options(selectinload(ModelResource.comments))
         .filter(ModelResource.model_version_id == version_id)
     )
     model_resource = model_resource.scalars().all()
+
     return model_resource
 
 
@@ -34,8 +38,14 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
     if not model_resource:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    return model_resource
+    if model_resource.comments:
+        author_guids = {comment.author_guid for comment in model_resource.comments}
+        authors_data = await asyncio.get_running_loop().run_in_executor(
+            None, get_authors_data_by_guids, author_guids, token
+        )
+        set_author_data(model_resource.comments, authors_data)
 
+    return model_resource
 
 async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
