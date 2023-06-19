@@ -33,7 +33,6 @@ class Operation(Base):
     operation_body = relationship('OperationBody', back_populates='operation')
 
 
-
 class OperationBody(Base):
     __tablename__ = 'operation_bodies'
 
@@ -51,7 +50,7 @@ class OperationBodyParameter(Base):
 
     operation_body_parameter_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id))
+    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id, ondelete='CASCADE'))
 
     flag = Column(Boolean, unique=False, default=True)
     name = Column(String(200), nullable=False)

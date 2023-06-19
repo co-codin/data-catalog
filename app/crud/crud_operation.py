@@ -127,9 +127,13 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
         .options(selectinload(OperationBody.operation_body_parameters))
         .filter(OperationBody.guid == guid)
     )
+    operation_body = operation_body.scalars().first()
 
     if operation_update_in.parameters is not None:
-        parameters_update_in_set = {parameter for parameter in operation_update_in.parameters}
+        parameters_update_in_set = set()
+        for parameter in operation_update_in.parameters:
+            parameters_update_in_set.add(parameter.name)
+
         body_parameters_set = {parameter.name for parameter in operation_body.operation_body_parameters}
         body_parameters_dict = {parameter.name: parameter for parameter in operation_body.operation_body_parameters}
 
@@ -138,14 +142,17 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
             operation_body.operation_body_parameters.remove(body_parameters_dict[parameter])
 
         parameters__to_create = parameters_update_in_set - body_parameters_set
-        for parameter_in in parameters__to_create:
-            guid = str(uuid.uuid4())
-            parameter = OperationBodyParameter(
-                **parameter_in.dict(),
-                guid=guid,
-                operation_body_id=operation_body.operation_body_id
-            )
-            session.add(parameter)
+        for parameter_in in operation_update_in.parameters:
+            if parameter_in.name in parameters__to_create:
+                guid = str(uuid.uuid4())
+                parameter = OperationBodyParameter(
+                    **parameter_in.dict(),
+                    guid=guid,
+                    operation_body_id=operation_body.operation_body_id
+                )
+                session.add(parameter)
+
+        await session.commit()
 
 
 async def delete_by_guid(guid: str, session: AsyncSession):
