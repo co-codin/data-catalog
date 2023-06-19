@@ -10,19 +10,17 @@ from app.crud.crud_tag import add_tags, update_tags
 from app.errors.errors import OperationNameAlreadyExist, OperationInputParametersNotExists, \
     OperationOutputParameterNotExists, OperationParametersNameAlreadyExist
 from app.models.operations import Operation, OperationBody, OperationBodyParameter
-from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationUpdateIn
+from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationUpdateIn, OperationManyOut
 
 
-async def read_all(session: AsyncSession) -> list[OperationOut]:
+async def read_all(session: AsyncSession) -> list[OperationManyOut]:
     operations = await session.execute(
         select(Operation)
         .options(selectinload(Operation.tags))
-        .options(selectinload(Operation.operation_body))
-        .options(joinedload(Operation.operation_body).selectinload(OperationBody.operation_body_parameters))
         .order_by(Operation.created_at)
     )
     operations = operations.scalars().all()
-    return [OperationOut.from_orm(operation) for operation in operations]
+    return [OperationManyOut.from_orm(operation) for operation in operations]
 
 
 async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:

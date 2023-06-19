@@ -46,6 +46,24 @@ class OperationBodyOut(BaseModel):
         orm_mode = True
 
 
+class OperationManyOut(BaseModel):
+    operation_id: int
+    guid: str
+
+    name: str
+    owner: str
+    status: str
+    desc: str | None
+
+    created_at: datetime
+    updated_at: datetime
+
+    tags: list[TagOut] = []
+
+    class Config:
+        orm_mode = True
+
+
 class OperationOut(BaseModel):
     operation_id: int
     guid: str
