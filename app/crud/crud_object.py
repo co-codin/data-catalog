@@ -23,15 +23,29 @@ from app.services.metadata_extractor import MetaDataExtractorFactory
 from app.errors.source_registry_errors import SourceRegistryIsNotOnError
 
 
-async def create_object(object_in: ObjectIn, session: AsyncSession):
+async def create_object(object_in: ObjectIn, session: AsyncSession) -> ObjectSynch:
     guid = str(uuid.uuid4())
-    object_model = Object(**object_in.dict(exclude={'tags'}), guid=guid)
+    source = await session.execute(
+        select(SourceRegister)
+        .options(load_only(SourceRegister.conn_string))
+        .where(SourceRegister.guid == object_in.source_registry_guid)
+    )
+    source = source.scalars().first()
+    if not source:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"source with guid = {object_in.source_registry_guid} doesn't exist"
+        )
+
+    object_model = Object(**object_in.dict(exclude={'tags'}), guid=guid, is_synchronizing=True)
 
     await add_tags(object_model, object_in.tags, session)
     session.add(object_model)
-
-    await session.commit()
-    return guid
+    conn_string_decrypted = decrypt(settings.encryption_key, source.conn_string)
+    return ObjectSynch(
+        object_name=object_model.name, conn_string=conn_string_decrypted,
+        source_registry_guid=object_in.source_registry_guid, object_guid=guid
+    )
 
 
 async def select_created_at_updated_at_from_source(source_registry_guid: str, table_name: str, session: AsyncSession):
@@ -108,11 +122,11 @@ async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: Asyn
     await session.commit()
 
 
-async def edit_is_synchronized(guid: str, is_synchronized: bool, session: AsyncSession):
+async def edit_is_synchronizing(guid: str, is_synchronizing: bool, session: AsyncSession):
     await session.execute(
         update(Object)
         .where(Object.guid == guid)
-        .values(is_synchronized=is_synchronized)
+        .values(is_synchronizing=is_synchronizing)
     )
     await session.commit()
 
@@ -150,7 +164,7 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
     elif object_.source.status != Status.ON:
         raise SourceRegistryIsNotOnError(object_.source.status)
 
-    object_.is_synchronized = False
+    object_.is_synchronizing = True
 
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(

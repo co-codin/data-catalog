@@ -106,7 +106,7 @@ class Object(Base):
     short_desc = Column(Text)
     business_desc = Column(Text)
 
-    is_synchronized = Column(Boolean, nullable=False, default=False)
+    is_synchronizing = Column(Boolean, nullable=False, default=False)
 
     source_registry_guid = Column(String(36), ForeignKey(SourceRegister.guid))
 

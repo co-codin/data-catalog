@@ -3,8 +3,8 @@ from app.dependencies import db_session, get_user, get_token
 from app.crud.crud_model_resource import read_resources_by_version_id, read_resources_by_guid, create_model_resource, \
     update_model_resource, delete_model_resource, create_attribute, edit_attribute, remove_attribute
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn, ResourceAttributeIn, \
-    ResourceAttributeUpdateIn
+from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn
+from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.schemas.source_registry import CommentIn
 
 router = APIRouter(
