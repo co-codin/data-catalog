@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean, Integer
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -32,8 +32,7 @@ class Operation(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
     name = Column(String(200), nullable=False)
-    owner = Column(String(36 * 4),
-                   nullable=False)  # проставляется автоматически именем пользователя, который создал операцию
+    owner = Column(String(36 * 4), nullable=False)
     status = Column(String(50), nullable=False)
     desc = Column(String(1000), nullable=True)
 

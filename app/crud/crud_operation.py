@@ -43,7 +43,7 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
     return operation_out
 
 
-async def create_operation(operation_in: OperationIn, session: AsyncSession, token: str) -> Operation:
+async def create_operation(operation_in: OperationIn, session: AsyncSession) -> Operation:
     guid = str(uuid.uuid4())
 
     operation_body = OperationBody(
@@ -53,7 +53,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession, tok
     )
     session.add(operation_body)
 
-    if not OperationIn.owner:
+    if not operation_in.owner:
         pass
 
     operation = Operation(
@@ -166,15 +166,16 @@ async def check_on_operation_parameters_uniqueness(parameters: list[OperationPar
 
     operation_body = await session.execute(
         select(OperationBody)
-        .selectinload(OperationBody.operation_body_parameters)
+        .options(selectinload(OperationBody.operation_body_parameters))
         .filter(OperationBody.guid == guid)
     )
     operation_body = operation_body.scalars().first()
-    for parameter in operation_body.operation_body_parameters:
-        if parameter.flag:
-            list_parameters_in.append(parameter.name)
-        else:
-            list_parameters_out.append(parameter.name)
+    if operation_body:
+        for parameter in operation_body.operation_body_parameters:
+            if parameter.flag:
+                list_parameters_in.append(parameter.name)
+            else:
+                list_parameters_out.append(parameter.name)
 
     if not len(list_parameters_in):
         raise OperationInputParametersNotExists()

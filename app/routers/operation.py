@@ -14,7 +14,7 @@ router = APIRouter(
 @router.post('/')
 async def add_model(operation_in: OperationIn, session=Depends(db_session), _=Depends(get_user)):
     await check_on_operation_name_uniqueness(name=operation_in.name, session=session)
-    await check_on_operation_parameters_uniqueness(parameters=operation_in.parameters)
+    await check_on_operation_parameters_uniqueness(parameters=operation_in.parameters, session=session)
     operation = await create_operation(operation_in, session)
     return {'guid': operation.guid}
 
