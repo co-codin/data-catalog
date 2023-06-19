@@ -14,17 +14,6 @@ operation_tags = Table(
 )
 
 
-class OperationBody(Base):
-    __tablename__ = 'operation_bodies'
-
-    operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
-
-    code = Column(Text, nullable=False)
-    operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
-    operation = relationship('Operation', back_populates='operation_body')
-
-
 class Operation(Base):
     __tablename__ = 'operations'
 
@@ -41,9 +30,20 @@ class Operation(Base):
                         server_onupdate=func.now())
 
     tags = relationship('Tag', secondary=operation_tags, order_by='Tag.id')
-
-    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id, ondelete='CASCADE'))
     operation_body = relationship('OperationBody', back_populates='operation')
+
+
+
+class OperationBody(Base):
+    __tablename__ = 'operation_bodies'
+
+    operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+
+    code = Column(Text, nullable=False)
+    operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
+    operation = relationship('Operation', back_populates='operation_body')
+    operation_id = Column(BigInteger, ForeignKey(Operation.operation_id, ondelete='CASCADE'))
 
 
 class OperationBodyParameter(Base):

@@ -11,6 +11,9 @@ from app.errors.errors import OperationNameAlreadyExist, OperationInputParameter
     OperationOutputParameterNotExists, OperationParametersNameAlreadyExist
 from app.models.operations import Operation, OperationBody, OperationBodyParameter
 from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationUpdateIn, OperationManyOut
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def read_all(session: AsyncSession) -> list[OperationManyOut]:
@@ -27,12 +30,14 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
     operation = await session.execute(
         select(Operation)
         .options(selectinload(Operation.tags))
-        .options(selectinload(Operation.operation_body))
-        .options(joinedload(Operation.operation_body).selectinload(OperationBody.operation_body_parameters))
+        .options(joinedload(Operation.operation_body))
         .filter(Operation.guid == guid)
     )
 
     operation = operation.scalars().first()
+    d = {c.name: getattr(operation, c.name) for c in operation.__table__.columns}
+    logger.info(f'11111111111111111 {operation.operation_body}')
+    logger.info(f'11111111111111111 {d}')
 
     if not operation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -45,20 +50,19 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
 async def create_operation(operation_in: OperationIn, session: AsyncSession) -> Operation:
     guid = str(uuid.uuid4())
 
-    operation_body = OperationBody(
-        code=operation_in.code,
-        guid=guid,
-
-    )
-    session.add(operation_body)
-
     # if not operation_in.owner:
 
     operation = Operation(
         **operation_in.dict(exclude={'tags', 'code', 'parameters'}),
-        guid=guid,
-        operation_body_id=operation_body.operation_body_id
+        guid=guid
     )
+
+    operation_body = OperationBody(
+        code=operation_in.code,
+        guid=guid,
+        operation_id=operation.operation_id
+    )
+    session.add(operation_body)
 
     await add_tags(operation, operation_in.tags, session)
     session.add(operation)
