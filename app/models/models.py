@@ -98,8 +98,6 @@ class ModelDataType(Base):
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
 
-    additional = Column(JSONB, nullable=True)
-
 
 class ModelQuality(Base):
     __tablename__ = 'model_qualities'
@@ -175,8 +173,6 @@ class ModelResource(Base):
     desc = Column(String(500))
     type = Column(String(500))
     db_link = Column(String(500))
-    json = Column(JSONB, nullable=True)
-    xml = Column(Text, nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -228,3 +224,4 @@ class ModelResourceAttribute(Base):
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
 
     parent_id = Column(BigInteger, nullable=True)
+    additional = Column(JSONB, nullable=True)
