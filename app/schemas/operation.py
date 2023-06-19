@@ -40,7 +40,7 @@ class OperationBodyOut(BaseModel):
     guid: str
 
     code: str
-    operation_body_parameters = OperationBodyParametersManyOut
+    operation_body_parameters: list[OperationBodyParametersManyOut] = []
 
     class Config:
         orm_mode = True
