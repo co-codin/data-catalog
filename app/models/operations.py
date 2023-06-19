@@ -4,7 +4,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 
 from app.database import Base
-from app.models import ModelDataType
+from app.models.models import ModelDataType
 
 operation_tags = Table(
     "operation_tags",

@@ -4,7 +4,7 @@ from sqlalchemy import select, delete, and_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Operation
+from app.models.operations import Operation
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
 

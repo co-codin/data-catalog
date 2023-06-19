@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
