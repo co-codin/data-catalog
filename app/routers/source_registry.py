@@ -33,9 +33,9 @@ async def add_source_registry(
 ):
     await check_on_uniqueness(name=source_registry.name, conn_string=source_registry.conn_string, session=session)
     source_registry_model = await create_source_registry(source_registry, session)
-    await send_for_synchronization(
-        source_registry_model.guid, source_registry.conn_string, migration_pattern, model_in
-    )
+    # await send_for_synchronization(
+    #     source_registry_model.guid, source_registry.conn_string, migration_pattern, model_in
+    # )
     return {'guid': source_registry_model.guid}
 
 
