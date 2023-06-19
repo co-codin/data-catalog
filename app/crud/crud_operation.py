@@ -17,6 +17,7 @@ async def read_all(session: AsyncSession) -> list[OperationOut]:
     operations = await session.execute(
         select(Operation)
         .options(selectinload(Operation.tags))
+        .options(selectinload(Operation.operation_body))
         .options(joinedload(Operation.operation_body).selectinload(OperationBody.operation_body_parameters))
         .order_by(Operation.created_at)
     )
@@ -28,6 +29,7 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
     operation = await session.execute(
         select(Operation)
         .options(selectinload(Operation.tags))
+        .options(selectinload(Operation.operation_body))
         .options(joinedload(Operation.operation_body).selectinload(OperationBody.operation_body_parameters))
         .filter(Operation.guid == guid)
     )
@@ -59,9 +61,9 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession) -> 
         guid=guid,
         operation_body_id=operation_body.operation_body_id
     )
-    session.add(operation)
 
     await add_tags(operation, operation_in.tags, session)
+    session.add(operation)
 
     for parameter_in in operation_in.parameters:
         guid = str(uuid.uuid4())

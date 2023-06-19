@@ -23,7 +23,7 @@ class OperationIn(BaseModel):
 
 
 class OperationBodyParametersManyOut(BaseModel):
-    id: int
+    operation_body_parameter_id: int
     guid: str
 
     flag: bool
@@ -36,7 +36,7 @@ class OperationBodyParametersManyOut(BaseModel):
 
 
 class OperationBodyOut(BaseModel):
-    id: int
+    operation_body_id: int
     guid: str
 
     code: str
@@ -47,7 +47,7 @@ class OperationBodyOut(BaseModel):
 
 
 class OperationOut(BaseModel):
-    id: int
+    operation_id: int
     guid: str
 
     name: str
