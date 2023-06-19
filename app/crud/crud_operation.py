@@ -1,5 +1,4 @@
 import uuid
-import asyncio
 
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, joinedload
@@ -53,8 +52,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession) -> 
     )
     session.add(operation_body)
 
-    if not operation_in.owner:
-        pass
+    # if not operation_in.owner:
 
     operation = Operation(
         **operation_in.dict(exclude={'tags', 'code', 'parameters'}),
@@ -74,6 +72,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession) -> 
         )
         session.add(parameter)
 
+    await session.commit()
     return operation
 
 
@@ -155,7 +154,8 @@ async def check_on_operation_name_uniqueness(name: str, session: AsyncSession, g
             raise OperationNameAlreadyExist(name)
 
 
-async def check_on_operation_parameters_uniqueness(parameters: list[OperationParameterIn], session: AsyncSession, guid: Optional[str] = None):
+async def check_on_operation_parameters_uniqueness(parameters: list[OperationParameterIn], session: AsyncSession,
+                                                   guid: Optional[str] = None):
     list_parameters_in = []
     list_parameters_out = []
     for parameter in parameters:
@@ -186,4 +186,3 @@ async def check_on_operation_parameters_uniqueness(parameters: list[OperationPar
     set_parameters_in = set(list_parameters_in)
     if len(list_parameters_in) != len(set_parameters_in):
         raise OperationParametersNameAlreadyExist()
-

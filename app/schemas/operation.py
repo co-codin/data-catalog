@@ -18,7 +18,6 @@ class OperationIn(BaseModel):
     status: str = Field(..., max_length=50)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
-    tags: Optional[List[str]] = None
     code: str = Field(...)
     parameters: list[OperationParameterIn] = []
 

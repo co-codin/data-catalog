@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.crud.crud_operation import read_all, read_by_guid, check_on_operation_name_uniqueness, \
     check_on_operation_parameters_uniqueness, create_operation, edit_operation, delete_by_guid
-from app.dependencies import db_session, get_token, get_user
+from app.dependencies import db_session, get_user
 from app.schemas.operation import OperationIn, OperationUpdateIn
 
 router = APIRouter(
@@ -12,10 +12,10 @@ router = APIRouter(
 
 
 @router.post('/')
-async def add_model(operation_in: OperationIn, session=Depends(db_session), _=Depends(get_user)):
+async def add_model(operation_in: OperationIn, session=Depends(db_session)):
     await check_on_operation_name_uniqueness(name=operation_in.name, session=session)
     await check_on_operation_parameters_uniqueness(parameters=operation_in.parameters, session=session)
-    operation = await create_operation(operation_in, session)
+    operation = await create_operation(operation_in=operation_in, session=session)
     return {'guid': operation.guid}
 
 

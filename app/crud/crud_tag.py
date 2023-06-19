@@ -55,13 +55,15 @@ async def remove_redundant_tags(session: AsyncSession):
             joinedload(Tag.source_registries),
             joinedload(Tag.objects),
             joinedload(Tag.fields),
-            joinedload(Tag.models)
+            joinedload(Tag.models),
+            joinedload(Tag.operations)
         )
         .where(
             and_(
                 ~Tag.source_registries.any(),
                 ~Tag.objects.any(),
-                ~Tag.models.any()
+                ~Tag.models.any(),
+                ~Tag.operations.any()
             )
         )
     )
