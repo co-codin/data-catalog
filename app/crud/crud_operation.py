@@ -59,7 +59,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession) -> 
     operation = Operation(
         **operation_in.dict(exclude={'tags', 'code', 'parameters'}),
         guid=guid,
-        operation_body_id=operation_body.id
+        operation_body_id=operation_body.operation_body_id
     )
     session.add(operation)
 
@@ -70,7 +70,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession) -> 
         parameter = OperationBodyParameter(
             **parameter_in.dict(),
             guid=guid,
-            operation_body_id=operation_body.id
+            operation_body_id=operation_body.operation_body_id
         )
         session.add(parameter)
 
@@ -131,7 +131,7 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
             parameter = OperationBodyParameter(
                 **parameter_in.dict(),
                 guid=guid,
-                operation_body_id=operation_body.id
+                operation_body_id=operation_body.operation_body_id
             )
             session.add(parameter)
 

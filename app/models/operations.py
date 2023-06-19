@@ -9,7 +9,7 @@ from app.models.models import ModelDataType
 operation_tags = Table(
     "operation_tags",
     Base.metadata,
-    Column("operation_tags", ForeignKey("operations.id", ondelete='CASCADE'), primary_key=True),
+    Column("operation_id", ForeignKey("operations.operation_id", ondelete='CASCADE'), primary_key=True),
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
@@ -17,7 +17,7 @@ operation_tags = Table(
 class OperationBody(Base):
     __tablename__ = 'operation_bodies'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
     code = Column(Text, nullable=False)
@@ -28,7 +28,7 @@ class OperationBody(Base):
 class Operation(Base):
     __tablename__ = 'operations'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    operation_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
     name = Column(String(200), nullable=False)
@@ -42,16 +42,16 @@ class Operation(Base):
 
     tags = relationship('Tag', secondary=operation_tags, order_by='Tag.id')
 
-    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.id, ondelete='CASCADE'))
+    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id, ondelete='CASCADE'))
     operation_body = relationship('OperationBody', back_populates='operation')
 
 
 class OperationBodyParameter(Base):
     __tablename__ = 'operation_body_parameters'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    operation_body_parameter_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.id))
+    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id))
 
     flag = Column(Boolean, unique=False, default=True)
     name = Column(String(200), nullable=False)
