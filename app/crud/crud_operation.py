@@ -11,9 +11,6 @@ from app.errors.errors import OperationNameAlreadyExist, OperationInputParameter
     OperationOutputParameterNotExists, OperationParametersNameAlreadyExist
 from app.models.operations import Operation, OperationBody, OperationBodyParameter
 from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationUpdateIn, OperationManyOut
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 async def read_all(session: AsyncSession) -> list[OperationManyOut]:
