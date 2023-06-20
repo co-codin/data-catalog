@@ -112,7 +112,6 @@ async def process_graph_migration_success(graph_migration: dict):
                 if not object_.source_created_at:
                     object_.source_created_at = datetime.utcnow()
 
-                object_.source_updated_at = datetime.utcnow()
                 await set_object_synchronized_at(object_)
 
         await session.commit()
