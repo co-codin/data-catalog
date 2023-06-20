@@ -15,6 +15,7 @@ class ResourceAttributeIn(BaseModel):
     cardinality: Cardinality
     parent_id: Optional[int] = Field(None)
     tags: Optional[List[str]] = []
+    additional: Optional[str] = Field(None)
 
     @validator('data_type_flag')
     def data_type_flag_validator(cls, v):
@@ -35,6 +36,7 @@ class ResourceAttributeUpdateIn(BaseModel):
     cardinality: Optional[str] = Field(None)
     parent_id: Optional[int] = Field(None)
     tags: Optional[List[str]] = Field(None)
+    additional: Optional[str] = Field(None)
 
     @validator('data_type_flag')
     def data_type_flag_validator(cls, v):

@@ -113,3 +113,35 @@ class ModelNameAlreadyExist(APIError):
 
     def __str__(self):
         return f'model name {self._name} already exists'
+
+
+class OperationNameAlreadyExist(ModelNameAlreadyExist):
+    def __str__(self):
+        return f'operation name {self._name} already exists'
+
+
+class OperationInputParametersNotExists(APIError):
+    def __init__(self, *nodes: str):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._nodes = nodes
+
+    def __str__(self):
+        return 'Operation should have one input parameter as minimum'
+
+
+class OperationOutputParameterNotExists(APIError):
+    def __init__(self, *nodes: str):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._nodes = nodes
+
+    def __str__(self):
+        return 'Operation should have one output parameter'
+
+
+class OperationParametersNameAlreadyExist(APIError):
+    def __init__(self, *nodes: str):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._nodes = nodes
+
+    def __str__(self):
+        return "All input parameters names in one operation should be unique"

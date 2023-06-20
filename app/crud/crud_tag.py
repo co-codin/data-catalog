@@ -4,12 +4,13 @@ from sqlalchemy import select, delete, and_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.operations import Operation
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
 
 
 async def add_tags(
-        tags_like_model: SourceRegister | Object | Field | Model,
+        tags_like_model: SourceRegister | Object | Field | Model | Operation,
         tags_in: Iterable[str],
         session: AsyncSession
 ):
@@ -30,7 +31,7 @@ async def add_tags(
 
 
 async def update_tags(
-        tags_like_model: SourceRegister | Object | Model | Field,
+        tags_like_model: SourceRegister | Object | Model | Field | Operation,
         session: AsyncSession, tags_update_in: list[str] | None
 ):
     if tags_update_in is not None:
@@ -54,13 +55,15 @@ async def remove_redundant_tags(session: AsyncSession):
             joinedload(Tag.source_registries),
             joinedload(Tag.objects),
             joinedload(Tag.fields),
-            joinedload(Tag.models)
+            joinedload(Tag.models),
+            joinedload(Tag.operations)
         )
         .where(
             and_(
                 ~Tag.source_registries.any(),
                 ~Tag.objects.any(),
-                ~Tag.models.any()
+                ~Tag.models.any(),
+                ~Tag.operations.any()
             )
         )
     )

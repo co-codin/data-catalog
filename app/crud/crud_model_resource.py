@@ -30,6 +30,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
+        .options(selectinload(ModelResource.attributes))
         .filter(ModelResource.guid == guid)
     )
 
