@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
-from app.models.models import ModelResource, ModelResourceAttribute
+from app.models.models import ModelResource, ModelResourceAttribute, ModelDataType
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
@@ -30,7 +30,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
-        .options(selectinload(ModelResource.attributes))
+        .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .filter(ModelResource.guid == guid)
     )
 
