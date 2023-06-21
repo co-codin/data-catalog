@@ -1,7 +1,9 @@
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+from typing import Optional, List, Any
+from datetime import datetime
 
 from app.models.models import Cardinality
+from app.schemas.tag import TagOut
 
 
 class ResourceAttributeIn(BaseModel):
@@ -53,3 +55,35 @@ class ResourceAttributeUpdateIn(BaseModel):
             raise ValueError('Invalid cardinality')
 
         return v
+
+
+class ModelResourceAttributeOut(BaseModel):
+    id: int
+    guid: str
+
+    name: str
+    key: str | None
+    db_link: str
+    desc: str
+
+    resource_id: int
+    model_resource_id: int | None
+    model_data_type_id: int | None
+
+    cardinality: str
+
+    created_at: datetime
+    updated_at: datetime
+
+    tags: list[TagOut] = []
+
+    parent_id: int | None
+    additional: str | None
+    parents: list[__name__] = []
+
+    model_data_types: Any
+    model_resources: Any
+    resources: Any
+
+    class Config:
+        orm_mode = True

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from app.dependencies import db_session, get_user, get_token
 from app.crud.crud_model_resource import read_resources_by_version_id, read_resources_by_guid, create_model_resource, \
-    update_model_resource, delete_model_resource, create_attribute, edit_attribute, remove_attribute
+    update_model_resource, delete_model_resource, create_attribute, edit_attribute, remove_attribute, \
+    get_attribute_by_guid
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
@@ -65,6 +66,11 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
 async def add_attribute(attribute_in: ResourceAttributeIn, session=Depends(db_session)):
     resource_attribute_guid = await create_attribute(attribute_in, session)
     return {'guid': resource_attribute_guid}
+
+
+@router.get('/attributes/{guid}')
+async def get_attribute(guid: str, session=Depends(db_session)):
+    return await get_attribute_by_guid(guid, session)
 
 
 @router.put('/attributes/{guid}')
