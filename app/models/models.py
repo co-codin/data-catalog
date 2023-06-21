@@ -98,6 +98,8 @@ class ModelDataType(Base):
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
 
+    model_resource_attributes = relationship('ModelResourceAttribute', back_populates='model_data_types')
+
 
 class ModelQuality(Base):
     __tablename__ = 'model_qualities'
@@ -180,7 +182,10 @@ class ModelResource(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_resources')
     model_attitudes = relationship('ModelAttitude', back_populates='model_resources')
-    attributes = relationship('ModelResourceAttribute', back_populates='model_resources')
+    attributes = relationship('ModelResourceAttribute', primaryjoin="ModelResource.id==ModelResourceAttribute"
+                                                                    ".resource_id")
+    typed_attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
+                                                                          '.model_resource_id')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
 
@@ -204,15 +209,15 @@ class ModelResourceAttribute(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
 
     name = Column(String(100), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
     db_link = Column(String(500))
     desc = Column(String(1000))
 
-    data_type_id = Column(BigInteger, index=True, nullable=True)
-    data_type_flag = Column(Integer, nullable=True)
+    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
+    model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
+    model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id), nullable=True)
 
     cardinality = Column(String(100), nullable=False)
 
@@ -220,7 +225,9 @@ class ModelResourceAttribute(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
-    model_resources = relationship('ModelResource', back_populates='attributes')
+    resources = relationship('ModelResource', back_populates='attributes', foreign_keys=[resource_id])
+    model_resources = relationship('ModelResource', back_populates='typed_attributes', foreign_keys=[model_resource_id])
+    model_data_types = relationship('ModelDataType', back_populates='model_resource_attributes')
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
 
     parent_id = Column(BigInteger, nullable=True)
