@@ -1,5 +1,8 @@
 import asyncio
+import json
 import logging
+
+from typing import Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -15,7 +18,7 @@ from app.routers import (
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
-from app.services.synchronizer import update_data_catalog_data
+from app.services.synchronizer import update_data_catalog_data, process_graph_migration_failure
 
 config_logger()
 
@@ -64,7 +67,9 @@ async def on_startup():
         await channel.queue_declare(settings.migrations_result_queue)
         await channel.queue_bind(settings.migrations_result_queue, settings.migration_exchange, 'result')
 
-        asyncio.create_task(consume(settings.migrations_result_queue, update_data_catalog_data))
+        asyncio.create_task(
+            consume(settings.migrations_result_queue, update_data_catalog_data, process_graph_migration_failure)
+        )
 
 
 @app.middleware("http")
@@ -98,7 +103,7 @@ def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
     )
 
 
-async def consume(query, func):
+async def consume(query, func: Callable, failure_func: Callable):
     while True:
         try:
             logger.info(f'Starting {query} worker')
@@ -108,6 +113,9 @@ async def consume(query, func):
                         await func(body)
                     except Exception as e:
                         logger.exception(f'Failed to process message {body}: {e}')
+
+                        if failure_func:
+                            await failure_func(json.loads(body))
         except Exception as e:
             logger.exception(f'Worker {query} failed: {e}')
 
