@@ -102,8 +102,15 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
     guid = str(uuid.uuid4())
 
     model_resource_attribute = ModelResourceAttribute(
-        **attribute_in.dict(exclude={'tags', 'cardinality'}), guid=guid, cardinality=attribute_in.cardinality.value
+        **attribute_in.dict(exclude={'tags', 'cardinality', 'data_type_flag', 'data_type_id'}),
+        guid=guid,
+        cardinality=attribute_in.cardinality.value,
     )
+
+    if attribute_in.data_type_flag==0:
+        model_resource_attribute.model_data_type_id=attribute_in.data_type_id
+    else:
+        model_resource_attribute.model_resource_id = attribute_in.data_type_id
 
     await add_tags(model_resource_attribute, attribute_in.tags, session)
 
@@ -122,9 +129,14 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
     model_resource_attribute = model_resource_attribute.scalars().first()
 
     model_resource_attribute_update_in_data = {
-        key: value for key, value in attribute_update_in.dict(exclude={'tags'}).items()
+        key: value for key, value in attribute_update_in.dict(exclude={'tags', 'data_type_flag', 'data_type_id'}).items()
         if value is not None
     }
+
+    if attribute_update_in.data_type_flag==0:
+        model_resource_attribute_update_in_data.model_data_type_id=attribute_update_in.data_type_id
+    else:
+        model_resource_attribute_update_in_data.model_resource_id = attribute_update_in.data_type_id
 
     await session.execute(
         update(ModelResourceAttribute)
