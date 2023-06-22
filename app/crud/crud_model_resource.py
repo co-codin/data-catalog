@@ -7,8 +7,8 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
-from app.models.models import ModelResource, ModelResourceAttribute
-from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn
+from app.models.models import ModelResource, ModelResourceAttribute, ModelDataType
+from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
@@ -30,7 +30,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
-        .options(selectinload(ModelResource.attributes))
+        .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .filter(ModelResource.guid == guid)
     )
 
@@ -47,6 +47,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         set_author_data(model_resource.comments, authors_data)
 
     return model_resource
+
 
 async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
@@ -102,8 +103,15 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
     guid = str(uuid.uuid4())
 
     model_resource_attribute = ModelResourceAttribute(
-        **attribute_in.dict(exclude={'tags', 'cardinality'}), guid=guid, cardinality=attribute_in.cardinality.value
+        **attribute_in.dict(exclude={'tags', 'cardinality', 'data_type_flag', 'data_type_id'}),
+        guid=guid,
+        cardinality=attribute_in.cardinality.value,
     )
+
+    if attribute_in.data_type_flag == 0:
+        model_resource_attribute.model_data_type_id = attribute_in.data_type_id
+    else:
+        model_resource_attribute.model_resource_id = attribute_in.data_type_id
 
     await add_tags(model_resource_attribute, attribute_in.tags, session)
 
@@ -111,6 +119,52 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
     await session.commit()
 
     return model_resource_attribute.guid
+
+
+async def get_attribute_parents(session: AsyncSession, parents: list, parent_id: int):
+    model_resource_attribute = await session.execute(
+        select(ModelResourceAttribute)
+        .options(selectinload(ModelResourceAttribute.resources))
+        .options(selectinload(ModelResourceAttribute.model_resources))
+        .options(selectinload(ModelResourceAttribute.model_data_types))
+        .options(selectinload(ModelResourceAttribute.tags))
+        .options(selectinload(ModelResourceAttribute.resources))
+        .filter(ModelResourceAttribute.id == parent_id)
+    )
+    model_resource_attribute = model_resource_attribute.scalars().first()
+
+    parents.append(model_resource_attribute)
+
+    if model_resource_attribute.parent_id is None:
+        return parents
+
+    parents = await get_attribute_parents(session=session, parents=parents,
+                                          parent_id=model_resource_attribute.parent_id)
+    return parents
+
+
+async def get_attribute_by_guid(guid: str, session: AsyncSession):
+    model_resource_attribute = await session.execute(
+        select(ModelResourceAttribute)
+        .options(selectinload(ModelResourceAttribute.resources))
+        .options(selectinload(ModelResourceAttribute.model_resources))
+        .options(selectinload(ModelResourceAttribute.model_data_types))
+        .options(selectinload(ModelResourceAttribute.tags))
+        .options(selectinload(ModelResourceAttribute.resources))
+        .filter(ModelResourceAttribute.guid == guid)
+    )
+    model_resource_attribute = model_resource_attribute.scalars().first()
+
+    if not model_resource_attribute:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    model_resource_attribute_out = ModelResourceAttributeOut.from_orm(model_resource_attribute)
+
+    if model_resource_attribute.parent_id is not None:
+        parents = await get_attribute_parents(session=session, parents=[], parent_id=model_resource_attribute.parent_id)
+        model_resource_attribute_out.parents = parents
+
+    return model_resource_attribute_out
 
 
 async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdateIn, session: AsyncSession):
@@ -122,9 +176,15 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
     model_resource_attribute = model_resource_attribute.scalars().first()
 
     model_resource_attribute_update_in_data = {
-        key: value for key, value in attribute_update_in.dict(exclude={'tags'}).items()
+        key: value for key, value in
+        attribute_update_in.dict(exclude={'tags', 'data_type_flag', 'data_type_id'}).items()
         if value is not None
     }
+
+    if attribute_update_in.data_type_flag == 0:
+        model_resource_attribute_update_in_data.model_data_type_id = attribute_update_in.data_type_id
+    else:
+        model_resource_attribute_update_in_data.model_resource_id = attribute_update_in.data_type_id
 
     await session.execute(
         update(ModelResourceAttribute)

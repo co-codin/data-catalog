@@ -125,7 +125,7 @@ class Field(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    object_guid = Column(String, ForeignKey(Object.guid))
+    object_guid = Column(String, ForeignKey(Object.guid, ondelete='CASCADE'))
 
     name = Column(String, nullable=False)
     data_type_id = Column(BigInteger, index=True, nullable=True)
