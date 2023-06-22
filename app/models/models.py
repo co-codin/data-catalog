@@ -85,6 +85,8 @@ class ModelVersion(Base):
     model_qualities = relationship('ModelQuality', back_populates='model_version')
     relation_groups = relationship('ModelRelationGroup', back_populates='model_version')
     model_resources = relationship('ModelResource', back_populates='model_version')
+    query_constructor_body = relationship('QueryConstructorBody', back_populates='model_version')
+
     confirmed_at = Column(DateTime, nullable=True)
 
 
@@ -229,6 +231,7 @@ class ModelResourceAttribute(Base):
     model_resources = relationship('ModelResource', back_populates='typed_attributes', foreign_keys=[model_resource_id])
     model_data_types = relationship('ModelDataType', back_populates='model_resource_attributes')
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
+    query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='model_resource_attribute')
 
     parent_id = Column(BigInteger, nullable=True)
     additional = Column(JSONB, nullable=True)

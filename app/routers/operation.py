@@ -12,7 +12,7 @@ router = APIRouter(
 
 
 @router.post('/')
-async def add_model(operation_in: OperationIn, session=Depends(db_session), _=Depends(get_user)):
+async def add_operation(operation_in: OperationIn, session=Depends(db_session), _=Depends(get_user)):
     await check_on_operation_name_uniqueness(name=operation_in.name, session=session)
     await check_on_operation_parameters_uniqueness(parameters=operation_in.parameters, session=session)
     operation = await create_operation(operation_in=operation_in, session=session)
@@ -25,7 +25,7 @@ async def read_operations(session=Depends(db_session), _=Depends(get_user)):
 
 
 @router.get('/{guid}')
-async def get_model(guid: str, session=Depends(db_session), _=Depends(get_user)):
+async def get_operation(guid: str, session=Depends(db_session), _=Depends(get_user)):
     return await read_by_guid(guid, session)
 
 
