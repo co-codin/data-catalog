@@ -13,7 +13,7 @@ from app.models import Status
 from app.schemas.migration import MigrationPattern
 from app.schemas.model import ModelCommon
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, CommentIn, SourceRegistryManyOut
+    SourceRegistryIn, SourceRegistryOut, CommentIn, SourceRegistryManyOut
 )
 
 from app.dependencies import db_session, get_user, get_token
@@ -48,7 +48,7 @@ async def synchronize(guid: str, migration_pattern: MigrationPattern, session=De
 
 @router.put('/{guid}', response_model=Dict[str, str])
 async def update_source_registry(
-        guid: str, source_registry: SourceRegistryUpdateIn, session=Depends(db_session), _=Depends(get_user)
+        guid: str, source_registry: SourceRegistryIn, session=Depends(db_session), _=Depends(get_user)
 ):
     await check_on_uniqueness(
         guid=guid, name=source_registry.name, conn_string=source_registry.conn_string, session=session

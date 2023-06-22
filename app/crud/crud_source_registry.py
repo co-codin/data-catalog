@@ -16,7 +16,7 @@ from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.models.sources import SourceRegister, Status
 
 from app.schemas.source_registry import (
-    SourceRegistryIn, SourceRegistryUpdateIn, SourceRegistryOut, SourceRegistryManyOut, SourceRegistrySynch
+    SourceRegistryIn, SourceRegistryOut, SourceRegistryManyOut, SourceRegistrySynch
 )
 
 from app.services.crypto import encrypt, decrypt
@@ -68,7 +68,7 @@ async def check_on_uniqueness(name: str, conn_string: str, session: AsyncSession
                 raise ConnStringAlreadyExist(conn_string)
 
 
-async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryUpdateIn, session: AsyncSession):
+async def edit_source_registry(guid: str, source_registry_update_in: SourceRegistryIn, session: AsyncSession):
     driver = source_registry_update_in.conn_string.split('://', maxsplit=1)[0]
     encrypted_conn_string = encrypt(settings.encryption_key, source_registry_update_in.conn_string)
     await session.execute(
