@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError
 from app.models.models import ModelResource, ModelResourceAttribute, ModelDataType
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
@@ -100,18 +101,19 @@ async def delete_model_resource(guid: str, session: AsyncSession):
 
 
 async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSession):
+    if (attribute_in.model_resource_id is None) and (attribute_in.model_data_type_id is None):
+        raise AttributeDataTypeError()
+
+    if (attribute_in.model_resource_id is not None) and (attribute_in.model_data_type_id is not None):
+        raise AttributeDataTypeOverflowError()
+
     guid = str(uuid.uuid4())
 
     model_resource_attribute = ModelResourceAttribute(
-        **attribute_in.dict(exclude={'tags', 'cardinality', 'data_type_flag', 'data_type_id'}),
+        **attribute_in.dict(exclude={'tags', 'cardinality'}),
         guid=guid,
         cardinality=attribute_in.cardinality.value,
     )
-
-    if attribute_in.data_type_flag == 0:
-        model_resource_attribute.model_data_type_id = attribute_in.data_type_id
-    else:
-        model_resource_attribute.model_resource_id = attribute_in.data_type_id
 
     await add_tags(model_resource_attribute, attribute_in.tags, session)
 
@@ -177,14 +179,18 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
 
     model_resource_attribute_update_in_data = {
         key: value for key, value in
-        attribute_update_in.dict(exclude={'tags', 'data_type_flag', 'data_type_id'}).items()
+        attribute_update_in.dict(exclude={'tags'}).items()
         if value is not None
     }
 
-    if attribute_update_in.data_type_flag == 0:
-        model_resource_attribute_update_in_data.model_data_type_id = attribute_update_in.data_type_id
-    else:
-        model_resource_attribute_update_in_data.model_resource_id = attribute_update_in.data_type_id
+    if (attribute_update_in.model_resource_id is not None) and (attribute_update_in.model_data_type_id is not None):
+        raise AttributeDataTypeOverflowError()
+
+    if (model_resource_attribute.model_resource_id is not None) and (attribute_update_in.model_resource_id is None):
+        model_resource_attribute_update_in_data.model_resource_id=None
+
+    if (model_resource_attribute.model_data_type_id is not None) and (attribute_update_in.model_data_type_id is None):
+        model_resource_attribute_update_in_data.model_data_type_id=None
 
     await session.execute(
         update(ModelResourceAttribute)
