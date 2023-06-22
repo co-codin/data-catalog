@@ -4,7 +4,7 @@ from typing import Optional, List
 
 class ModelResourceIn(BaseModel):
     model_version_id: int = Field()
-    name: str = Field(..., max_length=100)
+    name: str
     owner: str = Field(..., max_length=36 * 4)
     type: str = Field(..., max_length=36 * 4)
     db_link: Optional[str] = Field(..., max_length=36 * 4)

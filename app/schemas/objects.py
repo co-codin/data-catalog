@@ -118,6 +118,7 @@ class ObjectUpdateIn(ObjectCommon):
 
 class ObjectSynch(BaseModel):
     object_name: str
+    object_db_path: str | None = None
     conn_string: str
     source_registry_guid: str
     object_guid: str

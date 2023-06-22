@@ -28,7 +28,8 @@ class MigrationRequestStatus(Enum):
 
 async def send_for_synchronization(
         source_registry_guid: str, conn_string: str, migration_pattern: MigrationPattern,
-        model_in: ModelCommon | None = None, object_name: str | None = None, object_guid: str | None = None
+        model_in: ModelCommon | None = None, object_name: str | None = None, object_guid: str | None = None,
+        object_db_path: str | None = None
 ):
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
@@ -44,7 +45,8 @@ async def send_for_synchronization(
         'source_registry_guid': source_registry_guid,
         'object_name': object_name,
         'model': model_in.dict() if model_in else None,
-        'object_guid': object_guid
+        'object_guid': object_guid,
+        'object_db_path': object_db_path
     }
 
     async with create_channel() as channel:
@@ -98,23 +100,23 @@ async def process_graph_migration_success(graph_migration: dict):
             else:
                 # synchronizing object
                 object_ = await get_object(source_registry_guid, object_name, session)
+                if object_:
+                    if len(applied_migration.schemas) == 1 and len(applied_migration.schemas[0].tables_to_create) == 1:
+                        # adding fields for already existing object
+                        schema = applied_migration.schemas[0]
+                        table = applied_migration.schemas[0].tables_to_create[0]
+                        db_path = f'{db_source}.{schema.name}.{table.name}'
 
-                if len(applied_migration.schemas) == 1 and len(applied_migration.schemas[0].tables_to_create) == 1:
-                    # adding fields for already existing object
-                    schema = applied_migration.schemas[0]
-                    table = applied_migration.schemas[0].tables_to_create[0]
-                    db_path = f'{db_source}.{schema.name}.{table.name}'
+                        object_.db_path = db_path
+                        fields = await create_fields(table.fields, db_path, object_.owner, session)
+                        object_.fields.extend(fields)
 
-                    object_.db_path = db_path
-                    fields = await create_fields(table.fields, db_path, object_.owner, session)
-                    object_.fields.extend(fields)
+                        if not object_.source_created_at:
+                            object_.source_created_at = datetime.utcnow()
+                        if not object_.source_updated_at:
+                            object_.source_updated_at = datetime.utcnow()
 
-                    if not object_.source_created_at:
-                        object_.source_created_at = datetime.utcnow()
-                    if not object_.source_updated_at:
-                        object_.source_updated_at = datetime.utcnow()
-
-                await set_object_synchronized_at(object_)
+                    await set_object_synchronized_at(object_)
 
         await session.commit()
         await remove_redundant_tags(session)
