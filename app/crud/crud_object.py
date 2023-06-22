@@ -168,7 +168,7 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
 
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(
-        object_name=object_.name, conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid,
-        object_guid=object_.guid
+        object_name=object_.name, object_db_path=object_.db_path,
+        conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid, object_guid=object_.guid
     )
     return object_sync
