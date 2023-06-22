@@ -8,7 +8,7 @@ from app.schemas.tag import TagOut
 
 class ResourceAttributeIn(BaseModel):
     resource_id: int
-    name: str = Field(None, max_length=100)
+    name: str = Field(None, max_length=200)
     key: Optional[bool] = Field(None)
     db_link: Optional[str] = Field(..., max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
@@ -21,7 +21,7 @@ class ResourceAttributeIn(BaseModel):
 
 
 class ResourceAttributeUpdateIn(BaseModel):
-    name: Optional[str] = Field(None, max_length=100)
+    name: Optional[str] = Field(None, max_length=200)
     key: Optional[bool] = Field(None)
     db_link: Optional[str] = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
