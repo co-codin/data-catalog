@@ -4,3 +4,4 @@ from .models import *
 from .comments import *
 from .log import *
 from .operations import *
+from .queries import *

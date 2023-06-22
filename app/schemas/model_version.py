@@ -53,7 +53,7 @@ class ModelVersionManyOut(BaseModel):
     comments: list[CommentOut] = []
 
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     class Config:
         orm_mode = True
