@@ -138,9 +138,9 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
         for parameter in parameters_to_delete:
             operation_body.operation_body_parameters.remove(body_parameters_dict[parameter])
 
-        parameters__to_create = parameters_update_in_set - body_parameters_set
+        parameters_to_create = parameters_update_in_set - body_parameters_set
         for parameter_in in operation_update_in.parameters:
-            if parameter_in.name in parameters__to_create:
+            if parameter_in.name in parameters_to_create:
                 guid = str(uuid.uuid4())
                 parameter = OperationBodyParameter(
                     **parameter_in.dict(),
