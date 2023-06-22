@@ -73,7 +73,7 @@ class ModelVersion(Base):
     version = Column(String(100), nullable=True)
     owner = Column(String(36 * 4), nullable=False)
 
-    desc = Column(String(500))
+    desc = Column(String(100))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -132,9 +132,9 @@ class ModelRelationGroup(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
     model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
 
-    name = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
-    desc = Column(String(500))
+    desc = Column(Text, nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -152,9 +152,9 @@ class ModelRelation(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
     model_relation_group_id = Column(BigInteger, ForeignKey(ModelRelationGroup.id))
 
-    name = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
-    desc = Column(String(500))
+    desc = Column(Text, nullable=False)
     function = Column(Text, nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -174,7 +174,7 @@ class ModelResource(Base):
 
     name = Column(Text, nullable=False)
     owner = Column(String(36 * 4), nullable=False)
-    desc = Column(String(500))
+    desc = Column(Text, nullable=False)
     type = Column(String(500))
     db_link = Column(String(500))
 
@@ -212,10 +212,10 @@ class ModelResourceAttribute(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
-    name = Column(String(100), nullable=False)
+    name = Column(String(200), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
     db_link = Column(String(500))
-    desc = Column(String(1000))
+    desc = Column(Text, nullable=False)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
