@@ -10,8 +10,8 @@ from app.schemas.tag import TagOut
 
 class ModelCommon(BaseModel):
     name: str = Field(..., max_length=100)
-    short_desc: str | None = Field(None, max_length=500)
-    business_desc: str | None = Field(None, max_length=500)
+    short_desc: str | None = Field(None, max_length=200)
+    business_desc: str | None = Field(None, max_length=2000)
     tags: list[str] = []
 
 
@@ -22,8 +22,8 @@ class ModelIn(ModelCommon):
 class ModelUpdateIn(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
     owner: Optional[str] = Field(None, max_length=36*4)
-    short_desc: Optional[str] = None
-    business_desc: Optional[str] = None
+    short_desc: Optional[str] = Field(None, max_length=200)
+    business_desc: Optional[str] = Field(None, max_length=2000)
     tags: Optional[List[str]] = None
 
 
