@@ -18,7 +18,7 @@ class ModelVersionIn(BaseModel):
 class ModelVersionUpdateIn(BaseModel):
     status: str = Field(None, max_length=100)
     owner: Optional[str] = Field(None, max_length=36*4)
-    desc: Optional[str] = Field(None, max_length=100)
+    desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
 
 
