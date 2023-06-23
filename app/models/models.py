@@ -73,7 +73,7 @@ class ModelVersion(Base):
     version = Column(String(100), nullable=True)
     owner = Column(String(36 * 4), nullable=False)
 
-    desc = Column(String(100))
+    desc = Column(Text)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
