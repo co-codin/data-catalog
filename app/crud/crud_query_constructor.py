@@ -6,16 +6,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
 from app.crud.crud_tag import add_tags, update_tags
-from app.models import QueryConstructor, QueryConstructorBody, QueryConstructorBodyField, ModelVersion
+from app.errors.operation_constructor_errors import QueryConstructorWrongOwnerExists, QueryAlreadyRunError, \
+    QueryAlreadyStoppedError, QueryIsRunError
+from app.models import QueryConstructor, QueryConstructorBody, QueryConstructorBodyField, ModelVersion, \
+    QueryConstructorHistory, QueryStatus
 from app.schemas.query_constructor import QueryConstructorIn, QueryConstructorManyOut, QueryConstructorOut, \
     QueryConstructorUpdateIn
 
 
-async def create_query_constructor(query_constructor_in: QueryConstructorIn, session: AsyncSession) -> QueryConstructor:
+async def create_query_constructor(query_constructor_in: QueryConstructorIn, session: AsyncSession,
+                                   author_guid: str) -> QueryConstructor:
     guid = str(uuid.uuid4())
 
+    if query_constructor_in.owner is None:
+        query_constructor_in.owner = author_guid
+
     query_constructor = QueryConstructor(
-        **query_constructor_in.dict(exclude={'tags', 'fields', 'model_version_id', 'filters', 'aggregators'}),
+        **query_constructor_in.dict(
+            exclude={'tags', 'fields', 'model_version_id', 'filters', 'aggregators', 'run_immediately'}),
         guid=guid
     )
 
@@ -53,6 +61,10 @@ async def create_query_constructor(query_constructor_in: QueryConstructorIn, ses
         session.add(query_constructor_body_field)
 
     await session.commit()
+
+    if query_constructor_in.run_immediately:
+        await start(query_constructor.guid, session, author_guid)
+
     return query_constructor
 
 
@@ -66,7 +78,16 @@ async def read_all(session: AsyncSession) -> list[QueryConstructorManyOut]:
     )
     query_constructors = query_constructors.scalars().all()
 
-    return [QueryConstructorManyOut.from_orm(query_constructor) for query_constructor in query_constructors]
+    query_constructors_out = [QueryConstructorManyOut.from_orm(query_constructor) for query_constructor
+                               in query_constructors]
+
+    for query_constructor_out in query_constructors_out:
+        for item in QueryStatus:
+            if item.value == query_constructor_out.status:
+                query_constructor_out.status = item.name.lower()
+                break
+
+    return query_constructors_out
 
 
 async def read_by_guid(guid: str, session: AsyncSession) -> QueryConstructorOut:
@@ -88,11 +109,27 @@ async def read_by_guid(guid: str, session: AsyncSession) -> QueryConstructorOut:
 
     query_constructor_out = QueryConstructorOut.from_orm(query_constructor)
 
+    for item in QueryStatus:
+        if item.value == query_constructor_out.status:
+            query_constructor_out.status = item.name.lower()
+            break
+
     return query_constructor_out
 
 
 async def edit_query_constructor(guid: str, query_constructor_update_in: QueryConstructorUpdateIn,
-                                 session: AsyncSession):
+                                 session: AsyncSession, author_guid: str):
+    query_constructor = await session.execute(
+        select(QueryConstructor)
+        .filter(QueryConstructor.guid == guid)
+    )
+    query_constructor = query_constructor.scalars().first()
+    if query_constructor.owner != author_guid:
+        raise QueryConstructorWrongOwnerExists()
+
+    if query_constructor.status == QueryStatus.PROCESSING.value:
+        raise QueryIsRunError()
+
     query_constructor_update_in_data = {
         key: value for key, value in query_constructor_update_in.dict(exclude={'tags', 'fields', 'model_version_id',
                                                                                'filters', 'aggregators'}).items()
@@ -161,9 +198,73 @@ async def edit_query_constructor(guid: str, query_constructor_update_in: QueryCo
         await session.commit()
 
 
-async def delete_by_guid(guid: str, session: AsyncSession):
-    await session.execute(
-        delete(QueryConstructor)
-        .where(QueryConstructor.guid == guid)
+async def delete_by_guid(guid: str, session: AsyncSession, author_guid: str):
+    query_constructor = await session.execute(
+        select(QueryConstructor)
+        .filter(QueryConstructor.guid == guid)
     )
+    query_constructor = query_constructor.scalars().first()
+    if query_constructor.owner == author_guid:
+        await session.execute(
+            delete(QueryConstructor)
+            .where(QueryConstructor.guid == guid)
+        )
+
+
+async def start(guid: str, session: AsyncSession, author_guid: str):
+    query_constructor = await session.execute(
+        select(QueryConstructor)
+        .filter(QueryConstructor.guid == guid)
+    )
+    query_constructor = query_constructor.scalars().first()
+    if query_constructor.owner != author_guid:
+        raise QueryConstructorWrongOwnerExists()
+
+    if query_constructor.status == QueryStatus.PROCESSING.value:
+        raise QueryAlreadyRunError()
+
+    await session.execute(
+        update(QueryConstructor)
+        .where(QueryConstructor.guid == guid)
+        .values(
+            status=QueryStatus.PROCESSING.value
+        )
+    )
+
+    guid = str(uuid.uuid4())
+    query_constructor_history = QueryConstructorHistory(
+        guid=guid,
+        query_constructor_id=query_constructor.id
+    )
+    session.add(query_constructor_history)
+    await session.commit()
+
+
+async def stop(guid: str, session: AsyncSession, author_guid: str):
+    query_constructor = await session.execute(
+        select(QueryConstructor)
+        .filter(QueryConstructor.guid == guid)
+    )
+    query_constructor = query_constructor.scalars().first()
+    if query_constructor.owner != author_guid:
+        raise QueryConstructorWrongOwnerExists()
+
+    if query_constructor.status == QueryStatus.STOPPED.value:
+        raise QueryAlreadyStoppedError()
+
+    await session.execute(
+        update(QueryConstructor)
+        .where(QueryConstructor.guid == guid)
+        .values(
+            status=QueryStatus.STOPPED.value
+        )
+    )
+
+    guid = str(uuid.uuid4())
+    query_constructor_history = QueryConstructorHistory(
+        guid=guid,
+        query_constructor_id=query_constructor.id,
+        status=QueryStatus.STOPPED.value
+    )
+    session.add(query_constructor_history)
     await session.commit()

@@ -1,4 +1,6 @@
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table
+from enum import Enum
+
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Integer
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -6,6 +8,15 @@ from datetime import datetime
 
 from app.database import Base
 from app.models.models import ModelVersion, ModelResourceAttribute
+
+
+class QueryStatus(Enum):
+    CREATED = 0
+    PROCESSING = 1
+    FINISHED = 2
+    STOPPED = 3
+    FAULT = 4
+
 
 query_constructor_tags = Table(
     "query_constructor_tags",
@@ -24,6 +35,7 @@ class QueryConstructor(Base):
     name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(String(1000), nullable=True)
+    status = Column(Integer, nullable=False, default=QueryStatus.CREATED.value)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -93,6 +105,6 @@ class QueryConstructorHistory(Base):
                         server_onupdate=func.now())
 
     ended_at = Column(DateTime, nullable=True)
-    status = Column(String, nullable=False, default='processing')
+    status = Column(Integer, nullable=False, default=QueryStatus.PROCESSING.value)
 
     query_constructor = relationship('QueryConstructor', back_populates='query_constructor_history')
