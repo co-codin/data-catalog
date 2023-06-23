@@ -73,13 +73,13 @@ deploy:
       $CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME ./.ci/$CI_PROJECT_NAME -f .ci/$CI_PROJECT_NAME/updated-values.yaml
     - DEPLOYMENT_ROLLOUT_STATUS=$(kubectl rollout status -n smartdwh deployment/$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME 2>&1)
     - DEPLOYMENT_ROLLOUT_SUCCESS=$?
-    - >
+    - |
       if [ $DEPLOYMENT_ROLLOUT_SUCCESS -ne 0 ]; 
-        then echo "$DEPLOYMENT_ROLLOUT_STATUS" && echo "Rolling back..." 
-        && kubectl get pods -n smartdwh 
-        && kubectl describe po -n smartdwh -l app="$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME" 
-        && FAILED_POD=$(kubectl get pods -n smartdwh -l app="$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME" --field-selector status.phase!=Running -o jsonpath="{.items[0].metadata.name}")
-        && kubectl logs -n smartdwh "$FAILED_POD" 
-        && helm rollback $CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME
+        then echo "$DEPLOYMENT_ROLLOUT_STATUS" && echo "Rolling back..." \
+        && kubectl get pods -n smartdwh \
+        && kubectl describe po -n smartdwh -l app="$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME" \
+        && FAILED_POD=$(kubectl get pods -n smartdwh -l app="$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME" --field-selector status.phase!=Running -o jsonpath="{.items[0].metadata.name}") \
+        && kubectl logs -n smartdwh "$FAILED_POD" \
+        && helm rollback $CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME \
         && exit 1; 
       fi
