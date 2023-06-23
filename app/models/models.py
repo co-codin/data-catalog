@@ -215,7 +215,7 @@ class ModelResourceAttribute(Base):
     name = Column(String(200), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
     db_link = Column(String(500))
-    desc = Column(Text, nullable=False)
+    desc = Column(Text, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
