@@ -48,7 +48,7 @@ class ModelResourceAttributeOut(BaseModel):
     name: str
     key: str | None
     db_link: str
-    desc: str
+    desc: str | None = None
 
     resource_id: int
     model_resource_id: int | None
