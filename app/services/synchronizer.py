@@ -148,7 +148,7 @@ async def add_model_version_resources(
             resource_db_link = f'{db_source}.{schema.name}.{table.name}'
             resource = ModelResource(
                 guid=str(uuid.uuid4()), name=model_name, owner=model_version.owner,
-                type='resource', db_link=resource_db_link
+                type='Ресурс', db_link=resource_db_link
             )
             for field in table.fields:
                 attr_db_link = f'{resource_db_link}.{field.name}'
