@@ -174,7 +174,7 @@ class ModelResource(Base):
 
     name = Column(Text, nullable=False)
     owner = Column(String(36 * 4), nullable=False)
-    desc = Column(Text, nullable=False)
+    desc = Column(Text, nullable=True)
     type = Column(String(500))
     db_link = Column(String(500))
 

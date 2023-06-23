@@ -28,10 +28,6 @@ class SourceRegistryIn(SourceRegistryCommon):
         return v
 
 
-class SourceRegistryUpdateIn(SourceRegistryIn):
-    synchronized_at: Optional[datetime] = None
-
-
 class SourceRegistryOutCommon(BaseModel):
     guid: str
     type: str
