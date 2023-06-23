@@ -173,7 +173,7 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.tags))
-        .filter(ModelResource.guid == guid)
+        .filter(ModelResourceAttribute.guid == guid)
     )
     model_resource_attribute = model_resource_attribute.scalars().first()
 
@@ -187,10 +187,10 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
         raise AttributeDataTypeOverflowError()
 
     if (model_resource_attribute.model_resource_id is not None) and (attribute_update_in.model_resource_id is None):
-        model_resource_attribute_update_in_data.model_resource_id=None
+        model_resource_attribute_update_in_data['model_resource_id'] = None
 
     if (model_resource_attribute.model_data_type_id is not None) and (attribute_update_in.model_data_type_id is None):
-        model_resource_attribute_update_in_data.model_data_type_id=None
+        model_resource_attribute_update_in_data['model_data_type_id'] = None
 
     await session.execute(
         update(ModelResourceAttribute)
