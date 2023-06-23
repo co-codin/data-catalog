@@ -49,6 +49,7 @@ deploy:
     - echo $KUBE_CONFIG | base64 -d > /root/.kube/config
   script:
     - apk add yq
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && mv kubectl /bin/.
     - export SITE_URL=$(echo -n $CI_ENVIRONMENT_URL | awk -F/ '{gsub(/^https:\/\//, ""); print $1}')
     - path_value=$(printf '/%s(/|$)(.*)' "$CI_PROJECT_NAME")
     - yq eval ".ingress.hosts[0].host = env(SITE_URL) | .ingress.tls[0].hosts[0] = env(SITE_URL) | .ingress.hosts[0].paths[0].path = \"${path_value}\"" .ci/$CI_PROJECT_NAME/values.yaml > .ci/$CI_PROJECT_NAME/updated-values.yaml
