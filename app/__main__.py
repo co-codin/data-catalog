@@ -111,7 +111,6 @@ async def consume(query, func: Callable, failure_func: Callable):
             async with create_channel() as channel:
                 async for delivery_tag, body in channel.consume(query):
                     try:
-                        logger.info(f"Received message: {body}")
                         await func(body)
                         await channel.basic_ack(delivery_tag)
                     except Exception as e:
