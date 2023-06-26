@@ -111,6 +111,7 @@ async def consume(query, func: Callable, failure_func: Callable):
             async with create_channel() as channel:
                 async for body in channel.consume(query):
                     try:
+                        logger.info(f"Received message: {body}")
                         await func(body)
                     except Exception as e:
                         logger.exception(f'Failed to process message {body}: {e}')
