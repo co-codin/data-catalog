@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.queries import QueryConstructor
-from app.models.operations import Operation
+from app.models.models import Operation
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
 

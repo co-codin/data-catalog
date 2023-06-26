@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from app.models.models import ModelRelation
+from app.errors.errors import ModelVersionNotDraftError
+from app.models.models import ModelRelation, ModelRelationGroup, ModelVersion
 from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
@@ -34,8 +35,29 @@ async def read_relation_by_guid(guid: str, token: str, session: AsyncSession):
     return model_relation
 
 
+async def check_model_version_is_draft(model_relation_group_id: int, session: AsyncSession):
+    model_relation_group = await session.execute(
+        select(ModelRelationGroup)
+        .filter(ModelRelationGroup.id == model_relation_group_id)
+    )
+    model_relation_group = model_relation_group.scalars().first()
+
+    model_version = await session.execute(
+        select(ModelVersion)
+        .filter(ModelVersion.id == model_relation_group.model_version_id)
+    )
+    model_version = model_version.scalars().first()
+
+    if model_version.status != 'draft':
+        raise ModelVersionNotDraftError
+
+
 async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
+
+
+    await check_model_version_is_draft(model_relation_group_id=relation_in.model_relation_group_id,
+                                       session=session)
 
     model_relation = ModelRelation(
         **relation_in.dict(exclude={'tags'}),

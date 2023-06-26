@@ -14,6 +14,7 @@ from app.crud.crud_tag import add_tags, update_tags
 from app.errors.errors import ModelNameAlreadyExist
 from app.models.models import Model, ModelVersion
 from app.schemas.model import ModelIn, ModelUpdateIn, ModelManyOut, ModelOut
+from app.services.log import log_remove
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> Model:
@@ -115,9 +116,11 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
     await session.commit()
 
 
-async def delete_by_guid(guid: str, session: AsyncSession):
+async def delete_by_guid(guid: str, session: AsyncSession, author_guid: str):
     await session.execute(
         delete(Model)
         .where(Model.guid == guid)
     )
     await session.commit()
+
+    await log_remove(session=session, guid=guid, author_guid=author_guid, name="Удаление модели", description="")

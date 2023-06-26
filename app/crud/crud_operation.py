@@ -9,7 +9,7 @@ from typing import Optional
 from app.crud.crud_tag import add_tags, update_tags
 from app.errors.errors import OperationNameAlreadyExist, OperationInputParametersNotExists, \
     OperationOutputParameterNotExists, OperationParametersNameAlreadyExist
-from app.models.operations import Operation, OperationBody, OperationBodyParameter
+from app.models.models import Operation, OperationBody, OperationBodyParameter
 from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationUpdateIn, OperationManyOut
 
 
