@@ -82,7 +82,7 @@ async def process_graph_migration_success(graph_migration: dict):
                 model = Model(**model_in, guid=str(uuid.uuid4()), owner=registry.owner)
                 model_version = ModelVersion(guid=str(uuid.uuid4()), owner=registry.owner)
 
-                await add_model_version_resources(applied_migration, db_source, model_version, model.name)
+                await add_model_version_resources(applied_migration, db_source, model_version)
 
                 model.model_versions.append(model_version)
                 session.add(model)
@@ -140,9 +140,7 @@ async def process_graph_migration_failure(graph_migration: dict):
             )
 
 
-async def add_model_version_resources(
-        migration: MigrationOut, db_source: str, model_version: ModelVersion, model_name: str
-):
+async def add_model_version_resources(migration: MigrationOut, db_source: str, model_version: ModelVersion):
     for schema in migration.schemas:
         for table in schema.tables_to_create:
             resource_db_link = f'{db_source}.{schema.name}.{table.name}'
