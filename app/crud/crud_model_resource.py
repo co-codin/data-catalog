@@ -111,9 +111,11 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
 
     model_resource_attribute = ModelResourceAttribute(
         **attribute_in.dict(exclude={'tags', 'cardinality'}),
-        guid=guid,
-        cardinality=attribute_in.cardinality.value,
+        guid=guid
     )
+
+    if attribute_in.cardinality is not None:
+        model_resource_attribute.cardinality=attribute_in.cardinality.value
 
     await add_tags(model_resource_attribute, attribute_in.tags, session)
 

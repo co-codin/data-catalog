@@ -200,14 +200,14 @@ class ModelResourceAttribute(Base):
 
     name = Column(String(200), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
-    db_link = Column(String(500))
+    db_link = Column(String(500), nullable=True)
     desc = Column(Text, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id), nullable=True)
 
-    cardinality = Column(String(100), nullable=False)
+    cardinality = Column(String(100), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,

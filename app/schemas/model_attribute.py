@@ -10,11 +10,11 @@ class ResourceAttributeIn(BaseModel):
     resource_id: int
     name: str = Field(None, max_length=200)
     key: Optional[bool] = Field(None)
-    db_link: Optional[str] = Field(..., max_length=36 * 4)
+    db_link: Optional[str] = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
     model_resource_id: Optional[int] = Field(None)
     model_data_type_id: Optional[int] = Field(None)
-    cardinality: Cardinality
+    cardinality: Optional[Cardinality]
     parent_id: Optional[int] = Field(None)
     tags: Optional[List[str]] = []
     additional: Optional[str] = Field(None)
