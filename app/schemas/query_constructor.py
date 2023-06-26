@@ -1,18 +1,17 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any
 
-from app.schemas.model_version import ModelVersionManyOut
-
 
 class QueryConstructorIn(BaseModel):
     name: str = Field(..., max_length=200)
-    owner: str = Field(..., max_length=36 * 4)
+    owner: str = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
     model_version_id: int
     filters: Optional[str] = Field(None)
     aggregators: Optional[str] = Field(None)
     fields: list[int] = []
     tags: Optional[List[str]] = None
+    run_immediately: bool = Field(None)
 
 
 class QueryConstructorUpdateIn(BaseModel):
@@ -52,6 +51,7 @@ class QueryConstructorManyOut(BaseModel):
     guid: str
     name: str
     owner: str
+    status: int | str
     desc: str | None
     query_constructor_body: list[QueryConstructorBodyOut] = []
 
@@ -65,6 +65,7 @@ class QueryConstructorOut(BaseModel):
     name: str
     owner: str
     desc: str | None
+    status: int | str
     filters: str | None
     aggregators: str | None
     query_constructor_body: list[QueryConstructorBodyOut] = []

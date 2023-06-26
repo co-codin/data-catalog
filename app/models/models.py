@@ -73,7 +73,7 @@ class ModelVersion(Base):
     version = Column(String(100), nullable=True)
     owner = Column(String(36 * 4), nullable=False)
 
-    desc = Column(String(100))
+    desc = Column(Text)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -184,26 +184,12 @@ class ModelResource(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_resources')
     model_attitudes = relationship('ModelAttitude', back_populates='model_resources')
-    attributes = relationship('ModelResourceAttribute', primaryjoin="ModelResource.id==ModelResourceAttribute"
-                                                                    ".resource_id")
+    attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
+                                                                    '.resource_id')
     typed_attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
                                                                           '.model_resource_id')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
-
-
-class ModelAttitude(Base):
-    __tablename__ = 'model_attitudes'
-
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
-    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
-
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                        server_onupdate=func.now())
-
-    model_resources = relationship('ModelResource', back_populates='model_attitudes')
 
 
 class ModelResourceAttribute(Base):
@@ -214,14 +200,14 @@ class ModelResourceAttribute(Base):
 
     name = Column(String(200), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
-    db_link = Column(String(500))
-    desc = Column(Text, nullable=False)
+    db_link = Column(String(500), nullable=True)
+    desc = Column(Text, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id), nullable=True)
 
-    cardinality = Column(String(100), nullable=False)
+    cardinality = Column(String(100), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -233,5 +219,30 @@ class ModelResourceAttribute(Base):
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
     query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='model_resource_attribute')
 
+    left_attribute_attitudes = relationship('ModelAttitude', primaryjoin='ModelResourceAttribute.id==ModelAttitude'
+                                                                         '.left_attribute_id')
+    right_attribute_attitudes = relationship('ModelAttitude', primaryjoin='ModelResourceAttribute.id==ModelAttitude'
+                                                                          '.right_attribute_id')
+
     parent_id = Column(BigInteger, nullable=True)
     additional = Column(JSONB, nullable=True)
+
+
+class ModelAttitude(Base):
+    __tablename__ = 'model_attitudes'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
+    left_attribute_id = Column(BigInteger, ForeignKey(ModelResourceAttribute.id))
+    right_attribute_id = Column(BigInteger, ForeignKey(ModelResourceAttribute.id))
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    model_resources = relationship('ModelResource', back_populates='model_attitudes')
+    left_attributes = relationship('ModelResourceAttribute', back_populates='left_attribute_attitudes',
+                                   foreign_keys=[left_attribute_id])
+    right_attributes = relationship('ModelResourceAttribute', back_populates='right_attribute_attitudes',
+                                    foreign_keys=[right_attribute_id])
