@@ -241,6 +241,9 @@ async def alter_objects(
         for schema in applied_migration.schemas
         for table in schema.tables_to_alter
     }
+    if not tables_to_alter:
+        return
+
     object_db_path_to_object: dict[str: Object] = source_registry.object_db_path_to_object(tables_to_alter)
     fields_to_delete = []
 
