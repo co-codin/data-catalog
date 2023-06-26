@@ -8,7 +8,7 @@ class ModelRelationIn(BaseModel):
     owner: str = Field(..., max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = []
-    function: Optional[str] = Field(None, max_length=500)
+    operation_id: int = Field()
 
 
 class ModelRelationUpdateIn(BaseModel):
@@ -16,4 +16,4 @@ class ModelRelationUpdateIn(BaseModel):
     owner: str = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
-    function: Optional[str] = Field(None, max_length=500)
+    operation_id: Optional[int] = Field()
