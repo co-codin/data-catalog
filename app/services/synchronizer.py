@@ -159,7 +159,7 @@ async def add_model_version_resources(
 
                 resource_attr = ModelResourceAttribute(
                     guid=str(uuid.uuid4()), name=field.name, key=field.is_key, db_link=attr_db_link,
-                    cardinality=cardinality, data_type_id=SYS_DATA_TYPE_TO_ID.get(field.db_type, None),
+                    cardinality=cardinality, model_data_type_id=SYS_DATA_TYPE_TO_ID.get(field.db_type, None),
                     data_type_flag=0
                 )
                 resource.attributes.append(resource_attr)

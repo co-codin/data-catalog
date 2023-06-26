@@ -116,7 +116,7 @@ async def consume(query, func: Callable, failure_func: Callable):
                         await channel.basic_ack(delivery_tag)
                     except Exception as e:
                         logger.exception(f'Failed to process message {body}: {e}')
-                        await channel.basic_reject(delivery_tag, requeue=False)
+                        await channel.basic_reject(delivery_tag, requeue=True)
 
                         if failure_func:
                             await failure_func(json.loads(body))
