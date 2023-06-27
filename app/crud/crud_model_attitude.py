@@ -27,7 +27,6 @@ async def create_model_attitude(attitude_in: ModelAttitudeIn, session: AsyncSess
                     ModelResourceAttribute.id == attitude_in.right_attribute_id))
     )
     count_model_attributes = count_model_attributes.scalars().first()
-    print(count_model_attributes)
     if count_model_attributes != 2:
         raise ModelAttitudeAttributesError()
 
