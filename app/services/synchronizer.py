@@ -3,6 +3,7 @@ import uuid
 
 from datetime import datetime
 from enum import Enum
+from dicttoxml import dicttoxml
 
 from sqlalchemy import select, delete, update, and_
 from sqlalchemy.orm import selectinload, joinedload
@@ -148,10 +149,17 @@ async def add_model_version_resources(migration: MigrationOut, db_source: str, m
     for schema in migration.schemas:
         for table in schema.tables_to_create:
             resource_db_link = f'{db_source}.{schema.name}.{table.name}'
+            resource_type = 'Ресурс'
+
             resource = ModelResource(
                 guid=str(uuid.uuid4()), name=table.name, owner=model_version.owner,
-                type='Ресурс', db_link=resource_db_link
+                type=resource_type, db_link=resource_db_link
             )
+            model_resource_json = {
+                'name': resource.name, 'type': resource_type, 'desc': '', 'db_link': resource_db_link, 'tags': [],
+                'attrs': []
+            }
+
             for field in table.fields:
                 attr_db_link = f'{resource_db_link}.{field.name}'
                 if field.is_key:
@@ -163,7 +171,17 @@ async def add_model_version_resources(migration: MigrationOut, db_source: str, m
                     guid=str(uuid.uuid4()), name=field.name, key=field.is_key, db_link=attr_db_link,
                     cardinality=cardinality, model_data_type_id=SYS_DATA_TYPE_TO_ID.get(field.db_type, None)
                 )
+                model_resource_attr = {
+                    'name': resource_attr.name, 'is_key': resource_attr.key,
+                    'data_type': resource_attr.model_data_type_id, 'db_link': resource_attr.db_link,
+                    'cardinality': resource_attr.cardinality, 'desc': '', 'tags': []
+                }
+                model_resource_json['attrs'].append(model_resource_attr)
                 resource.attributes.append(resource_attr)
+            model_resource_xml = dicttoxml(model_resource_json)
+
+            resource.json = model_resource_json
+            resource.xml = model_resource_xml.decode('utf-8')
             model_version.model_resources.append(resource)
 
 
