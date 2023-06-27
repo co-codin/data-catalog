@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError
-from app.models.models import ModelResource, ModelResourceAttribute, ModelDataType
+from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags

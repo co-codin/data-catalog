@@ -82,7 +82,7 @@ async def process_graph_migration_success(graph_migration: dict):
                 model = Model(**model_in, guid=str(uuid.uuid4()), owner=registry.owner)
                 model_version = ModelVersion(guid=str(uuid.uuid4()), owner=registry.owner)
 
-                await add_model_version_resources(applied_migration, db_source, model_version, model.name)
+                await add_model_version_resources(applied_migration, db_source, model_version)
 
                 model.model_versions.append(model_version)
                 session.add(model)
@@ -140,14 +140,12 @@ async def process_graph_migration_failure(graph_migration: dict):
             )
 
 
-async def add_model_version_resources(
-        migration: MigrationOut, db_source: str, model_version: ModelVersion, model_name: str
-):
+async def add_model_version_resources(migration: MigrationOut, db_source: str, model_version: ModelVersion):
     for schema in migration.schemas:
         for table in schema.tables_to_create:
             resource_db_link = f'{db_source}.{schema.name}.{table.name}'
             resource = ModelResource(
-                guid=str(uuid.uuid4()), name=model_name, owner=model_version.owner,
+                guid=str(uuid.uuid4()), name=table.name, owner=model_version.owner,
                 type='Ресурс', db_link=resource_db_link
             )
             for field in table.fields:
@@ -159,8 +157,7 @@ async def add_model_version_resources(
 
                 resource_attr = ModelResourceAttribute(
                     guid=str(uuid.uuid4()), name=field.name, key=field.is_key, db_link=attr_db_link,
-                    cardinality=cardinality, data_type_id=SYS_DATA_TYPE_TO_ID.get(field.db_type, None),
-                    data_type_flag=0
+                    cardinality=cardinality, model_data_type_id=SYS_DATA_TYPE_TO_ID.get(field.db_type, None)
                 )
                 resource.attributes.append(resource_attr)
             model_version.model_resources.append(resource)
@@ -241,6 +238,9 @@ async def alter_objects(
         for schema in applied_migration.schemas
         for table in schema.tables_to_alter
     }
+    if not tables_to_alter:
+        return
+
     object_db_path_to_object: dict[str: Object] = source_registry.object_db_path_to_object(tables_to_alter)
     fields_to_delete = []
 
