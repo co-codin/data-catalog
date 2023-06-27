@@ -3,7 +3,7 @@ import uuid
 
 from datetime import datetime
 from enum import Enum
-from dict2xml import dict2xml
+from json2xml import json2xml
 
 from sqlalchemy import select, delete, update, and_
 from sqlalchemy.orm import selectinload, joinedload
@@ -178,7 +178,7 @@ async def add_model_version_resources(migration: MigrationOut, db_source: str, m
                 }
                 model_resource_json['attrs'].append(model_resource_attr)
                 resource.attributes.append(resource_attr)
-            model_resource_xml = dict2xml(model_resource_json)
+            model_resource_xml = json2xml.Json2xml(model_resource_json, wrapper='all', pretty=True).to_xml()
 
             resource.json = model_resource_json
             resource.xml = model_resource_xml
