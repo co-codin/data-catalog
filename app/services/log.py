@@ -6,7 +6,7 @@ from app.schemas.log import LogIn
 
 async def get_all_logs(session: AsyncSession):
     logs = await session.execute(
-        select(Log)
+        select(Log).order_by(Log.id.desc())
     )
     logs = logs.scalars().all()
     if not logs:

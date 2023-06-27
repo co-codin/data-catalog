@@ -239,7 +239,8 @@ class ModelResource(Base):
     model_version = relationship('ModelVersion', back_populates='model_resources')
     model_attitudes = relationship('ModelAttitude', back_populates='model_resources')
     attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
-                                                                    '.resource_id')
+                                                                    '.resource_id',
+                              order_by='ModelResourceAttribute.name')
     typed_attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
                                                                           '.model_resource_id')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')

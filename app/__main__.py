@@ -13,7 +13,7 @@ from app.mq import create_channel
 from app.routers import (
     db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects,
     model_data_type, model_quality, fields, model_relation_group, model_relation, model_resource,
-    model_resource_attitude, operation, query_constructor
+    model_resource_attitude, operation, query_constructor, log
 )
 from app.errors import APIError
 from app.config import settings
@@ -53,6 +53,7 @@ app.include_router(model_resource.router)
 app.include_router(model_resource_attitude.router)
 app.include_router(operation.router)
 app.include_router(query_constructor.router)
+app.include_router(log.router)
 
 
 @app.on_event('startup')
