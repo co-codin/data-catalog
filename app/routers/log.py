@@ -1,7 +1,4 @@
-
 from fastapi import APIRouter, Depends
-
-
 
 from app.dependencies import db_session, get_user, get_token
 from app.filters.log import LogFilter
