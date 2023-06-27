@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from app.crud.crud_tag import remove_redundant_tags
+from app.crud.crud_tag import remove_redundant_tags, add_tags
 from app.models import (
     SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute, Cardinality
 )
@@ -79,7 +79,11 @@ async def process_graph_migration_success(graph_migration: dict):
             db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
             if model_in:
-                model = Model(**model_in, guid=str(uuid.uuid4()), owner=registry.owner)
+                model = Model(
+                    name=model_in['name'], short_desc=model_in['short_desc'], business_desc=model_in['business_desc'],
+                    guid=str(uuid.uuid4()), owner=registry.owner
+                )
+                await add_tags(model, model_in['tags'], session)
                 model_version = ModelVersion(guid=str(uuid.uuid4()), owner=registry.owner)
 
                 await add_model_version_resources(applied_migration, db_source, model_version)
