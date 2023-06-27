@@ -181,7 +181,7 @@ async def add_model_version_resources(migration: MigrationOut, db_source: str, m
             model_resource_xml = dict2xml(model_resource_json)
 
             resource.json = model_resource_json
-            resource.xml = model_resource_xml.decode('utf-8')
+            resource.xml = model_resource_xml
             model_version.model_resources.append(resource)
 
 
