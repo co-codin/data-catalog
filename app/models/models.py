@@ -232,6 +232,9 @@ class ModelResource(Base):
     type = Column(String(500))
     db_link = Column(String(500))
 
+    json = Column(JSONB, nullable=True)
+    xml = Column(Text, nullable=True)
+
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
