@@ -18,7 +18,7 @@ from app.mq import create_channel
 from app.schemas.migration import MigrationOut, FieldToCreate, MigrationPattern
 from app.schemas.model import ModelCommon
 from app.database import db_session
-from app.constants.data_types import SYS_DATA_TYPE_TO_ID
+from app.constants.data_types import SYS_DATA_TYPE_TO_ID, ID_TO_SYS_DATA_TYPE
 from app.config import settings
 
 
@@ -173,8 +173,9 @@ async def add_model_version_resources(migration: MigrationOut, db_source: str, m
                 )
                 model_resource_attr = {
                     'name': resource_attr.name, 'is_key': resource_attr.key,
-                    'data_type': resource_attr.model_data_type_id, 'db_link': resource_attr.db_link,
-                    'cardinality': resource_attr.cardinality, 'desc': '', 'tags': []
+                    'data_type': ID_TO_SYS_DATA_TYPE.get(resource_attr.model_data_type_id, None),
+                    'db_link': resource_attr.db_link, 'cardinality': resource_attr.cardinality, 'desc': '',
+                    'tags': []
                 }
                 model_resource_json['attrs'].append(model_resource_attr)
                 resource.attributes.append(resource_attr)
