@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
-from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError
+from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError
 from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
@@ -93,6 +93,20 @@ async def update_model_resource(guid: int, resource_update_in: ModelResourceUpda
 
 
 async def delete_model_resource(guid: str, session: AsyncSession):
+    model_resource = await session.execute(
+        delete(ModelResource)
+        .where(ModelResource.guid == guid)
+    )
+    model_resource = model_resource.scalars().first()
+
+    count_model_resource_attributes = await session.execute(
+        select(ModelResourceAttribute)
+        .filter(ModelResourceAttribute.resource_id == model_resource.id)
+    )
+    count_model_resource_attributes=count_model_resource_attributes.scalars().first()
+    if count_model_resource_attributes > 0:
+        raise ModelResourceHasAttributesError()
+
     await session.execute(
         delete(ModelResource)
         .where(ModelResource.guid == guid)
