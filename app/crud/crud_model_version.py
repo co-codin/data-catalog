@@ -2,6 +2,7 @@ import asyncio
 import uuid
 
 from datetime import datetime
+from enum import Enum
 
 from fastapi import HTTPException, status
 
@@ -15,7 +16,52 @@ from app.models.models import ModelVersion, ModelQuality
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
 
 
+class VersionLevel(Enum):
+    CRITICAL = 'critical'
+    MINOR = 'minor'
+    PATCH = 'patch'
+
+
+async def generate_version_number(id: int, session: AsyncSession, level: VersionLevel):
+    model_version = await session.execute(
+        select(ModelVersion)
+        .filter(ModelVersion.id == id)
+    )
+    model_version = model_version.scalars().first()
+
+    if model_version.status != 'archive' and model_version.status != 'approved':
+        if model_version.version is None:
+            critical = 0
+            minor = 0
+            patch = 0
+        else:
+            version = model_version.version.split('.')
+            critical = int(version[0])
+            minor = int(version[1])
+            patch = int(version[2])
+
+        match level:
+            case VersionLevel.CRITICAL:
+                critical = critical + 1
+                minor = 0
+                patch = 0
+            case VersionLevel.MINOR:
+                minor = minor + 1
+                patch = 0
+            case VersionLevel.PATCH:
+                patch = patch + 1
+
+        await session.execute(
+            update(ModelVersion)
+            .where(ModelVersion.id == id)
+            .values(
+                version=str(critical) + "." + str(minor) + "." + str(patch)
+            )
+        )
+
+
 async def read_all(model_id: str, session: AsyncSession):
+    await generate_version_number(id=1, session=session, level=VersionLevel.PATCH)
     model_versions = await session.execute(
         select(ModelVersion)
         .filter(ModelVersion.model_id == model_id)
@@ -27,7 +73,7 @@ async def read_all(model_id: str, session: AsyncSession):
 
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> ModelVersion:
     guid = str(uuid.uuid4())
-    
+
     model_version = ModelVersion(
         **model_version_in.dict(exclude={'tags'}),
         guid=guid

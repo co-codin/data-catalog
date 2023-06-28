@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
+from app.crud.crud_model_version import generate_version_number, VersionLevel
 from app.errors.errors import ModelVersionNotDraftError
 from app.models.models import ModelRelation, ModelRelationGroup, ModelVersion
 from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn
@@ -26,7 +27,6 @@ async def read_relation_by_guid(guid: str, token: str, session: AsyncSession):
         .options(selectinload(ModelRelation.tags))
         .filter(ModelRelation.guid == guid)
     )
-
     model_relation = model_relation.scalars().first()
 
     if not model_relation:
@@ -68,6 +68,14 @@ async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSess
     session.add(model_relation)
     await session.commit()
 
+    model_relation_group = await session.execute(
+        select(ModelRelationGroup)
+        .filter(ModelRelationGroup.id == model_relation.model_relation_group_id)
+    )
+
+    model_relation_group = model_relation_group.scalars().first()
+    await generate_version_number(id=model_relation_group.model_version_id, session=session, level=VersionLevel.PATCH)
+
     return model_relation.guid
 
 
@@ -99,6 +107,20 @@ async def update_model_relation(guid: int, relation_update_in: ModelRelationUpda
 
 
 async def delete_model_relation(guid: str, session: AsyncSession):
+    model_relation = await session.execute(
+        select(ModelRelation)
+        .options(selectinload(ModelRelation.tags))
+        .filter(ModelRelation.guid == guid)
+    )
+    model_relation = model_relation.scalars().first()
+
+    model_relation_group = await session.execute(
+        select(ModelRelationGroup)
+        .filter(ModelRelationGroup.id == model_relation.model_relation_group_id)
+    )
+    model_relation_group = model_relation_group.scalars().first()
+    await generate_version_number(id=model_relation_group.model_version_id, session=session, level=VersionLevel.PATCH)
+
     await session.execute(
         delete(ModelRelation)
         .where(ModelRelation.guid == guid)

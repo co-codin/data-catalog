@@ -1,12 +1,13 @@
 import asyncio
 import uuid
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_model_version import VersionLevel, generate_version_number
 from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError
 from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
@@ -62,6 +63,8 @@ async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSess
     session.add(model_resource)
     await session.commit()
 
+    await generate_version_number(id=resource_in.model_version_id, session=session, level=VersionLevel.MINOR)
+
     return model_resource.guid
 
 
@@ -94,16 +97,16 @@ async def update_model_resource(guid: int, resource_update_in: ModelResourceUpda
 
 async def delete_model_resource(guid: str, session: AsyncSession):
     model_resource = await session.execute(
-        delete(ModelResource)
+        select(ModelResource)
         .where(ModelResource.guid == guid)
     )
     model_resource = model_resource.scalars().first()
 
     count_model_resource_attributes = await session.execute(
-        select(ModelResourceAttribute)
+        select(func.count(ModelResourceAttribute.id))
         .filter(ModelResourceAttribute.resource_id == model_resource.id)
     )
-    count_model_resource_attributes=count_model_resource_attributes.scalars().first()
+    count_model_resource_attributes = count_model_resource_attributes.scalars().first()
     if count_model_resource_attributes > 0:
         raise ModelResourceHasAttributesError()
 
@@ -112,6 +115,8 @@ async def delete_model_resource(guid: str, session: AsyncSession):
         .where(ModelResource.guid == guid)
     )
     await session.commit()
+
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.CRITICAL)
 
 
 async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSession):
@@ -129,12 +134,19 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
     )
 
     if attribute_in.cardinality is not None:
-        model_resource_attribute.cardinality=attribute_in.cardinality.value
+        model_resource_attribute.cardinality = attribute_in.cardinality.value
 
     await add_tags(model_resource_attribute, attribute_in.tags, session)
 
     session.add(model_resource_attribute)
     await session.commit()
+
+    model_resource = await session.execute(
+        select(ModelResource)
+        .where(ModelResource.id == model_resource_attribute.resource_id)
+    )
+    model_resource = model_resource.scalars().first()
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.MINOR)
 
     return model_resource_attribute.guid
 
@@ -243,8 +255,15 @@ async def remove_attribute(guid: str, session: AsyncSession):
 
     await delete_children(model_resource_attribute.id, session)
 
+    model_resource = await session.execute(
+        select(ModelResource)
+        .where(ModelResource.id == model_resource_attribute.resource_id)
+    )
+    model_resource = model_resource.scalars().first()
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.CRITICAL)
+
     await session.execute(
         delete(ModelResourceAttribute)
         .where(ModelResourceAttribute.guid == guid)
     )
-    await session.commit()
+
