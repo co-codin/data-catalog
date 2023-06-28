@@ -1,10 +1,11 @@
 import uuid
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
+from app.crud.crud_model_version import generate_version_number, VersionLevel
 from app.models.models import ModelRelationGroup, ModelRelation
 from app.schemas.model_relation_group import ModelRelationGroupIn, ModelRelationGroupUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
@@ -82,10 +83,18 @@ async def delete_model_relation_group(guid: str, session: AsyncSession):
     )
     model_relation_group = model_relation_group.scalars().first()
 
-    await session.execute(
-        delete(ModelRelation)
+    count_model_relations = await session.execute(
+        select(func.count(ModelRelation.id))
         .where(ModelRelation.model_relation_group_id == model_relation_group.id)
     )
+    count_model_relations = count_model_relations.scalars().first()
+    if count_model_relations > 0:
+        await session.execute(
+            delete(ModelRelation)
+            .where(ModelRelation.model_relation_group_id == model_relation_group.id)
+        )
+        await generate_version_number(id=model_relation_group.model_version_id, session=session,
+                                      level=VersionLevel.PATCH)
 
     await session.execute(
         delete(ModelRelationGroup)
