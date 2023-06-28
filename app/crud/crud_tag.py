@@ -57,6 +57,7 @@ async def remove_redundant_tags(session: AsyncSession):
             joinedload(Tag.objects),
             joinedload(Tag.fields),
             joinedload(Tag.models),
+            joinedload(Tag.model_versions),
             joinedload(Tag.operations),
             joinedload(Tag.queries)
         )
@@ -64,7 +65,9 @@ async def remove_redundant_tags(session: AsyncSession):
             and_(
                 ~Tag.source_registries.any(),
                 ~Tag.objects.any(),
+                ~Tag.fields.any(),
                 ~Tag.models.any(),
+                ~Tag.model_versions.any(),
                 ~Tag.operations.any(),
                 ~Tag.queries.any()
             )
