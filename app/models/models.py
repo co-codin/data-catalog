@@ -230,7 +230,7 @@ class ModelResource(Base):
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(Text, nullable=True)
     type = Column(String(500))
-    db_link = Column(String(500))
+    db_link = Column(String(500), nullable=True)
 
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
