@@ -65,7 +65,7 @@ class FieldOut(FieldManyOut):
 
 class FieldUpdateIn(BaseModel):
     owner: str
-    desc: str
+    desc: str | None = None
     tags: list[str] = []
 
 
