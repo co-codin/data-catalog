@@ -88,7 +88,7 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         .filter(ModelVersion.model_id == model_version_in.model_id)
     )
     count_model_versions_draft = count_model_versions_draft.scalars().first()
-    if count_model_versions_draft > 0:
+    if count_model_versions_draft == 1:
         last_approved_model_version = await session.execute(
             select(ModelVersion)
             .filter(and_(ModelVersion.model_id == model_version_in.model_id, ModelVersion.status == "approved"))
