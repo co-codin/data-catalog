@@ -1,5 +1,5 @@
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version, read_all
+from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version
 from app.dependencies import db_session, get_token, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
