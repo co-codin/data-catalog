@@ -88,7 +88,7 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         .filter(ModelVersion.model_id == model_version_in.model_id)
     )
     count_model_versions_draft = count_model_versions_draft.scalars().first()
-    if count_model_versions_draft == 1:
+    if count_model_versions_draft > 0:
         last_approved_model_version = await session.execute(
             select(ModelVersion)
             .filter(and_(ModelVersion.model_id == model_version_in.model_id, ModelVersion.status == "approved"))
@@ -226,8 +226,11 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
                 if right_attribute_id in model_attributes_mapping:
                     right_attribute_id = model_attributes_mapping[right_attribute_id]
 
+                resource_id = exists_model_attitude.resource_id
+                if exists_model_attitude.resource_id in model_resources_mapping:
+                    resource_id=model_resources_mapping[exists_model_attitude.resource_id]
                 model_attitude = ModelAttitude(
-                    resource_id=model_resources_mapping[exists_model_attitude.resource_id],
+                    resource_id=resource_id,
                     guid=str(uuid.uuid4()),
                     left_attribute_id=left_attribute_id,
                     right_attribute_id=right_attribute_id
