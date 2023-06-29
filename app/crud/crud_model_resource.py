@@ -266,4 +266,3 @@ async def remove_attribute(guid: str, session: AsyncSession):
         delete(ModelResourceAttribute)
         .where(ModelResourceAttribute.guid == guid)
     )
-
