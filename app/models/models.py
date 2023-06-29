@@ -136,7 +136,7 @@ class ModelVersion(Base):
 
     model_id = Column(BigInteger, ForeignKey(Model.id, ondelete='CASCADE'))
     status = Column(String, nullable=False, default='draft')
-    version = Column(String(100), nullable=True, default="0.0.0")
+    version = Column(String(100), nullable=True)
     owner = Column(String(36 * 4), nullable=False)
 
     desc = Column(Text)
