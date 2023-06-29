@@ -5,13 +5,14 @@ from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.queries import QueryConstructor
-from app.models.models import Operation
+from app.models.models import Operation, ModelVersion, ModelQuality, ModelRelationGroup, ModelRelation, ModelResource
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
 
 
 async def add_tags(
-        tags_like_model: SourceRegister | Object | Field | Model | Operation | QueryConstructor,
+        tags_like_model: SourceRegister | Object | Field | Model | Operation | QueryConstructor | ModelVersion |
+                         ModelQuality | ModelRelationGroup | ModelRelation | ModelResource,
         tags_in: Iterable[str],
         session: AsyncSession
 ):
@@ -32,7 +33,8 @@ async def add_tags(
 
 
 async def update_tags(
-        tags_like_model: SourceRegister | Object | Model | Field | Operation,
+        tags_like_model: SourceRegister | Object | Model | Field | Operation | QueryConstructor |
+                         ModelVersion | ModelQuality | ModelRelationGroup | ModelRelation | ModelResource,
         session: AsyncSession, tags_update_in: list[str] | None
 ):
     if tags_update_in is not None:
@@ -58,6 +60,11 @@ async def remove_redundant_tags(session: AsyncSession):
             joinedload(Tag.fields),
             joinedload(Tag.models),
             joinedload(Tag.model_versions),
+            joinedload(Tag.model_qualities),
+            joinedload(Tag.model_relation_group),
+            joinedload(Tag.model_relations),
+            joinedload(Tag.model_resources),
+            joinedload(Tag.model_resource_attributes),
             joinedload(Tag.operations),
             joinedload(Tag.queries)
         )
@@ -68,6 +75,11 @@ async def remove_redundant_tags(session: AsyncSession):
                 ~Tag.fields.any(),
                 ~Tag.models.any(),
                 ~Tag.model_versions.any(),
+                ~Tag.model_qualities.any(),
+                ~Tag.model_relation_group.any(),
+                ~Tag.model_relations.any(),
+                ~Tag.model_resources.any(),
+                ~Tag.model_resource_attributes.any(),
                 ~Tag.operations.any(),
                 ~Tag.queries.any()
             )
