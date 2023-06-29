@@ -41,9 +41,15 @@ async def create_model_attitude(attitude_in: ModelAttitudeIn, session: AsyncSess
     session.add(model_attitude)
     await session.commit()
 
+    model_attribute = await session.execute(
+        select(ModelResourceAttribute)
+        .where(ModelResourceAttribute.id == attitude_in.left_attribute_id)
+    )
+    model_attribute = model_attribute.scalars().first()
+
     model_resource = await session.execute(
-        delete(ModelResource)
-        .where(ModelResource.guid == attitude_in.left_attribute_id)
+        select(ModelResource)
+        .where(ModelResource.id == model_attribute.resource_id)
     )
     model_resource = model_resource.scalars().first()
     await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.MINOR)
