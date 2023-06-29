@@ -57,14 +57,13 @@ async def check_on_model_quality_uniqueness(
         .where(
             and_(
                 ModelQuality.model_version_id == model_version_id,
-                ModelQuality.name == name
             )
-        )
+        ).filter(ModelQuality.name.ilike(name))
     )
     model_qualities = model_qualities.scalars().all()
 
     for model_quality in model_qualities:
-        if model_quality.name == name and model_quality.guid != guid:
+        if model_quality.guid != guid:
             raise ModelQualityNameAlreadyExist(name)
 
 
