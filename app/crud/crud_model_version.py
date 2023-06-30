@@ -305,16 +305,16 @@ async def clone_relation_groups(model_version_id: int, session: AsyncSession):
         await clone_relations(relation_group_id=exists_model_relation_group.id, session=session)
 
 
-async def clone_qualities(model_version_id: int, session: AsyncSession):
+async def clone_qualities(old_version_id: int, new_version_id: int, session: AsyncSession):
     model_qualities = await session.execute(
         select(ModelQuality)
         .options(selectinload(ModelQuality.tags))
-        .where(ModelQuality.model_version_id == model_version_id)
+        .where(ModelQuality.model_version_id == old_version_id)
     )
     model_qualities = model_qualities.scalars().all()
     for exists_model_quality in model_qualities:
         model_quality = ModelQuality(
-            model_version_id=exists_model_quality.model_version_id,
+            model_version_id=new_version_id,
             name=exists_model_quality.name,
             owner=exists_model_quality.owner,
             desc=exists_model_quality.desc,
@@ -353,7 +353,7 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         )
         last_approved_model_version = last_approved_model_version.scalars().first()
         if last_approved_model_version is not None:
-            await clone_qualities(model_version_id=last_approved_model_version.id, session=session)
+            await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id, session=session)
             await clone_relation_groups(model_version_id=last_approved_model_version.id, session=session)
             model_resources_mapping, model_attributes_mapping = await clone_resources(
                 model_version_id=last_approved_model_version.id, session=session)
