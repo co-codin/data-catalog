@@ -188,7 +188,8 @@ async def clone_attitudes(old_version_id: int, session: AsyncSession, model_attr
         session.add(model_attitude)
 
 
-async def clone_attributes(old_resource_id: int, new_resource_id: int, session: AsyncSession, model_attributes_mapping: {}) -> {}:
+async def clone_attributes(old_resource_id: int, new_resource_id: int, session: AsyncSession,
+                           model_attributes_mapping: {}) -> {}:
     model_attributes = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.tags))
@@ -222,8 +223,8 @@ async def clone_attributes(old_resource_id: int, new_resource_id: int, session: 
     return model_attributes_mapping
 
 
-async def clone_attribute_relations(new_version_id=int, session=AsyncSession, model_attributes_mapping={},
-                                    model_resources_mapping={}):
+async def clone_attribute_relations(new_version_id: int, session: AsyncSession, model_attributes_mapping: {},
+                                    model_resources_mapping: {}):
     model_resources = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
@@ -287,7 +288,8 @@ async def clone_resources(old_version_id: int, new_version_id: int, session: Asy
         await session.commit()
 
         model_resources_mapping[exists_model_resource.id] = model_resource.id
-        model_attributes_mapping = await clone_attributes(old_resource_id=exists_model_resource.id, new_resource_id=model_resource.id, session=session,
+        model_attributes_mapping = await clone_attributes(old_resource_id=exists_model_resource.id,
+                                                          new_resource_id=model_resource.id, session=session,
                                                           model_attributes_mapping=model_attributes_mapping)
 
         return model_resources_mapping, model_attributes_mapping
@@ -388,11 +390,25 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
     if count_model_versions_draft > 0:
         last_approved_model_version = await session.execute(
             select(ModelVersion)
+            .options(selectinload(ModelVersion.tags))
             .filter(and_(ModelVersion.model_id == model_version_in.model_id, ModelVersion.status == "approved"))
             .order_by(desc(ModelVersion.updated_at))
         )
         last_approved_model_version = last_approved_model_version.scalars().first()
         if last_approved_model_version is not None:
+            await session.execute(
+                update(ModelVersion)
+                .where(ModelVersion.guid == model_version.guid)
+                .values(
+                    desc=last_approved_model_version.desc
+                )
+            )
+
+            tags = []
+            for tag in last_approved_model_version.tags:
+                tags.append(tag.name)
+            await update_tags(model_version, session, tags)
+
             await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
                                   session=session)
             await clone_relation_groups(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
@@ -401,8 +417,8 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
                 old_version_id=last_approved_model_version.id, new_version_id=model_version.id, session=session)
 
             await clone_attribute_relations(new_version_id=model_version.id, session=session,
-                                  model_attributes_mapping=model_attributes_mapping,
-                                  model_resources_mapping=model_resources_mapping)
+                                            model_attributes_mapping=model_attributes_mapping,
+                                            model_resources_mapping=model_resources_mapping)
 
             await clone_attitudes(old_version_id=last_approved_model_version.id, session=session,
                                   model_attributes_mapping=model_attributes_mapping,
