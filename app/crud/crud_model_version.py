@@ -160,11 +160,11 @@ async def delete_model_version(guid: str, session: AsyncSession):
     await session.commit()
 
 
-async def clone_attitudes(model_version_id: int, session: AsyncSession, model_attributes_mapping: [int],
+async def clone_attitudes(old_version_id: int, session: AsyncSession, model_attributes_mapping: [int],
                           model_resources_mapping: [int]):
     model_attitudes = await session.execute(
         select(ModelAttitude)
-        .filter(ModelResource.model_version_id == model_version_id)
+        .filter(ModelResource.model_version_id == old_version_id)
     )
     model_attitudes = model_attitudes.scalars().all()
     for exists_model_attitude in model_attitudes:
@@ -188,11 +188,11 @@ async def clone_attitudes(model_version_id: int, session: AsyncSession, model_at
         session.add(model_attitude)
 
 
-async def clone_attributes(resource_id: int, session: AsyncSession, model_attributes_mapping: {}) -> {}:
+async def clone_attributes(old_resource_id: int, new_resource_id: int, session: AsyncSession, model_attributes_mapping: {}) -> {}:
     model_attributes = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.tags))
-        .filter(ModelResourceAttribute.resource_id == resource_id)
+        .filter(ModelResourceAttribute.resource_id == old_resource_id)
     )
     model_attributes = model_attributes.scalars().all()
     for exists_model_resource_attribute in model_attributes:
@@ -201,10 +201,12 @@ async def clone_attributes(resource_id: int, session: AsyncSession, model_attrib
             key=exists_model_resource_attribute.key,
             db_link=exists_model_resource_attribute.db_link,
             desc=exists_model_resource_attribute.desc,
-            resource_id=resource_id,
+            resource_id=new_resource_id,
             model_resource_id=exists_model_resource_attribute.model_resource_id,
             model_data_type_id=exists_model_resource_attribute.model_data_type_id,
             cardinality=exists_model_resource_attribute.cardinality,
+            parent_id=exists_model_resource_attribute.parent_id,
+            additional=exists_model_resource_attribute.additional,
             guid=str(uuid.uuid4())
         )
 
@@ -220,18 +222,53 @@ async def clone_attributes(resource_id: int, session: AsyncSession, model_attrib
     return model_attributes_mapping
 
 
-async def clone_resources(model_version_id: int, session: AsyncSession):
+async def clone_attribute_relations(new_version_id=int, session=AsyncSession, model_attributes_mapping={},
+                                    model_resources_mapping={}):
     model_resources = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
-        .filter(ModelResource.model_version_id == model_version_id)
+        .filter(ModelResource.model_version_id == new_version_id)
+    )
+    model_resources = model_resources.scalars().all()
+    for model_resource in model_resources:
+        model_attributes = await session.execute(
+            select(ModelResourceAttribute)
+            .options(selectinload(ModelResourceAttribute.tags))
+            .filter(ModelResourceAttribute.resource_id == model_resource.id)
+        )
+        model_attributes = model_attributes.scalars().all()
+
+        for model_attribute in model_attributes:
+            if model_attribute.parent_id is None:
+                parent_id = None
+            else:
+                parent_id = model_attributes_mapping[model_attribute.parent_id]
+            if model_attribute.model_resource_id is None:
+                model_resource_id = None
+            else:
+                model_resource_id = model_resources_mapping[model_attribute.model_resource_id]
+            await session.execute(
+                update(ModelResourceAttribute)
+                .where(ModelResourceAttribute.guid == model_attribute.guid)
+                .values(
+                    model_resource_id=model_resource_id,
+                    parent_id=parent_id
+                )
+            )
+
+
+async def clone_resources(old_version_id: int, new_version_id: int, session: AsyncSession):
+    model_resources = await session.execute(
+        select(ModelResource)
+        .options(selectinload(ModelResource.tags))
+        .filter(ModelResource.model_version_id == old_version_id)
     )
     model_resources = model_resources.scalars().all()
     model_resources_mapping = {}
     model_attributes_mapping = {}
     for exists_model_resource in model_resources:
         model_resource = ModelResource(
-            model_version_id=exists_model_resource.model_version_id,
+            model_version_id=new_version_id,
             name=exists_model_resource.name,
             owner=exists_model_resource.owner,
             desc=exists_model_resource.desc,
@@ -250,23 +287,22 @@ async def clone_resources(model_version_id: int, session: AsyncSession):
         await session.commit()
 
         model_resources_mapping[exists_model_resource.id] = model_resource.id
-
-        model_attributes_mapping = await clone_attributes(resource_id=exists_model_resource.id, session=session,
-                                                    model_attributes_mapping=model_attributes_mapping)
+        model_attributes_mapping = await clone_attributes(old_resource_id=exists_model_resource.id, new_resource_id=model_resource.id, session=session,
+                                                          model_attributes_mapping=model_attributes_mapping)
 
         return model_resources_mapping, model_attributes_mapping
 
 
-async def clone_relations(relation_group_id: int, session: AsyncSession):
+async def clone_relations(old_relation_group_id: int, new_relation_group_id: int, session: AsyncSession):
     exists_model_relations = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
-        .filter(ModelRelation.model_relation_group_id == relation_group_id)
+        .filter(ModelRelation.model_relation_group_id == old_relation_group_id)
     )
     model_relations = exists_model_relations.scalars().all()
     for exists_model_relation in model_relations:
         model_relation = ModelRelation(
-            model_relation_group_id=exists_model_relation.model_relation_group_id,
+            model_relation_group_id=new_relation_group_id,
             name=exists_model_relation.name,
             owner=exists_model_relation.owner,
             desc=exists_model_relation.desc,
@@ -279,30 +315,34 @@ async def clone_relations(relation_group_id: int, session: AsyncSession):
             tags.append(tag.name)
         await add_tags(model_relation, tags, session)
         session.add(model_relation)
+        await session.commit()
 
 
-async def clone_relation_groups(model_version_id: int, session: AsyncSession):
+async def clone_relation_groups(old_version_id: int, new_version_id: int, session: AsyncSession):
     model_relation_groups = await session.execute(
         select(ModelRelationGroup)
         .options(selectinload(ModelRelationGroup.tags))
-        .filter(ModelRelationGroup.model_version_id == model_version_id)
+        .filter(ModelRelationGroup.model_version_id == old_version_id)
     )
     model_relation_groups = model_relation_groups.scalars().all()
     for exists_model_relation_group in model_relation_groups:
         model_relation_group = ModelRelationGroup(
-            model_version_id=exists_model_relation_group.model_version_id,
+            model_version_id=new_version_id,
             name=exists_model_relation_group.name,
             owner=exists_model_relation_group.owner,
             desc=exists_model_relation_group.desc,
             guid=str(uuid.uuid4())
         )
-        session.add(model_relation_group)
+
         tags = []
         for tag in exists_model_relation_group.tags:
             tags.append(tag.name)
         await add_tags(model_relation_group, tags, session)
+        session.add(model_relation_group)
+        await session.commit()
 
-        await clone_relations(relation_group_id=exists_model_relation_group.id, session=session)
+        await clone_relations(old_relation_group_id=exists_model_relation_group.id,
+                              new_relation_group_id=model_relation_group.id, session=session)
 
 
 async def clone_qualities(old_version_id: int, new_version_id: int, session: AsyncSession):
@@ -353,12 +393,18 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         )
         last_approved_model_version = last_approved_model_version.scalars().first()
         if last_approved_model_version is not None:
-            await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id, session=session)
-            await clone_relation_groups(model_version_id=last_approved_model_version.id, session=session)
+            await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
+                                  session=session)
+            await clone_relation_groups(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
+                                        session=session)
             model_resources_mapping, model_attributes_mapping = await clone_resources(
-                model_version_id=last_approved_model_version.id, session=session)
+                old_version_id=last_approved_model_version.id, new_version_id=model_version.id, session=session)
 
-            await clone_attitudes(model_version_id=last_approved_model_version.id, session=session,
+            await clone_attribute_relations(new_version_id=model_version.id, session=session,
+                                  model_attributes_mapping=model_attributes_mapping,
+                                  model_resources_mapping=model_resources_mapping)
+
+            await clone_attitudes(old_version_id=last_approved_model_version.id, session=session,
                                   model_attributes_mapping=model_attributes_mapping,
                                   model_resources_mapping=model_resources_mapping)
 
