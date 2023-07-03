@@ -293,7 +293,7 @@ async def clone_resources(old_version_id: int, new_version_id: int, session: Asy
                                                           new_resource_id=model_resource.id, session=session,
                                                           model_attributes_mapping=model_attributes_mapping)
 
-        return model_resources_mapping, model_attributes_mapping
+    return model_resources_mapping, model_attributes_mapping
 
 
 async def clone_relations(old_version_id: int, new_version_id: int, session: AsyncSession):
@@ -352,23 +352,24 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         guid=guid
     )
 
-    cloned = await clone_model_version(model_version=model_version, model_version_in=model_version_in, session=session)
-    if cloned is False:
-        await add_tags(model_version, model_version_in.tags, session)
-        session.add(model_version)
-
+    await add_tags(model_version, model_version_in.tags, session)
+    session.add(model_version)
     await session.commit()
+
+    await clone_model_version(model_version=model_version, model_version_in=model_version_in, session=session)
     return model_version
 
 
-async def clone_model_version(model_version: ModelVersion, model_version_in: ModelVersionIn, session: AsyncSession) -> bool:
+async def clone_model_version(model_version: ModelVersion, model_version_in: ModelVersionIn,
+                              session: AsyncSession) -> bool:
     count_model_versions_draft = await session.execute(
         select(func.count(ModelVersion.id))
         .where(ModelVersion.status == "draft")
         .filter(ModelVersion.model_id == model_version_in.model_id)
     )
     count_model_versions_draft = count_model_versions_draft.scalars().first()
-    if count_model_versions_draft > 0:
+
+    if count_model_versions_draft == 1:
         last_approved_model_version = await session.execute(
             select(ModelVersion)
             .options(selectinload(ModelVersion.tags))
@@ -377,19 +378,6 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
         )
         last_approved_model_version = last_approved_model_version.scalars().first()
         if last_approved_model_version is not None:
-            tags = model_version_in.tags
-            for tag in last_approved_model_version.tags:
-                tags.append(tag.name)
-            await update_tags(model_version, session, tags)
-
-            await session.execute(
-                update(ModelVersion)
-                .where(ModelVersion.guid == model_version.guid)
-                .values(
-                    desc=last_approved_model_version.desc
-                )
-            )
-
             await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
                                   session=session)
             await clone_relations(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
@@ -404,6 +392,21 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
             await clone_attitudes(old_version_id=last_approved_model_version.id, session=session,
                                   model_attributes_mapping=model_attributes_mapping,
                                   model_resources_mapping=model_resources_mapping)
+
+            await session.execute(
+                update(ModelVersion)
+                .where(ModelVersion.guid == model_version.guid)
+                .values(
+                    desc=last_approved_model_version.desc,
+                    version=None
+                )
+            )
+
+            tags = model_version_in.tags
+            for tag in last_approved_model_version.tags:
+                tags.append(tag.name)
+            if tags:
+                await update_tags(model_version, session, tags)
 
             return True
     return False
