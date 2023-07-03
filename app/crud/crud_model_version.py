@@ -12,6 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
+from app.database import Base
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
     ModelRelation
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
@@ -351,9 +352,16 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         guid=guid
     )
 
-    await add_tags(model_version, model_version_in.tags, session)
-    session.add(model_version)
+    cloned = await clone_model_version(model_version=model_version, model_version_in=model_version_in, session=session)
+    if cloned is False:
+        await add_tags(model_version, model_version_in.tags, session)
+        session.add(model_version)
 
+    await session.commit()
+    return model_version
+
+
+async def clone_model_version(model_version: ModelVersion, model_version_in: ModelVersionIn, session: AsyncSession) -> bool:
     count_model_versions_draft = await session.execute(
         select(func.count(ModelVersion.id))
         .where(ModelVersion.status == "draft")
@@ -369,6 +377,11 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
         )
         last_approved_model_version = last_approved_model_version.scalars().first()
         if last_approved_model_version is not None:
+            tags = model_version_in.tags
+            for tag in last_approved_model_version.tags:
+                tags.append(tag.name)
+            await update_tags(model_version, session, tags)
+
             await session.execute(
                 update(ModelVersion)
                 .where(ModelVersion.guid == model_version.guid)
@@ -376,11 +389,6 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
                     desc=last_approved_model_version.desc
                 )
             )
-
-            tags = []
-            for tag in last_approved_model_version.tags:
-                tags.append(tag.name)
-            await update_tags(model_version, session, tags)
 
             await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
                                   session=session)
@@ -397,5 +405,5 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
                                   model_attributes_mapping=model_attributes_mapping,
                                   model_resources_mapping=model_resources_mapping)
 
-    await session.commit()
-    return model_version
+            return True
+    return False
