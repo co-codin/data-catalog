@@ -7,15 +7,15 @@ from fastapi import HTTPException, status
 
 from app.crud.crud_model_version import generate_version_number, VersionLevel
 from app.errors.errors import ModelVersionNotDraftError
-from app.models.models import ModelRelation, ModelRelationGroup, ModelVersion
+from app.models.models import ModelRelation, ModelVersion
 from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
-async def read_relations_by_group_id(group_id: int, session: AsyncSession):
+async def read_relations_by_version(version_id: int, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
-        .filter(ModelRelation.model_relation_group_id == group_id)
+        .filter(ModelRelation.model_version_id == version_id)
     )
     model_relation = model_relation.scalars().all()
     return model_relation
@@ -35,16 +35,10 @@ async def read_relation_by_guid(guid: str, token: str, session: AsyncSession):
     return model_relation
 
 
-async def check_model_version_is_draft(model_relation_group_id: int, session: AsyncSession):
-    model_relation_group = await session.execute(
-        select(ModelRelationGroup)
-        .filter(ModelRelationGroup.id == model_relation_group_id)
-    )
-    model_relation_group = model_relation_group.scalars().first()
-
+async def check_model_version_is_draft(version_id: int, session: AsyncSession):
     model_version = await session.execute(
         select(ModelVersion)
-        .filter(ModelVersion.id == model_relation_group.model_version_id)
+        .filter(ModelVersion.id == version_id)
     )
     model_version = model_version.scalars().first()
 
@@ -55,8 +49,7 @@ async def check_model_version_is_draft(model_relation_group_id: int, session: As
 async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSession) -> str:
     guid = str(uuid.uuid4())
 
-
-    await check_model_version_is_draft(model_relation_group_id=relation_in.model_relation_group_id,
+    await check_model_version_is_draft(version_id=relation_in.model_version_id,
                                        session=session)
 
     model_relation = ModelRelation(
@@ -68,18 +61,12 @@ async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSess
     session.add(model_relation)
     await session.commit()
 
-    model_relation_group = await session.execute(
-        select(ModelRelationGroup)
-        .filter(ModelRelationGroup.id == model_relation.model_relation_group_id)
-    )
-
-    model_relation_group = model_relation_group.scalars().first()
-    await generate_version_number(id=model_relation_group.model_version_id, session=session, level=VersionLevel.PATCH)
+    await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
 
     return model_relation.guid
 
 
-async def update_model_relation(guid: int, relation_update_in: ModelRelationUpdateIn, session: AsyncSession):
+async def update_model_relation(guid: str, relation_update_in: ModelRelationUpdateIn, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
@@ -114,12 +101,8 @@ async def delete_model_relation(guid: str, session: AsyncSession):
     )
     model_relation = model_relation.scalars().first()
 
-    model_relation_group = await session.execute(
-        select(ModelRelationGroup)
-        .filter(ModelRelationGroup.id == model_relation.model_relation_group_id)
-    )
-    model_relation_group = model_relation_group.scalars().first()
-    await generate_version_number(id=model_relation_group.model_version_id, session=session, level=VersionLevel.PATCH)
+    await check_model_version_is_draft(version_id=model_relation.model_version_id, session=session)
+    await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
 
     await session.execute(
         delete(ModelRelation)
