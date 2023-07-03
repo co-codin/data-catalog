@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
-    ModelRelation, ModelRelationGroup
+    ModelRelation
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
 
 
@@ -295,16 +295,16 @@ async def clone_resources(old_version_id: int, new_version_id: int, session: Asy
         return model_resources_mapping, model_attributes_mapping
 
 
-async def clone_relations(old_relation_group_id: int, new_relation_group_id: int, session: AsyncSession):
+async def clone_relations(old_version_id: int, new_version_id: int, session: AsyncSession):
     exists_model_relations = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
-        .filter(ModelRelation.model_relation_group_id == old_relation_group_id)
+        .filter(ModelRelation.model_version_id == old_version_id)
     )
     model_relations = exists_model_relations.scalars().all()
     for exists_model_relation in model_relations:
         model_relation = ModelRelation(
-            model_relation_group_id=new_relation_group_id,
+            model_version_id=new_version_id,
             name=exists_model_relation.name,
             owner=exists_model_relation.owner,
             desc=exists_model_relation.desc,
@@ -318,33 +318,6 @@ async def clone_relations(old_relation_group_id: int, new_relation_group_id: int
         await add_tags(model_relation, tags, session)
         session.add(model_relation)
         await session.commit()
-
-
-async def clone_relation_groups(old_version_id: int, new_version_id: int, session: AsyncSession):
-    model_relation_groups = await session.execute(
-        select(ModelRelationGroup)
-        .options(selectinload(ModelRelationGroup.tags))
-        .filter(ModelRelationGroup.model_version_id == old_version_id)
-    )
-    model_relation_groups = model_relation_groups.scalars().all()
-    for exists_model_relation_group in model_relation_groups:
-        model_relation_group = ModelRelationGroup(
-            model_version_id=new_version_id,
-            name=exists_model_relation_group.name,
-            owner=exists_model_relation_group.owner,
-            desc=exists_model_relation_group.desc,
-            guid=str(uuid.uuid4())
-        )
-
-        tags = []
-        for tag in exists_model_relation_group.tags:
-            tags.append(tag.name)
-        await add_tags(model_relation_group, tags, session)
-        session.add(model_relation_group)
-        await session.commit()
-
-        await clone_relations(old_relation_group_id=exists_model_relation_group.id,
-                              new_relation_group_id=model_relation_group.id, session=session)
 
 
 async def clone_qualities(old_version_id: int, new_version_id: int, session: AsyncSession):
@@ -411,8 +384,8 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
 
             await clone_qualities(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
                                   session=session)
-            await clone_relation_groups(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
-                                        session=session)
+            await clone_relations(old_version_id=last_approved_model_version.id, new_version_id=model_version.id,
+                                  session=session)
             model_resources_mapping, model_attributes_mapping = await clone_resources(
                 old_version_id=last_approved_model_version.id, new_version_id=model_version.id, session=session)
 
