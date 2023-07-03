@@ -144,8 +144,9 @@ class ModelVersion(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
-    model = relationship('Model', back_populates='model_versions')
+    confirmed_at = Column(DateTime, nullable=True)
 
+    model = relationship('Model', back_populates='model_versions')
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
     model_qualities = relationship('ModelQuality', back_populates='model_version')
@@ -153,15 +154,13 @@ class ModelVersion(Base):
     model_resources = relationship('ModelResource', back_populates='model_version')
     query_constructor_body = relationship('QueryConstructorBody', back_populates='model_version')
 
-    confirmed_at = Column(DateTime, nullable=True)
-
 
 class ModelQuality(Base):
     __tablename__ = 'model_qualities'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id, ondelete='CASCADE'))
 
     name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
@@ -183,7 +182,7 @@ class ModelRelationGroup(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id, ondelete='CASCADE'))
 
     name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
@@ -203,7 +202,7 @@ class ModelRelation(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    model_relation_group_id = Column(BigInteger, ForeignKey(ModelRelationGroup.id))
+    model_relation_group_id = Column(BigInteger, ForeignKey(ModelRelationGroup.id, ondelete='CASCADE'))
 
     name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
@@ -224,7 +223,7 @@ class ModelResource(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id, ondelete='CASCADE'))
 
     name = Column(Text, nullable=False)
     owner = Column(String(36 * 4), nullable=False)
@@ -261,7 +260,7 @@ class ModelResourceAttribute(Base):
     db_link = Column(String(500), nullable=True)
     desc = Column(Text, nullable=True)
 
-    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
+    resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id), nullable=True)
 
@@ -291,7 +290,7 @@ class ModelAttitude(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
-    resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
+    resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
     left_attribute_id = Column(BigInteger, ForeignKey(ModelResourceAttribute.id))
     right_attribute_id = Column(BigInteger, ForeignKey(ModelResourceAttribute.id))
 
