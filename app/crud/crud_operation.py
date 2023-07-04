@@ -41,7 +41,37 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
     return operation_out
 
 
-async def create_operation(operation_in: OperationIn, session: AsyncSession,  author_guid: str) -> Operation:
+async def create_operation_version(version: int, operation_id: int, data_in: OperationIn | OperationUpdateIn,
+                                   session: AsyncSession, author_guid=""):
+    guid = str(uuid.uuid4())
+    operation_body = OperationBody(
+        code=data_in.code,
+        guid=guid,
+        operation_id=operation_id,
+        version=version
+    )
+
+    if isinstance(data_in, OperationUpdateIn):
+        operation_body.version_desc = data_in.version_desc
+        if data_in.version_owner is None:
+            data_in.version_owner = author_guid
+        operation_body.version_owner = data_in.version_owner
+
+    session.add(operation_body)
+
+    for parameter_in in data_in.parameters:
+        guid = str(uuid.uuid4())
+        parameter = OperationBodyParameter(
+            **parameter_in.dict(),
+            guid=guid,
+            operation_body_id=operation_body.operation_body_id
+        )
+        session.add(parameter)
+
+    await session.commit()
+
+
+async def create_operation(operation_in: OperationIn, session: AsyncSession, author_guid: str) -> Operation:
     guid = str(uuid.uuid4())
 
     if operation_in.owner is None:
@@ -54,41 +84,18 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession,  au
 
     await add_tags(operation, operation_in.tags, session)
     session.add(operation)
-
-    operation = await session.execute(
-        select(Operation)
-        .filter(Operation.guid == guid)
-    )
-    operation = operation.scalars().first()
-
-    guid = str(uuid.uuid4())
-    operation_body = OperationBody(
-        code=operation_in.code,
-        guid=guid,
-        operation_id=operation.operation_id
-    )
-    session.add(operation_body)
-
-    operation_body = await session.execute(
-        select(OperationBody)
-        .filter(OperationBody.guid == guid)
-    )
-    operation_body = operation_body.scalars().first()
-
-    for parameter_in in operation_in.parameters:
-        guid = str(uuid.uuid4())
-        parameter = OperationBodyParameter(
-            **parameter_in.dict(),
-            guid=guid,
-            operation_body_id=operation_body.operation_body_id
-        )
-        session.add(parameter)
-
     await session.commit()
+
+    await create_operation_version(version=1, operation_id=operation.operation_id, data_in=operation_in, session=session)
+
     return operation
 
 
-async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, session: AsyncSession):
+def need_create_version(operation_update_in: OperationUpdateIn) -> bool:
+    return operation_update_in.code is not None or operation_update_in.parameters is not None
+
+
+async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, session: AsyncSession, author_guid: str):
     operation_update_in_data = {
         key: value for key, value in operation_update_in.dict(exclude={'tags', 'code', 'parameters'}).items()
         if value is not None
@@ -113,45 +120,16 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
 
     await update_tags(operation, session, operation_update_in.tags)
 
-    await session.execute(
-        update(OperationBody)
-        .where(OperationBody.operation_id == operation.operation_id)
-        .values(
-            code=operation_update_in.code
+    if need_create_version(operation_update_in=operation_update_in):
+        operation_body = await session.execute(
+            select(OperationBody)
+            .options(selectinload(OperationBody.operation_body_parameters))
+            .filter(OperationBody.operation_id == operation.operation_id)
+            .order_by(OperationBody.version.desc())
         )
-    )
-
-    operation_body = await session.execute(
-        select(OperationBody)
-        .options(selectinload(OperationBody.operation_body_parameters))
-        .filter(OperationBody.operation_id == operation.operation_id)
-    )
-    operation_body = operation_body.scalars().first()
-
-    if operation_update_in.parameters is not None:
-        parameters_update_in_set = set()
-        for parameter in operation_update_in.parameters:
-            parameters_update_in_set.add(parameter.name)
-
-        body_parameters_set = {parameter.name for parameter in operation_body.operation_body_parameters}
-        body_parameters_dict = {parameter.name: parameter for parameter in operation_body.operation_body_parameters}
-
-        parameters_to_delete = body_parameters_set - parameters_update_in_set
-        for parameter in parameters_to_delete:
-            operation_body.operation_body_parameters.remove(body_parameters_dict[parameter])
-
-        parameters_to_create = parameters_update_in_set - body_parameters_set
-        for parameter_in in operation_update_in.parameters:
-            if parameter_in.name in parameters_to_create:
-                guid = str(uuid.uuid4())
-                parameter = OperationBodyParameter(
-                    **parameter_in.dict(),
-                    guid=guid,
-                    operation_body_id=operation_body.operation_body_id
-                )
-                session.add(parameter)
-
-        await session.commit()
+        operation_body = operation_body.scalars().first()
+        await create_operation_version(version=operation_body.version+1, operation_id=operation.operation_id,
+                                       data_in=operation_update_in, session=session, author_guid=author_guid)
 
 
 async def delete_by_guid(guid: str, session: AsyncSession):
