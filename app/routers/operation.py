@@ -12,10 +12,10 @@ router = APIRouter(
 
 
 @router.post('/')
-async def add_operation(operation_in: OperationIn, session=Depends(db_session), _=Depends(get_user)):
+async def add_operation(operation_in: OperationIn, session=Depends(db_session), user=Depends(get_user)):
     await check_on_operation_name_uniqueness(name=operation_in.name, session=session)
     await check_on_operation_parameters_uniqueness(parameters=operation_in.parameters, session=session)
-    operation = await create_operation(operation_in=operation_in, session=session)
+    operation = await create_operation(operation_in=operation_in, session=session, author_guid=user['identity_id'])
     return {'guid': operation.guid}
 
 

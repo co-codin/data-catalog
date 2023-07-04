@@ -41,10 +41,11 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
     return operation_out
 
 
-async def create_operation(operation_in: OperationIn, session: AsyncSession) -> Operation:
+async def create_operation(operation_in: OperationIn, session: AsyncSession,  author_guid: str) -> Operation:
     guid = str(uuid.uuid4())
 
-    # if not operation_in.owner:
+    if operation_in.owner is None:
+        operation_in.owner = author_guid
 
     operation = Operation(
         **operation_in.dict(exclude={'tags', 'code', 'parameters'}),

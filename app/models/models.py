@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean, LargeBinary
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -57,6 +57,13 @@ operation_tags = Table(
     "operation_tags",
     Base.metadata,
     Column("operation_id", ForeignKey("operations.operation_id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+pipeline_tags = Table(
+    "pipeline_tags",
+    Base.metadata,
+    Column("pipeline_id", ForeignKey("pipelines.id", ondelete='CASCADE'), primary_key=True),
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
@@ -273,3 +280,44 @@ class ModelAttitude(Base):
                                    foreign_keys=[left_attribute_id])
     right_attributes = relationship('ModelResourceAttribute', back_populates='right_attribute_attitudes',
                                     foreign_keys=[right_attribute_id])
+
+
+class PipelineStatus(Enum):
+    EXPECTED = 0
+    ERROR = 1
+    SUCCESS = 2
+
+
+class Pipeline(Base):
+    __tablename__ = 'pipelines'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+
+    name = Column(String(500), nullable=False, index=True, unique=True)
+    owner = Column(String(36 * 4), nullable=False)
+    desc = Column(String(1000), nullable=True)
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id, ondelete='CASCADE'))
+    state = Column(Boolean(), nullable=False, default=True)
+    base = Column(Boolean(), nullable=False, default=True)
+    operating_mode = Column(Boolean(), nullable=False, default=False)
+
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
+
+    tags = relationship('Tag', secondary=pipeline_tags, order_by='Tag.id')
+    comments = relationship('Comment', order_by='Comment.id')
+    pipeline_result = relationship('PipelineResult', back_populates='pipeline')
+
+
+class PipelineResult(Base):
+    __tablename__ = 'pipeline_results'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    pipeline_id = Column(BigInteger, ForeignKey(Pipeline.id, ondelete='CASCADE'))
+
+    status = Column(BigInteger(), nullable=False, default=PipelineStatus.EXPECTED.value)
+    attachment = Column(LargeBinary(), nullable=True)
+
+    pipeline = relationship('Pipeline', back_populates='pipeline_result')
