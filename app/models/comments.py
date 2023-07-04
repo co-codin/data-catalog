@@ -5,7 +5,7 @@ from sqlalchemy.sql import func
 
 from app.database import Base
 from app.models.sources import SourceRegister, Object, Field
-from app.models.models import Model, ModelVersion, ModelResource, ModelQuality
+from app.models.models import Model, ModelVersion, ModelResource, ModelQuality, Pipeline
 
 
 class Comment(Base):
@@ -26,3 +26,4 @@ class Comment(Base):
     field_guid = Column(String(36), ForeignKey(Field.guid, ondelete='CASCADE'))
     resource_guid = Column(String(36), ForeignKey(ModelResource.guid, ondelete='CASCADE'))
     quality_guid = Column(String(36), ForeignKey(ModelQuality.guid, ondelete='CASCADE'))
+    pipeline_guid = Column(String(36), ForeignKey(Pipeline.guid, ondelete='CASCADE'))
