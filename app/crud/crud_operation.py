@@ -61,6 +61,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession,  au
     )
     operation = operation.scalars().first()
 
+    guid = str(uuid.uuid4())
     operation_body = OperationBody(
         code=operation_in.code,
         guid=guid,
@@ -114,7 +115,7 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
 
     await session.execute(
         update(OperationBody)
-        .where(OperationBody.guid == guid)
+        .where(OperationBody.operation_id == operation.operation_id)
         .values(
             code=operation_update_in.code
         )
@@ -123,7 +124,7 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
     operation_body = await session.execute(
         select(OperationBody)
         .options(selectinload(OperationBody.operation_body_parameters))
-        .filter(OperationBody.guid == guid)
+        .filter(OperationBody.operation_id == operation.operation_id)
     )
     operation_body = operation_body.scalars().first()
 
