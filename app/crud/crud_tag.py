@@ -5,15 +5,15 @@ from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.queries import QueryConstructor
-from app.models.models import Operation, ModelQuality, ModelRelation, ModelResource, \
-    ModelResourceAttribute, ModelVersion
+from app.models.models import Operation, ModelQuality, ModelRelation, ModelResource, ModelResourceAttribute, \
+    ModelVersion, Pipeline
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
 
 
 async def add_tags(
         tags_like_model: SourceRegister | Object | Field | Model | Operation | QueryConstructor | ModelQuality
-                         | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion,
+                         | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline,
         tags_in: Iterable[str],
         session: AsyncSession
 ):
@@ -35,7 +35,7 @@ async def add_tags(
 
 async def update_tags(
         tags_like_model: SourceRegister | Object | Model | Field | Operation | QueryConstructor | ModelQuality
-                         | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion,
+                         | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline,
         session: AsyncSession, tags_update_in: list[str] | None
 ):
     if tags_update_in is not None:
@@ -66,7 +66,8 @@ async def remove_redundant_tags(session: AsyncSession):
             joinedload(Tag.model_resources),
             joinedload(Tag.model_resource_attributes),
             joinedload(Tag.operations),
-            joinedload(Tag.queries)
+            joinedload(Tag.queries),
+            joinedload(Tag.pipelines)
         )
         .where(
             and_(
@@ -80,7 +81,8 @@ async def remove_redundant_tags(session: AsyncSession):
                 ~Tag.model_resources.any(),
                 ~Tag.model_resource_attributes.any(),
                 ~Tag.operations.any(),
-                ~Tag.queries.any()
+                ~Tag.queries.any(),
+                ~Tag.pipelines.any()
             )
         )
     )

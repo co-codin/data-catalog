@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from app.models.queries import query_constructor_tags
 from app.models.sources import source_registry_tags, objects_tags, model_tags, fields_tags
 from app.models.models import model_version_tags, operation_tags, model_resource_tags, model_quality_tags, \
-    model_relation_tags, model_resource_attribute_tags
+    model_relation_tags, model_resource_attribute_tags, pipeline_tags
 from app.database import Base
 
 
@@ -25,3 +25,4 @@ class Tag(Base):
     model_resource_attributes = relationship('ModelResourceAttribute', secondary=model_resource_attribute_tags)
     operations = relationship('Operation', secondary=operation_tags)
     queries = relationship('QueryConstructor', secondary=query_constructor_tags)
+    pipelines = relationship('Pipeline', secondary=pipeline_tags)

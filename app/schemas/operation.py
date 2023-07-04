@@ -91,3 +91,5 @@ class OperationUpdateIn(BaseModel):
     tags: Optional[List[str]] = None
     code: Optional[str] = None
     parameters: Optional[list[OperationParameterIn]] = None
+    version_owner: Optional[str] = Field(None, max_length=36 * 4)
+    version_desc: Optional[str] = Field(None, max_length=1000)
