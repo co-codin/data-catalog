@@ -106,6 +106,10 @@ class OperationBody(Base):
 
     operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
+    version = Column(BigInteger, default=1)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
+    version_owner = Column(String(36 * 4), nullable=True)
+    version_desc = Column(String(1000), nullable=True)
 
     code = Column(Text, nullable=False)
     operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
