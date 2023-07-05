@@ -17,8 +17,8 @@ async def read_model_relations(version_id: int, session=Depends(db_session), _=D
 
 
 @router.get('/{guid}')
-async def get_model_relation(guid: str, session=Depends(db_session), token=Depends(get_token)):
-    return await read_relation_by_guid(guid, token, session)
+async def get_model_relation(guid: str, session=Depends(db_session), _=Depends(get_token)):
+    return await read_relation_by_guid(guid, session)
 
 
 @router.post('/')

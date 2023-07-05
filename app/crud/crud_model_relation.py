@@ -21,7 +21,7 @@ async def read_relations_by_version(version_id: int, session: AsyncSession):
     return model_relation
 
 
-async def read_relation_by_guid(guid: str, token: str, session: AsyncSession):
+async def read_relation_by_guid(guid: str, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
