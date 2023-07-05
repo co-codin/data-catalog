@@ -241,12 +241,13 @@ class ModelResourceAttribute(Base):
     key = Column(Boolean, index=True, nullable=True)
     db_link = Column(String(500), nullable=True)
     desc = Column(Text, nullable=True)
+    cardinality = Column(String(100), nullable=True)
+    parent_id = Column(BigInteger, nullable=True)
+    additional = Column(JSONB, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id, ondelete='CASCADE'), nullable=True)
-
-    cardinality = Column(String(100), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
