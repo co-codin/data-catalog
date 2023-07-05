@@ -104,6 +104,7 @@ class Operation(Base):
 class OperationBody(Base):
     __tablename__ = 'operation_bodies'
 
+    operation_id = Column(BigInteger, ForeignKey(Operation.operation_id, ondelete='CASCADE'))
     operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
     version = Column(BigInteger, default=1)
@@ -114,7 +115,7 @@ class OperationBody(Base):
     code = Column(Text, nullable=False)
     operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
     operation = relationship('Operation', back_populates='operation_body')
-    operation_id = Column(BigInteger, ForeignKey(Operation.operation_id, ondelete='CASCADE'))
+    model_relation_operations = relationship('OperationBody', back_populates='relation_operations')
 
 
 class OperationBodyParameter(Base):
