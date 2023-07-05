@@ -242,7 +242,7 @@ class ModelResourceAttribute(Base):
     desc = Column(Text, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
-    model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'), nullable=True)
+    model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id, ondelete='CASCADE'), nullable=True)
 
     cardinality = Column(String(100), nullable=True)
