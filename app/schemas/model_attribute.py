@@ -69,5 +69,7 @@ class ModelResourceAttributeOut(BaseModel):
     model_resources: Any
     resources: Any
 
+    data_type_errors: str | None
+
     class Config:
         orm_mode = True

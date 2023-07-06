@@ -58,6 +58,7 @@ async def create_operation_version(version: int, operation_id: int, data_in: Ope
         operation_body.version_owner = data_in.version_owner
 
     session.add(operation_body)
+    await session.commit()
 
     for parameter_in in data_in.parameters:
         guid = str(uuid.uuid4())
@@ -67,8 +68,7 @@ async def create_operation_version(version: int, operation_id: int, data_in: Ope
             operation_body_id=operation_body.operation_body_id
         )
         session.add(parameter)
-
-    await session.commit()
+        await session.commit()
 
 
 async def create_operation(operation_in: OperationIn, session: AsyncSession, author_guid: str) -> Operation:
