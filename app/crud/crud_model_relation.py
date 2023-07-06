@@ -6,9 +6,13 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.crud.crud_model_version import generate_version_number, VersionLevel
-from app.errors.errors import ModelVersionNotDraftError
-from app.models.models import ModelRelation, ModelVersion
-from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn
+from app.errors.errors import ModelVersionNotDraftError, OperationParameterNotExistError, \
+    OperationParameterNotConfiguredError, OperationParameterOutputError
+from app.models.models import ModelRelation, ModelVersion, OperationBody, Operation, \
+    ModelRelationOperation, ModelRelationOperationParameter, OperationBodyParameter
+from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn, ModelRelationOperationIn, \
+    ModelRelationOperationUpdateIn, \
+    ModelRelationOperationParameterIn, ModelRelationOperationParameterUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
@@ -25,6 +29,7 @@ async def read_relation_by_guid(guid: str, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
+        .options(selectinload(ModelRelationOperationIn.pararameters))
         .filter(ModelRelation.guid == guid)
     )
     model_relation = model_relation.scalars().first()
@@ -46,24 +51,149 @@ async def check_model_version_is_draft(version_id: int, session: AsyncSession):
         raise ModelVersionNotDraftError
 
 
-async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSession) -> str:
+def check_model_relation_operation_parameter(model_relation_operation_parameter_in: ModelRelationOperationParameterIn
+                                                                                    | ModelRelationOperationParameterUpdateIn):
+    test = int(model_relation_operation_parameter_in.value is not None) \
+           + int(model_relation_operation_parameter_in.model_resource_attribute_id is not None) \
+           + int(model_relation_operation_parameter_in.model_relation_operation is not None)
+    if test != 1:
+        raise OperationParameterNotConfiguredError()
+
+
+async def check_model_relation_operation_in(
+        model_relation_operation_in: ModelRelationOperationIn | ModelRelationOperationUpdateIn | None,
+        session: AsyncSession):
+    if model_relation_operation_in is None:
+        return
+
+    operation_body = await session.execute(
+        select(OperationBody)
+        .options(selectinload(OperationBody.operation_body_parameters))
+        .filter(OperationBody.operation_body_id == model_relation_operation_in.operation_body_id)
+    )
+    operation_body = operation_body.scalars().first()
+
+    operation = await session.execute(
+        select(Operation)
+        .filter(Operation.operation_id == operation_body.operation_id)
+    )
+    operation = operation.scalars().first()
+
+    for operation_body_parameter in operation_body.operation_body_parameters:
+        found = False
+        for model_relation_operation_parameter_in in model_relation_operation_in.model_relation_operation_parameter:
+            if model_relation_operation_parameter_in.operation_body_parameter_id == operation_body_parameter.operation_body_parameter_id:
+                check_model_relation_operation_parameter(
+                    model_relation_operation_parameter_in=model_relation_operation_parameter_in)
+                found = True
+                if not operation_body_parameter.flag and model_relation_operation_parameter_in.model_resource_attribute_id is None:
+                    raise OperationParameterOutputError(id_=operation_body_parameter.operation_body_parameter_id, name=operation_body_parameter.name)
+
+        if not found:
+            raise OperationParameterNotExistError(parameter=operation_body_parameter.name, operation=operation.name,
+                                                  version=operation_body.version)
+
+        if hasattr(operation_body_parameter, 'model_relation_operation'):
+            await check_model_relation_operation_in(
+                model_relation_operation_in=operation_body_parameter.model_relation_operation,
+                session=session)
+
+
+async def create_model_relation_operation(model_relation_id: int | None,
+                                          model_relation_operation_in: ModelRelationOperationIn | ModelRelationOperationUpdateIn | None,
+                                          session: AsyncSession, parent_id: int | None):
+    if model_relation_operation_in is None:
+        return
+
     guid = str(uuid.uuid4())
+    model_relation_operation = ModelRelationOperation(
+        guid=guid,
+        model_relation_id=model_relation_id,
+        operation_body_id=model_relation_operation_in.operation_body_id,
+        parent_id=parent_id
+    )
+    session.add(model_relation_operation)
+    await session.commit()
 
-    await check_model_version_is_draft(version_id=relation_in.model_version_id,
-                                       session=session)
+    for model_relation_operation_parameter_in in model_relation_operation_in.model_relation_operation_parameter:
+        guid = str(uuid.uuid4())
+        model_relation_operation_parameter = ModelRelationOperationParameter(
+            guid=guid,
+            model_relation_operation_id=model_relation_operation.id,
+            model_resource_attribute_id=model_relation_operation_parameter_in.model_resource_attribute_id,
+            value=model_relation_operation_parameter_in.value
+        )
+        session.add(model_relation_operation_parameter)
+        await session.commit()
 
+        if model_relation_operation_parameter_in.model_relation_operation is not None:
+            if type(model_relation_operation_parameter_in.model_relation_operation) == dict:
+                model_relation_operation_parameter_in.model_relation_operation = ModelRelationOperationIn(
+                    **model_relation_operation_parameter_in.model_relation_operation
+                )
+            await create_model_relation_operation(model_relation_id=None,
+                                                  model_relation_operation_in=model_relation_operation_parameter_in.model_relation_operation,
+                                                  session=session, parent_id=model_relation_operation.id)
+
+
+async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSession) -> str:
+    await check_model_version_is_draft(version_id=relation_in.model_version_id, session=session)
+
+    await check_model_relation_operation_in(model_relation_operation_in=relation_in.model_relation_operation,
+                                            session=session)
+
+    guid = str(uuid.uuid4())
     model_relation = ModelRelation(
-        **relation_in.dict(exclude={'tags'}),
+        **relation_in.dict(exclude={'tags', 'model_relation_operation'}),
         guid=guid
     )
     await add_tags(model_relation, relation_in.tags, session)
-
     session.add(model_relation)
     await session.commit()
 
-    await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
+    await create_model_relation_operation(model_relation_id=model_relation.id,
+                                          model_relation_operation_in=relation_in.model_relation_operation,
+                                          session=session, parent_id=None)
 
+    await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
     return model_relation.guid
+
+
+async def update_model_relation_operation_parameter(
+        model_relation_operation_parameter_in: ModelRelationOperationParameterUpdateIn | None,
+        session: AsyncSession):
+    if model_relation_operation_parameter_in is None:
+        return
+
+    check_model_relation_operation_parameter(
+        model_relation_operation_parameter_in=model_relation_operation_parameter_in)
+    await session.execute(
+        update(ModelRelationOperationParameter)
+        .where(
+            ModelRelationOperationParameter.id == model_relation_operation_parameter_in.model_relation_operation_parameter_id)
+        .values(
+            model_resource_attribute_id=model_relation_operation_parameter_in.model_resource_attribute_id,
+            value=model_relation_operation_parameter_in.value,
+        )
+    )
+
+    await update_model_relation_operation(model_relation_operation_in=model_relation_operation_parameter_in.model_relation_operation,
+                                          session=session)
+
+
+async def update_model_relation_operation(model_relation_operation_in: ModelRelationOperationUpdateIn | None,
+                                          session: AsyncSession):
+    if model_relation_operation_in is None:
+        return
+
+    for model_relation_operation_parameter_in in model_relation_operation_in.model_relation_operation_parameter:
+        if type(model_relation_operation_parameter_in.model_relation_operation) == dict:
+            model_relation_operation_parameter_in.model_relation_operation = ModelRelationOperationIn(
+                **model_relation_operation_parameter_in.model_relation_operation
+            )
+        await update_model_relation_operation_parameter(
+            model_relation_operation_parameter_in=model_relation_operation_parameter_in,
+            session=session)
 
 
 async def update_model_relation(guid: str, relation_update_in: ModelRelationUpdateIn, session: AsyncSession):
@@ -74,8 +204,11 @@ async def update_model_relation(guid: str, relation_update_in: ModelRelationUpda
     )
     model_relation = model_relation.scalars().first()
 
+    if not model_relation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
     model_relation_update_in_data = {
-        key: value for key, value in relation_update_in.dict(exclude={'tags'}).items()
+        key: value for key, value in relation_update_in.dict(exclude={'tags', 'model_relation_operation'}).items()
         if value is not None
     }
 
@@ -89,9 +222,33 @@ async def update_model_relation(guid: str, relation_update_in: ModelRelationUpda
 
     await update_tags(model_relation, session, relation_update_in.tags)
 
-    session.add(model_relation)
-    await session.commit()
+    if relation_update_in.model_relation_operation.model_relation_operation_id is not None:
+        await update_model_relation_operation(model_relation_operation_in=relation_update_in.model_relation_operation,
+                                              session=session)
+    elif relation_update_in.model_relation_operation.operation_body_id:
+        await check_model_relation_operation_in(model_relation_operation_in=relation_update_in.model_relation_operation,
+                                                session=session)
+        await session.execute(
+            delete(ModelRelationOperation)
+            .where(ModelRelationOperation.model_relation_id == model_relation.id)
+        )
+        await create_model_relation_operation(model_relation_id=model_relation.id,
+                                              model_relation_operation_in=relation_update_in.model_relation_operation,
+                                              session=session, parent_id=None)
 
+
+async def delete_child_operations(parent_id: int, session: AsyncSession):
+    childs = await session.execute(
+        select(ModelRelationOperation)
+        .filter(ModelRelationOperation.parent_id == parent_id)
+    )
+    childs = childs.scalars().first()
+    for child in childs:
+        await delete_child_operations(parent_id=child.id, session=session)
+        await session.execute(
+            delete(ModelRelationOperation)
+            .where(ModelRelationOperation.guid == parent_id)
+        )
 
 async def delete_model_relation(guid: str, session: AsyncSession):
     model_relation = await session.execute(
@@ -104,8 +261,13 @@ async def delete_model_relation(guid: str, session: AsyncSession):
     await check_model_version_is_draft(version_id=model_relation.model_version_id, session=session)
     await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
 
+    model_relation_operation = await session.execute(
+        select(ModelRelationOperation)
+        .filter(ModelRelationOperation.model_relation_id == model_relation.id)
+    )
+    model_relation_operation = model_relation_operation.scalars().first()
+    await delete_child_operations(parent_id=model_relation_operation.id, session=session)
     await session.execute(
         delete(ModelRelation)
         .where(ModelRelation.guid == guid)
     )
-    await session.commit()
