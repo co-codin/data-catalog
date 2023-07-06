@@ -15,6 +15,7 @@ from app.crud.crud_tag import add_tags, update_tags
 from app.database import Base
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
     ModelRelation
+from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
 
 
@@ -410,3 +411,20 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
 
             return True
     return False
+
+
+async def read_resources(guid: str, exclude_resource: str, session: AsyncSession) -> list[ModelResourceOutRelIn]:
+    model_version = await session.execute(
+        select(ModelVersion)
+        .options(selectinload(ModelVersion.model_resources))
+        .where(ModelVersion.guid == guid)
+    )
+    model_version = model_version.scalars().first()
+    if not model_version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return [
+        ModelResourceOutRelIn.from_orm(resource)
+        for resource in model_version.model_resources
+        if resource.name != exclude_resource
+    ]

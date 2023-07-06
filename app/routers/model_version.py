@@ -1,9 +1,11 @@
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version
+from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version, \
+    read_resources
 from app.dependencies import db_session, get_token, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 from app.schemas.source_registry import CommentIn
 
@@ -60,3 +62,8 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
+
+
+@router.get('/{guid}/resources', response_model=list[ModelResourceOutRelIn])
+async def get_resources(guid: str, exclude_resource: str, session=Depends(db_session), _=Depends(get_user)):
+    return await read_resources(guid, exclude_resource, session)

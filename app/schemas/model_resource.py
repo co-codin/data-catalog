@@ -19,3 +19,11 @@ class ModelResourceUpdateIn(BaseModel):
     db_link: Optional[str] = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
+
+
+class ModelResourceOutRelIn(BaseModel):
+    name: str
+    guid: str
+
+    class Config:
+        orm_mode = True

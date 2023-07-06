@@ -74,3 +74,9 @@ class ModelResourceAttributeOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ModelResourceAttrOutRelIn(BaseModel):
+    name: str
+    type: str | None = None
+    key: bool
