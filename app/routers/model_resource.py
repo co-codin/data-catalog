@@ -15,7 +15,7 @@ router = APIRouter(
 
 
 @router.get('/by_version/{version_id}')
-async def get_model_resources(version_id: int, session=Depends(db_session), user=Depends(get_user)):
+async def get_model_resources(version_id: int, session=Depends(db_session), _=Depends(get_user)):
     return await read_resources_by_version_id(version_id, session)
 
 
@@ -25,7 +25,7 @@ async def get_model_resource(guid: str, session=Depends(db_session), token=Depen
 
 
 @router.post('/')
-async def add_model_resource(resource_in: ModelResourceIn, session=Depends(db_session), user=Depends(get_user)):
+async def add_model_resource(resource_in: ModelResourceIn, session=Depends(db_session), _=Depends(get_user)):
     guid = await create_model_resource(resource_in, session)
 
     return {'guid': guid}
@@ -33,12 +33,12 @@ async def add_model_resource(resource_in: ModelResourceIn, session=Depends(db_se
 
 @router.put('/{guid}')
 async def update(guid: str, resource_update_in: ModelResourceUpdateIn, session=Depends(db_session),
-                 user=Depends(get_user)):
+                 _=Depends(get_user)):
     return await update_model_resource(guid, resource_update_in, session)
 
 
 @router.delete('/{guid}')
-async def delete(guid: str, session=Depends(db_session), user=Depends(get_user)):
+async def delete(guid: str, session=Depends(db_session), _=Depends(get_user)):
     return await delete_model_resource(guid, session)
 
 

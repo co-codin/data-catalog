@@ -124,6 +124,15 @@ class AttributeDataTypeOverflowError(APIError):
         return "Attribute can have only one data_type link"
 
 
+class AttributeRelationError(APIError):
+    def __init__(self, *nodes: str):
+        self.status_code = status.HTTP_400_BAD_REQUEST
+        self._nodes = nodes
+
+    def __str__(self):
+        return "Attribute can have relation on self"
+
+
 class ModelNameAlreadyExist(APIError):
     def __init__(self, name: str):
         self.status_code = status.HTTP_409_CONFLICT
