@@ -16,11 +16,12 @@ from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
-async def check_attribute_for_type(model_resource_attribute: ModelResourceAttribute,
-                                   model_resource_attribute_out: ModelResourceAttributeOut | ModelResourceAttribute,
-                                   session: AsyncSession):
+async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttribute, session: AsyncSession):
+    if model_resource_attribute.db_link is None or model_resource_attribute.db_link == '':
+        model_resource_attribute.db_link_error = True
+
     if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
-        model_resource_attribute_out.data_type_errors = 'data_type_error'
+        model_resource_attribute.data_type_errors = 'data_type_error'
     elif model_resource_attribute.model_resource_id is not None:
         model_resource = await session.execute(
             select(ModelResource)
@@ -29,12 +30,22 @@ async def check_attribute_for_type(model_resource_attribute: ModelResourceAttrib
         )
         model_resource = model_resource.scalars().first()
         if len(model_resource.attributes) == 0:
-            model_resource_attribute_out.data_type_errors = 'nested_attribute_data_type_error'
-            return
+            model_resource_attribute.data_type_errors = 'nested_attribute_data_type_error'
         for model_resource_attribute in model_resource.attributes:
-            await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
-                                           model_resource_attribute_out=model_resource_attribute_out,
-                                           session=session)
+            await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
+
+        await check_resource_for_errors(model_resource=model_resource)
+
+
+
+async def check_resource_for_errors(model_resource: ModelResource):
+    if model_resource.db_link is None or model_resource.db_link == '':
+        model_resource.db_link_error = True
+    else:
+        model_resource.db_link_error = False
+
+        print('111111111111111')
+        print(model_resource.db_link_error)
 
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
@@ -71,8 +82,8 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         set_author_data(model_resource.comments, authors_data)
 
     for attribute in model_resource.attributes:
-        await check_attribute_for_type(model_resource_attribute=attribute, model_resource_attribute_out=attribute,
-                                       session=session)
+        await check_attribute_for_errors(model_resource_attribute=attribute, session=session)
+    await check_resource_for_errors(model_resource=model_resource)
 
     return model_resource
 
@@ -217,10 +228,8 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
     if not model_resource_attribute:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
     model_resource_attribute_out = ModelResourceAttributeOut.from_orm(model_resource_attribute)
-    await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
-                                   model_resource_attribute_out=model_resource_attribute_out,
-                                   session=session)
 
     if model_resource_attribute.parent_id is not None:
         parents = await get_attribute_parents(session=session, parents=[], parent_id=model_resource_attribute.parent_id)
