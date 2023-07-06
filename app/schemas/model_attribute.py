@@ -70,6 +70,7 @@ class ModelResourceAttributeOut(BaseModel):
     resources: Any
 
     data_type_errors: str | None
+    db_link_error: bool = False
 
     class Config:
         orm_mode = True
