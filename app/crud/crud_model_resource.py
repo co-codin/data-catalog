@@ -16,6 +16,27 @@ from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 
 
+async def check_attribute_for_type(model_resource_attribute: ModelResourceAttribute,
+                                   model_resource_attribute_out: ModelResourceAttributeOut | ModelResourceAttribute,
+                                   session: AsyncSession):
+    if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
+        model_resource_attribute_out.data_type_errors = 'data_type_error'
+    elif model_resource_attribute.model_resource_id is not None:
+        model_resource = await session.execute(
+            select(ModelResource)
+            .options(selectinload(ModelResource.attributes))
+            .filter(ModelResource.id == model_resource_attribute.model_resource_id)
+        )
+        model_resource = model_resource.scalars().first()
+        if len(model_resource.attributes) == 0:
+            model_resource_attribute_out.data_type_errors = 'nested_attribute_data_type_error'
+            return
+        for model_resource_attribute in model_resource.attributes:
+            await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
+                                           model_resource_attribute_out=model_resource_attribute_out,
+                                           session=session)
+
+
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
     model_resource = await session.execute(
         select(ModelResource)
@@ -48,6 +69,10 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
             None, get_authors_data_by_guids, author_guids, token
         )
         set_author_data(model_resource.comments, authors_data)
+
+    for attribute in model_resource.attributes:
+        await check_attribute_for_type(model_resource_attribute=attribute, model_resource_attribute_out=attribute,
+                                       session=session)
 
     return model_resource
 
@@ -175,26 +200,6 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     parents = await get_attribute_parents(session=session, parents=parents,
                                           parent_id=model_resource_attribute.parent_id)
     return parents
-
-
-async def check_attribute_for_type(model_resource_attribute: ModelResourceAttribute,
-                                   model_resource_attribute_out: ModelResourceAttributeOut, session: AsyncSession):
-    if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
-        model_resource_attribute_out.data_type_errors = 'data_type_error'
-    elif model_resource_attribute.model_resource_id is not None:
-        model_resource = await session.execute(
-            select(ModelResource)
-            .options(selectinload(ModelResource.attributes))
-            .filter(ModelResource.id == model_resource_attribute.model_resource_id)
-        )
-        model_resource = model_resource.scalars().first()
-        if len(model_resource.attributes) == 0:
-            model_resource_attribute_out.data_type_errors = 'nested_attribute_data_type_error'
-            return
-        for model_resource_attribute in model_resource.attributes:
-            await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
-                                           model_resource_attribute_out=model_resource_attribute_out,
-                                           session=session)
 
 
 async def get_attribute_by_guid(guid: str, session: AsyncSession):
