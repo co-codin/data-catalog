@@ -5,6 +5,7 @@ COPY requirements.txt .
 RUN apk add --no-cache --virtual .build-deps \
         gcc \
         libc-dev \
+        libpq-dev \
         libffi-dev \
         openssl-dev \
         make \
