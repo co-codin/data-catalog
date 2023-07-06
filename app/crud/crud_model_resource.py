@@ -8,7 +8,8 @@ from fastapi import HTTPException, status
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_model_version import VersionLevel, generate_version_number
-from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError
+from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError, \
+    AttributeRelationError
 from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
@@ -126,6 +127,9 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
     if (attribute_in.model_resource_id is not None) and (attribute_in.model_data_type_id is not None):
         raise AttributeDataTypeOverflowError()
 
+    if attribute_in.model_resource_id == attribute_in.resource_id:
+        raise AttributeRelationError()
+
     guid = str(uuid.uuid4())
 
     model_resource_attribute = ModelResourceAttribute(
@@ -173,6 +177,26 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     return parents
 
 
+async def check_attribute_for_type(model_resource_attribute: ModelResourceAttribute,
+                                   model_resource_attribute_out: ModelResourceAttributeOut, session: AsyncSession):
+    if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
+        model_resource_attribute_out.data_type_errors = 'data_type_error'
+    elif model_resource_attribute.model_resource_id is not None:
+        model_resource = await session.execute(
+            select(ModelResource)
+            .options(selectinload(ModelResource.attributes))
+            .filter(ModelResource.id == model_resource_attribute.model_resource_id)
+        )
+        model_resource = model_resource.scalars().first()
+        if len(model_resource.attributes) == 0:
+            model_resource_attribute_out.data_type_errors = 'nested_attribute_data_type_error'
+            return
+        for model_resource_attribute in model_resource.attributes:
+            await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
+                                           model_resource_attribute_out=model_resource_attribute_out,
+                                           session=session)
+
+
 async def get_attribute_by_guid(guid: str, session: AsyncSession):
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
@@ -189,6 +213,9 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     model_resource_attribute_out = ModelResourceAttributeOut.from_orm(model_resource_attribute)
+    await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
+                                   model_resource_attribute_out=model_resource_attribute_out,
+                                   session=session)
 
     if model_resource_attribute.parent_id is not None:
         parents = await get_attribute_parents(session=session, parents=[], parent_id=model_resource_attribute.parent_id)
