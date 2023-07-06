@@ -98,12 +98,12 @@ class Operation(Base):
 
     tags = relationship('Tag', secondary=operation_tags, order_by='Tag.id')
     operation_body = relationship('OperationBody', back_populates='operation')
-    model_relations = relationship('ModelRelation', back_populates='operation')
 
 
 class OperationBody(Base):
     __tablename__ = 'operation_bodies'
 
+    operation_id = Column(BigInteger, ForeignKey(Operation.operation_id, ondelete='CASCADE'))
     operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
     version = Column(BigInteger, default=1)
@@ -114,7 +114,7 @@ class OperationBody(Base):
     code = Column(Text, nullable=False)
     operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
     operation = relationship('Operation', back_populates='operation_body')
-    operation_id = Column(BigInteger, ForeignKey(Operation.operation_id, ondelete='CASCADE'))
+    model_relation_operations = relationship('ModelRelationOperation', back_populates='operations_bodies')
 
 
 class OperationBodyParameter(Base):
@@ -188,7 +188,6 @@ class ModelRelation(Base):
     name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(Text, nullable=False)
-    operation_id = Column(BigInteger, ForeignKey(Operation.operation_id))
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -196,7 +195,37 @@ class ModelRelation(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_relations')
     tags = relationship('Tag', secondary=model_relation_tags, order_by='Tag.id')
-    operation = relationship('Operation', back_populates='model_relations')
+    relation_operation = relationship('ModelRelationOperation', back_populates='model_relation')
+
+
+class ModelRelationOperation(Base):
+    __tablename__ = 'model_relation_operations'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    model_relation_id = Column(BigInteger, ForeignKey(ModelRelation.id, ondelete='CASCADE'), nullable=True)
+    operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id, ondelete='CASCADE'))
+    parent_id = Column(BigInteger, nullable=True)
+
+    model_relation = relationship('ModelRelation', back_populates='relation_operation')
+    operations_bodies = relationship('OperationBody', back_populates='model_relation_operations')
+    model_relation_operations = relationship('ModelRelationOperationParameter',
+                                             back_populates='model_relation_operation')
+
+
+class ModelRelationOperationParameter(Base):
+    __tablename__ = 'model_relation_operation_parameters'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
+    guid = Column(String(36), nullable=False, index=True, unique=True)
+    model_relation_operation_id = Column(BigInteger, ForeignKey(ModelRelationOperation.id, ondelete='CASCADE'))
+
+    model_resource_attribute_id = Column(BigInteger, ForeignKey('model_resource_attributes.id'), nullable=True)
+    value = Column(JSONB, nullable=True)
+
+    model_resource_attributes = relationship('ModelResourceAttribute',
+                                             back_populates='model_relation_operation_parameters')
+    model_relation_operation = relationship('ModelRelationOperation', back_populates='model_relation_operations')
 
 
 class ModelResource(Base):
@@ -240,12 +269,13 @@ class ModelResourceAttribute(Base):
     key = Column(Boolean, index=True, nullable=True)
     db_link = Column(String(500), nullable=True)
     desc = Column(Text, nullable=True)
+    cardinality = Column(String(100), nullable=True)
+    parent_id = Column(BigInteger, nullable=True)
+    additional = Column(JSONB, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
     model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id, ondelete='CASCADE'), nullable=True)
-
-    cardinality = Column(String(100), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
@@ -261,9 +291,8 @@ class ModelResourceAttribute(Base):
                                                                          '.left_attribute_id')
     right_attribute_attitudes = relationship('ModelAttitude', primaryjoin='ModelResourceAttribute.id==ModelAttitude'
                                                                           '.right_attribute_id')
-
-    parent_id = Column(BigInteger, nullable=True)
-    additional = Column(JSONB, nullable=True)
+    model_relation_operation_parameters = relationship('ModelRelationOperationParameter',
+                                                       back_populates='model_resource_attributes')
 
 
 class ModelAttitude(Base):
