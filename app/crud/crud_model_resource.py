@@ -34,6 +34,19 @@ async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttr
         for model_resource_attribute in model_resource.attributes:
             await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
 
+        await check_resource_for_errors(model_resource=model_resource)
+
+
+
+async def check_resource_for_errors(model_resource: ModelResource):
+    if model_resource.db_link is None or model_resource.db_link == '':
+        model_resource.db_link_error = True
+    else:
+        model_resource.db_link_error = False
+
+        print('111111111111111')
+        print(model_resource.db_link_error)
+
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
     model_resource = await session.execute(
@@ -70,6 +83,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
 
     for attribute in model_resource.attributes:
         await check_attribute_for_errors(model_resource_attribute=attribute, session=session)
+    await check_resource_for_errors(model_resource=model_resource)
 
     return model_resource
 
