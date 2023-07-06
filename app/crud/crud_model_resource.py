@@ -68,7 +68,7 @@ async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSess
     return model_resource.guid
 
 
-async def update_model_resource(guid: int, resource_update_in: ModelResourceUpdateIn, session: AsyncSession):
+async def update_model_resource(guid: str, resource_update_in: ModelResourceUpdateIn, session: AsyncSession):
     model_resource = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
