@@ -69,4 +69,3 @@ async def _add_node_fields(tx: AsyncManagedTransaction, node_uuid: str, fields_t
 async def _edit_node_fields(tx: AsyncManagedTransaction, node_uuid: str, fields_to_update: List[Dict[int, Dict]]):
     if fields_to_update:
         await tx.run(edit_fields_hub_query, node_uuid=node_uuid, fields=fields_to_update)
-
