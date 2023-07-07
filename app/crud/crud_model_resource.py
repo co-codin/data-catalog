@@ -11,6 +11,7 @@ from age import Age
 
 from app.age_queries.node_queries import match_model_resource_rels, set_link_between_nodes, delete_link_between_nodes
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_model_version import generate_version_number
 from app.enums.enums import ModelVersionLevel
 from app.errors.checker import check_resource_for_errors, check_attribute_for_errors, init_model_resource_errors
 from app.errors.errors import (
@@ -35,8 +36,8 @@ async def read_resources_by_version_id(version_id: int, session: AsyncSession):
         .filter(ModelResource.model_version_id == version_id)
     )
     model_resources = model_resources.scalars().all()
-    for model_resource in model_resources:
-        await check_resource_for_errors(model_resource=model_resource, session=session)
+    #for model_resource in model_resources:
+    #    await check_resource_for_errors(model_resource=model_resource, session=session)
 
     return model_resources
 
