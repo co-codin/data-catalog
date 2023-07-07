@@ -131,6 +131,12 @@ class OperationBodyParameter(Base):
     operation_body = relationship('OperationBody', back_populates='operation_body_parameters')
 
 
+class ModelVersionStatus(Enum):
+    APPROVED = 'approved'
+    ARCHIVE = 'archive'
+    DRAFT = 'draft'
+
+
 class ModelVersion(Base):
     __tablename__ = 'model_versions'
 
@@ -138,7 +144,7 @@ class ModelVersion(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
     model_id = Column(BigInteger, ForeignKey(Model.id, ondelete='CASCADE'))
-    status = Column(String, nullable=False, default='draft')
+    status = Column(String, nullable=False, default=ModelVersionStatus.DRAFT.value)
     version = Column(String(100), nullable=True)
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(Text)

@@ -9,7 +9,7 @@ from app.crud.crud_model_version import generate_version_number, VersionLevel
 from app.errors.errors import ModelVersionNotDraftError, OperationParameterNotExistError, \
     OperationParameterNotConfiguredError, OperationParameterOutputError
 from app.models.models import ModelRelation, ModelVersion, OperationBody, Operation, \
-    ModelRelationOperation, ModelRelationOperationParameter, OperationBodyParameter
+    ModelRelationOperation, ModelRelationOperationParameter, ModelVersionStatus
 from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn, ModelRelationOperationIn, \
     ModelRelationOperationUpdateIn, \
     ModelRelationOperationParameterIn, ModelRelationOperationParameterUpdateIn
@@ -47,7 +47,7 @@ async def check_model_version_is_draft(version_id: int, session: AsyncSession):
     )
     model_version = model_version.scalars().first()
 
-    if model_version.status != 'draft':
+    if model_version.status != ModelVersionStatus.DRAFT.value:
         raise ModelVersionNotDraftError
 
 

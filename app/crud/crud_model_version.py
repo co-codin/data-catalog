@@ -12,9 +12,8 @@ from sqlalchemy.orm import selectinload
 
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
-from app.database import Base
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
-    ModelRelation
+    ModelRelation, ModelVersionStatus
 from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
 
@@ -32,7 +31,8 @@ async def generate_version_number(id: int, session: AsyncSession, level: Version
     )
     model_version = model_version.scalars().first()
 
-    if model_version.status != 'archive' and model_version.status != 'approved':
+    if model_version.status != ModelVersionStatus.ARCHIVE.value \
+            and model_version.status != ModelVersionStatus.APPROVED.value:
         if model_version.version is None:
             critical = 0
             minor = 0
@@ -85,15 +85,16 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     approved_model_version = await session.execute(
         select(ModelVersion)
         .filter(ModelVersion.model_id == model_version.model_id)
-        .filter(ModelVersion.status == 'approved')
+        .filter(ModelVersion.status == ModelVersionStatus.APPROVED.value)
         .order_by(ModelVersion.id)
     )
     approved_model_version = approved_model_version.scalars().first()
 
-    if not model_version.status == 'draft':
+    if not model_version.status == ModelVersionStatus.DRAFT.value:
         model_version_update_in.status = model_version.status
-    elif model_version.status == 'draft' and approved_model_version and model_version_update_in.status == 'approved':
-        approved_model_version.status = 'archive'
+    elif model_version.status == ModelVersionStatus.DRAFT.value and approved_model_version \
+            and model_version_update_in.status == ModelVersionStatus.APPROVED.value:
+        approved_model_version.status = ModelVersionStatus.ARCHIVE.value
         model_version.confirmed_at = datetime.now()
 
     model_version_update_in_data = {
@@ -101,7 +102,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         if value is not None
     }
 
-    if model_version.status == 'draft' and not model_version.version:
+    if model_version.status == ModelVersionStatus.DRAFT.value and not model_version.version:
         model_version_update_in_data['version'] = str(uuid.uuid4())
 
     await session.execute(
@@ -152,7 +153,7 @@ async def delete_model_version(guid: str, session: AsyncSession):
     )
     model_version = model_version.scalars().first()
 
-    if not model_version.status == 'draft':
+    if not model_version.status == ModelVersionStatus.DRAFT.value:
         raise HTTPException(status_code=403, detail='Можно удалить только черновика')
 
     await session.execute(
