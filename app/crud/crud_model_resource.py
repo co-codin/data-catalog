@@ -16,6 +16,7 @@ from app.errors.errors import (
     AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError,
     AttributeRelationError, ModelAttitudeAttributesError
 )
+from app.models import Object
 from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
@@ -34,6 +35,7 @@ async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttr
                                      session: AsyncSession) -> str | None:
     if model_resource_attribute.db_link is None or model_resource_attribute.db_link == '':
         model_resource_attribute.db_link_error = True
+        return 'attribute_db_link_error'
 
     if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
         model_resource_attribute.data_type_errors = 'data_type_error'
@@ -65,6 +67,14 @@ async def check_resource_for_errors(model_resource: ModelResource, session: Asyn
 
     if model_resource.db_link is None or model_resource.db_link == '':
         model_resource.errors.append('db_link_error')
+    else:
+        objects_count = await session.execute(
+            select(func.count(Object.id))
+            .filter(Object.db_path == model_resource.db_link)
+        )
+        objects_count = objects_count.scalars().first()
+        if objects_count == 0:
+            model_resource.errors.append('db_link_error')
 
     if len(model_resource.attributes) == 0:
         model_resource.errors.append('empty_resource')
