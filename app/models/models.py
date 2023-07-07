@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import Enum
 
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean, LargeBinary
 from sqlalchemy.sql import func
@@ -7,15 +6,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.database import Base
-from app.enums.enums import ModelVersionStatus
+from app.enums.enums import ModelVersionStatus, PipelineStatus
 from app.models.sources import Model
-
-
-class Cardinality(Enum):
-    ZERO_TO_ONE = '0..1'
-    ZERO_TO_MANY = '0..*'
-    ONE_TO_ONE = '1..1'
-    ONE_TO_MANY = '1..*'
 
 
 model_version_tags = Table(
@@ -314,12 +306,6 @@ class ModelAttitude(Base):
                                    foreign_keys=[left_attribute_id])
     right_attributes = relationship('ModelResourceAttribute', back_populates='right_attribute_attitudes',
                                     foreign_keys=[right_attribute_id])
-
-
-class PipelineStatus(Enum):
-    EXPECTED = 0
-    ERROR = 1
-    SUCCESS = 2
 
 
 class Pipeline(Base):

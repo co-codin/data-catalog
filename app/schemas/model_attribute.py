@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Any
 from datetime import datetime
 
-from app.models.models import Cardinality
+from app.enums.enums import Cardinality
 from app.schemas.tag import TagOut
 
 

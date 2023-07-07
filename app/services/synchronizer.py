@@ -11,8 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from app.crud.crud_tag import remove_redundant_tags, add_tags
+from app.enums.enums import Cardinality
 from app.models import (
-    SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute, Cardinality
+    SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute
 )
 from app.mq import create_channel
 from app.schemas.migration import MigrationOut, FieldToCreate, MigrationPattern
