@@ -16,6 +16,7 @@ from app.errors.errors import (
     AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError,
     AttributeRelationError, ModelAttitudeAttributesError
 )
+from app.models import Object
 from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
@@ -25,12 +26,20 @@ from app.constants.data_types import ID_TO_SYS_DATA_TYPE
 from app.schemas.model_attribute import ModelResourceAttrOutRelIn
 
 
-async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttribute, session: AsyncSession):
+def init_model_resource_errors(model_resource: ModelResource):
+    if not hasattr(model_resource, 'errors'):
+        setattr(model_resource, 'errors', [])
+
+
+async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttribute,
+                                     session: AsyncSession) -> str | None:
     if model_resource_attribute.db_link is None or model_resource_attribute.db_link == '':
         model_resource_attribute.db_link_error = True
+        return 'attribute_db_link_error'
 
     if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
         model_resource_attribute.data_type_errors = 'data_type_error'
+
     elif model_resource_attribute.model_resource_id is not None:
         model_resource = await session.execute(
             select(ModelResource)
@@ -40,33 +49,56 @@ async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttr
         model_resource = model_resource.scalars().first()
         if len(model_resource.attributes) == 0:
             model_resource_attribute.data_type_errors = 'nested_attribute_data_type_error'
-        for model_resource_attribute in model_resource.attributes:
-            await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
 
-        await check_resource_for_errors(model_resource=model_resource)
+        await check_resource_for_errors(model_resource=model_resource, session=selectinload)
+
+    if hasattr(model_resource_attribute, 'data_type_errors'):
+        return model_resource_attribute.data_type_errors
+    return None
 
 
+async def check_resource_for_errors(model_resource: ModelResource, session: AsyncSession):
+    init_model_resource_errors(model_resource=model_resource)
 
-async def check_resource_for_errors(model_resource: ModelResource):
+    for attribute in model_resource.attributes:
+        error = await check_attribute_for_errors(model_resource_attribute=attribute, session=session)
+        model_resource.errors.append(error) if error not in error else model_resource.errors
+        model_resource.errors.append(error)
+
     if model_resource.db_link is None or model_resource.db_link == '':
-        model_resource.db_link_error = True
+        model_resource.errors.append('db_link_error')
     else:
-        model_resource.db_link_error = False
+        objects_count = await session.execute(
+            select(func.count(Object.id))
+            .filter(Object.db_path == model_resource.db_link)
+        )
+        objects_count = objects_count.scalars().first()
+        if objects_count == 0:
+            model_resource.errors.append('db_link_error')
 
-        print('111111111111111')
-        print(model_resource.db_link_error)
+    if len(model_resource.attributes) == 0:
+        model_resource.errors.append('empty_resource')
+
+    errors = []
+    for err in model_resource.errors:
+        if err not in errors:
+            errors.append(err)
+    model_resource.errors = errors
 
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
-    model_resource = await session.execute(
+    model_resources = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
+        .options(selectinload(ModelResource.attributes))
         .filter(ModelResource.model_version_id == version_id)
     )
-    model_resource = model_resource.scalars().all()
+    model_resources = model_resources.scalars().all()
+    for model_resource in model_resources:
+        await check_resource_for_errors(model_resource=model_resource, session=session)
 
-    return model_resource
+    return model_resources
 
 
 async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
@@ -90,9 +122,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         )
         set_author_data(model_resource.comments, authors_data)
 
-    for attribute in model_resource.attributes:
-        await check_attribute_for_errors(model_resource_attribute=attribute, session=session)
-    await check_resource_for_errors(model_resource=model_resource)
+    await check_resource_for_errors(model_resource=model_resource, session=session)
 
     return model_resource
 
@@ -237,7 +267,11 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
     if not model_resource_attribute:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
+    error = await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
+    if error:
+        init_model_resource_errors(model_resource=model_resource_attribute.resources)
+        model_resource_attribute.resources.errors.append(error)
+
     model_resource_attribute_out = ModelResourceAttributeOut.from_orm(model_resource_attribute)
 
     if model_resource_attribute.parent_id is not None:
