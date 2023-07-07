@@ -20,7 +20,7 @@ engine = create_async_engine(
 async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 Base = declarative_base()
 
-ag = age.connect(dsn=settings.age_connection_string)
+ag = age.connect(dsn=settings.age_conn_string)
 
 
 @asynccontextmanager
