@@ -43,7 +43,7 @@ async def check_resource_for_errors(model_resource: ModelResource, session: Asyn
 
     for attribute in model_resource.attributes:
         error = await check_attribute_for_errors(model_resource_attribute=attribute, session=session)
-        model_resource.errors.append(error) if error not in error else model_resource.errors
+        model_resource.errors.append(error) if error not in model_resource.errors else model_resource.errors
         model_resource.errors.append(error)
 
     if model_resource.db_link is None or model_resource.db_link == '':
