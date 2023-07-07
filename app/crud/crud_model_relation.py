@@ -5,11 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from app.crud.crud_model_version import generate_version_number, VersionLevel
-from app.errors.errors import ModelVersionNotDraftError, OperationParameterNotExistError, \
-    OperationParameterNotConfiguredError, OperationParameterOutputError
+from app.crud.crud_model_version import generate_version_number
+from app.enums.enums import ModelVersionLevel, ModelVersionStatus
+from app.errors.errors import OperationParameterNotExistError, OperationParameterNotConfiguredError, \
+    OperationParameterOutputError
+from app.errors.model_version import ModelVersionNotDraftError
 from app.models.models import ModelRelation, ModelVersion, OperationBody, Operation, \
-    ModelRelationOperation, ModelRelationOperationParameter, ModelVersionStatus
+    ModelRelationOperation, ModelRelationOperationParameter
 from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn, ModelRelationOperationIn, \
     ModelRelationOperationUpdateIn, \
     ModelRelationOperationParameterIn, ModelRelationOperationParameterUpdateIn
@@ -29,7 +31,7 @@ async def read_relation_by_guid(guid: str, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
-        .options(selectinload(ModelRelationOperationIn.pararameters))
+        .options(selectinload(ModelRelationOperationIn.model_relation_operation_parameter))
         .filter(ModelRelation.guid == guid)
     )
     model_relation = model_relation.scalars().first()
@@ -155,7 +157,7 @@ async def create_model_relation(relation_in: ModelRelationIn, session: AsyncSess
                                           model_relation_operation_in=relation_in.model_relation_operation,
                                           session=session, parent_id=None)
 
-    await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
+    await generate_version_number(id=model_relation.model_version_id, session=session, level=ModelVersionLevel.PATCH)
     return model_relation.guid
 
 
@@ -259,7 +261,7 @@ async def delete_model_relation(guid: str, session: AsyncSession):
     model_relation = model_relation.scalars().first()
 
     await check_model_version_is_draft(version_id=model_relation.model_version_id, session=session)
-    await generate_version_number(id=model_relation.model_version_id, session=session, level=VersionLevel.PATCH)
+    await generate_version_number(id=model_relation.model_version_id, session=session, level=ModelVersionLevel.PATCH)
 
     model_relation_operation = await session.execute(
         select(ModelRelationOperation)

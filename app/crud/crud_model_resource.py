@@ -11,12 +11,12 @@ from age import Age
 
 from app.age_queries.node_queries import match_model_resource_rels, set_link_between_nodes, delete_link_between_nodes
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
-from app.crud.crud_model_version import VersionLevel, generate_version_number
+from app.enums.enums import ModelVersionLevel
+from app.errors.checker import check_resource_for_errors, check_attribute_for_errors, init_model_resource_errors
 from app.errors.errors import (
     AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError,
     AttributeRelationError, ModelAttitudeAttributesError
 )
-from app.models import Object
 from app.models.models import ModelResource, ModelResourceAttribute
 from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
@@ -24,66 +24,6 @@ from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
 from app.constants.data_types import ID_TO_SYS_DATA_TYPE
 from app.schemas.model_attribute import ModelResourceAttrOutRelIn
-
-
-def init_model_resource_errors(model_resource: ModelResource):
-    if not hasattr(model_resource, 'errors'):
-        setattr(model_resource, 'errors', [])
-
-
-async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttribute,
-                                     session: AsyncSession) -> str | None:
-    if model_resource_attribute.db_link is None or model_resource_attribute.db_link == '':
-        model_resource_attribute.db_link_error = True
-        return 'attribute_db_link_error'
-
-    if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
-        model_resource_attribute.data_type_errors = 'data_type_error'
-
-    elif model_resource_attribute.model_resource_id is not None:
-        model_resource = await session.execute(
-            select(ModelResource)
-            .options(selectinload(ModelResource.attributes))
-            .filter(ModelResource.id == model_resource_attribute.model_resource_id)
-        )
-        model_resource = model_resource.scalars().first()
-        if len(model_resource.attributes) == 0:
-            model_resource_attribute.data_type_errors = 'nested_attribute_data_type_error'
-
-        await check_resource_for_errors(model_resource=model_resource, session=selectinload)
-
-    if hasattr(model_resource_attribute, 'data_type_errors'):
-        return model_resource_attribute.data_type_errors
-    return None
-
-
-async def check_resource_for_errors(model_resource: ModelResource, session: AsyncSession):
-    init_model_resource_errors(model_resource=model_resource)
-
-    for attribute in model_resource.attributes:
-        error = await check_attribute_for_errors(model_resource_attribute=attribute, session=session)
-        model_resource.errors.append(error) if error not in error else model_resource.errors
-        model_resource.errors.append(error)
-
-    if model_resource.db_link is None or model_resource.db_link == '':
-        model_resource.errors.append('db_link_error')
-    else:
-        objects_count = await session.execute(
-            select(func.count(Object.id))
-            .filter(Object.db_path == model_resource.db_link)
-        )
-        objects_count = objects_count.scalars().first()
-        if objects_count == 0:
-            model_resource.errors.append('db_link_error')
-
-    if len(model_resource.attributes) == 0:
-        model_resource.errors.append('empty_resource')
-
-    errors = []
-    for err in model_resource.errors:
-        if err not in errors:
-            errors.append(err)
-    model_resource.errors = errors
 
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
@@ -139,7 +79,7 @@ async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSess
     session.add(model_resource)
     await session.commit()
 
-    await generate_version_number(id=resource_in.model_version_id, session=session, level=VersionLevel.MINOR)
+    await generate_version_number(id=resource_in.model_version_id, session=session, level=ModelVersionLevel.MINOR)
 
     return model_resource.guid
 
@@ -192,7 +132,7 @@ async def delete_model_resource(guid: str, session: AsyncSession):
     )
     await session.commit()
 
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.CRITICAL)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.CRITICAL)
 
 
 async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSession):
@@ -225,7 +165,7 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
         .where(ModelResource.id == model_resource_attribute.resource_id)
     )
     model_resource = model_resource.scalars().first()
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.MINOR)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.MINOR)
 
     return model_resource_attribute.guid
 
@@ -344,7 +284,7 @@ async def remove_attribute(guid: str, session: AsyncSession):
         .where(ModelResource.id == model_resource_attribute.resource_id)
     )
     model_resource = model_resource.scalars().first()
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.CRITICAL)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.CRITICAL)
 
     await session.execute(
         delete(ModelResourceAttribute)

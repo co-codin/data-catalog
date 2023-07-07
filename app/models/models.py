@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.database import Base
+from app.enums.enums import ModelVersionStatus
 from app.models.sources import Model
 
 
@@ -129,12 +130,6 @@ class OperationBodyParameter(Base):
     name_for_relation = Column(String(200), nullable=False)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id))
     operation_body = relationship('OperationBody', back_populates='operation_body_parameters')
-
-
-class ModelVersionStatus(Enum):
-    APPROVED = 'approved'
-    ARCHIVE = 'archive'
-    DRAFT = 'draft'
 
 
 class ModelVersion(Base):

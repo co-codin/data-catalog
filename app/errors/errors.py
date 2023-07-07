@@ -183,15 +183,6 @@ class ModelAttitudeAttributesError(APIError):
         return "Resource attributes in one attitude can't be equals and must be valid"
 
 
-class ModelVersionNotDraftError(APIError):
-    def __init__(self, *nodes: str):
-        self.status_code = status.HTTP_400_BAD_REQUEST
-        self._nodes = nodes
-
-    def __str__(self):
-        return "Model version isn't in draft status"
-
-
 class ModelResourceHasAttributesError(APIError):
     def __init__(self, *nodes: str):
         self.status_code = status.HTTP_400_BAD_REQUEST

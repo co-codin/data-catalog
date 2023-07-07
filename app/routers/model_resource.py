@@ -10,7 +10,8 @@ from app.crud.crud_model_resource import (
 )
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.crud.crud_model_version import VersionLevel, generate_version_number
+from app.crud.crud_model_version import generate_version_number
+from app.enums.enums import ModelVersionLevel
 from app.schemas.model_resource_rel import ModelResourceRelIn, ModelResourceRelOut
 
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttrOutRelIn
@@ -108,7 +109,7 @@ async def add_model_resource_rel(
 ):
     await check_on_model_resources_len(guid, rel_in.mapped_resource_guid, session)
     one_to_many_rel_id, model_version_id = await create_model_resource_rel(guid, rel_in, session, age_session)
-    await generate_version_number(id=model_version_id, session=session, level=VersionLevel.MINOR)
+    await generate_version_number(id=model_version_id, session=session, level=ModelVersionLevel.MINOR)
     return one_to_many_rel_id
 
 
@@ -127,4 +128,4 @@ async def delete_model_resource_rels(
     graph_name = model_resource.db_link.rsplit('.', maxsplit=1)[0]
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, remove_model_resource_rel, gid, graph_name, age_session)
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.MINOR)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.MINOR)

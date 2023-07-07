@@ -5,6 +5,7 @@ from app.dependencies import db_session, get_token, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.errors import APIError
 from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 from app.schemas.source_registry import CommentIn
@@ -25,14 +26,14 @@ async def get_model_version(guid: str, session=Depends(db_session), token=Depend
 
 
 @router.post('/')
-async def add_model_version(model_version_in: ModelVersionIn, session=Depends(db_session), user=Depends(get_user)):
+async def add_model_version(model_version_in: ModelVersionIn, session=Depends(db_session), _=Depends(get_user)):
     model_version = await create_model_version(model_version_in, session)
 
     return {'guid': model_version.guid}
 
 
 @router.put('/{guid}')
-async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, session=Depends(db_session), user=Depends(get_user)):
+async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, session=Depends(db_session), _=Depends(get_user)):
     return await update_model_version(guid, model_version_update_in, session)
 
 
