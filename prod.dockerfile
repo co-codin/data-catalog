@@ -13,6 +13,10 @@ RUN apk add --no-cache --virtual .build-deps \
     && apk del .build-deps
 
 FROM python:3.10-alpine
+RUN apk add gcc \
+        postgresql-dev \
+        python3-dev \
+        musl-dev
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY app/ /app/app/
 WORKDIR /app
