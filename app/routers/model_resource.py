@@ -97,7 +97,7 @@ async def delete_attribute(guid: str, session=Depends(db_session)):
     return {'msg': 'attribute has been deleted'}
 
 
-@router.get('/{guid}/attrs', response_model=list[ModelResourceAttrOutRelIn])
+@router.get('/{guid}/attributes', response_model=list[ModelResourceAttrOutRelIn])
 async def get_model_attrs(guid: str, session=Depends(db_session), _=Depends(get_user)):
     return await read_model_resource_attrs(guid, session)
 
