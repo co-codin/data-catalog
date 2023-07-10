@@ -49,12 +49,12 @@ async def check_resource_for_errors(model_resource: ModelResource, session: Asyn
     if model_resource.db_link is None or model_resource.db_link == '':
         model_resource.errors.append('db_link_error')
     else:
-        objects_count = await session.execute(
-            select(func.count(Object.id))
+        objects = await session.execute(
+            select(Object.id)
             .filter(Object.db_path == model_resource.db_link)
         )
-        objects_count = objects_count.scalars().first()
-        if objects_count == 0:
+        object = objects.scalars().first()
+        if object:
             model_resource.errors.append('db_link_error')
 
     if len(model_resource.attributes) == 0:
@@ -73,12 +73,12 @@ async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttr
         model_resource_attribute.db_link_error = True
         return 'attribute_db_link_error'
     else:
-        objects_count = await session.execute(
-            select(func.count(Object.id))
+        objects = await session.execute(
+            select(Object.id)
             .filter(Object.db_path == model_resource_attribute.db_link)
         )
-        objects_count = objects_count.scalars().first()
-        if objects_count == 0:
+        object = objects.scalars().first()
+        if object:
             model_resource_attribute.db_link_error = True
             return 'attribute_db_link_error'
 
@@ -95,7 +95,7 @@ async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttr
         if len(model_resource.attributes) == 0:
             model_resource_attribute.data_type_errors = 'nested_attribute_data_type_error'
 
-        await check_resource_for_errors(model_resource=model_resource, session=selectinload)
+        await check_resource_for_errors(model_resource=model_resource, session=session)
 
     if hasattr(model_resource_attribute, 'data_type_errors'):
         return model_resource_attribute.data_type_errors

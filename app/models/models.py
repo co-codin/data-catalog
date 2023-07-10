@@ -232,7 +232,7 @@ class ModelResource(Base):
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(Text, nullable=True)
     type = Column(String(500), default="Ресурс")
-    db_link = Column(String(500), nullable=True)
+    db_link = Column(String(500), nullable=True, index=True)
 
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
@@ -260,10 +260,10 @@ class ModelResourceAttribute(Base):
 
     name = Column(String(200), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
-    db_link = Column(String(500), nullable=True)
+    db_link = Column(String(500), nullable=True, index=True)
     desc = Column(Text, nullable=True)
     cardinality = Column(String(100), nullable=True)
-    parent_id = Column(BigInteger, nullable=True)
+    parent_id = Column(BigInteger, nullable=True, index=True)
     additional = Column(JSONB, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
