@@ -223,12 +223,12 @@ async def clone_attributes(old_resource_id: int, new_resource_id: int, session: 
     return model_attributes_mapping
 
 
-async def clone_attribute_relations(new_version_id: int, session: AsyncSession, model_attributes_mapping: {},
+async def clone_attribute_relations(old_version_id: int, session: AsyncSession, model_attributes_mapping: {},
                                     model_resources_mapping: {}):
     model_resources = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
-        .filter(ModelResource.model_version_id == new_version_id)
+        .filter(ModelResource.model_version_id == old_version_id)
     )
     model_resources = model_resources.scalars().all()
     for model_resource in model_resources:
@@ -384,7 +384,7 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
             model_resources_mapping, model_attributes_mapping = await clone_resources(
                 old_version_id=last_approved_model_version.id, new_version_id=model_version.id, session=session)
 
-            await clone_attribute_relations(new_version_id=model_version.id, session=session,
+            await clone_attribute_relations(old_version_id=last_approved_model_version.id, session=session,
                                             model_attributes_mapping=model_attributes_mapping,
                                             model_resources_mapping=model_resources_mapping)
 
