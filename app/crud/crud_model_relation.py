@@ -2,7 +2,7 @@ import uuid
 
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from fastapi import HTTPException, status
 
 from app.crud.crud_model_version import generate_version_number
@@ -27,14 +27,45 @@ async def read_relations_by_version(version_id: int, session: AsyncSession):
     return model_relation
 
 
+async def fill_nested_operations(relation_operation: ModelRelationOperation, session: AsyncSession):
+
+    for model_relation_operation_parameter in relation_operation.model_relation_operation_parameters:
+        if model_relation_operation_parameter.model_resource_attribute_id is None and model_relation_operation_parameter.value is None:
+            inner_model_operation = await session.execute(
+                select(ModelRelationOperation)
+                .options(selectinload(ModelRelationOperation.model_relation_operation_parameters).selectinload(ModelRelationOperation.operations_bodies))
+                .filter(ModelRelationOperation.parent_id == model_relation_operation_parameter.model_relation_operation_id)
+            )
+            model_relation_operation_parameter.inner_operation = inner_model_operation.scalars().first()
+            await fill_nested_operations(relation_operation=model_relation_operation_parameter.inner_operation, session=session)
+            await check_newest_version_exists(operation_body=inner_model_operation.relation_operation.operations_bodies,
+                                              session=session)
+
+
+async def check_newest_version_exists(operation_body: OperationBody, session: AsyncSession):
+    latest_operation_version = await session.execute(
+        select(OperationBody.version)
+        .filter(OperationBody.operation_id == operation_body.operation_id)
+        .order_by(OperationBody.version.desc())
+    )
+    latest_operation_version = latest_operation_version.scalars().first()
+    if latest_operation_version > operation_body.version:
+        operation_body.new_version_exists = True
+
 async def read_relation_by_guid(guid: str, session: AsyncSession):
     model_relation = await session.execute(
         select(ModelRelation)
         .options(selectinload(ModelRelation.tags))
-        .options(selectinload(ModelRelationOperationIn.model_relation_operation_parameter))
+        .options(joinedload(ModelRelation.relation_operation).selectinload(ModelRelationOperation.model_relation_operation_parameters))
+        .options(joinedload(ModelRelation.relation_operation).selectinload(ModelRelationOperation.operations_bodies))
         .filter(ModelRelation.guid == guid)
     )
     model_relation = model_relation.scalars().first()
+
+    await fill_nested_operations(relation_operation=model_relation.relation_operation, session=session)
+    await check_newest_version_exists(operation_body=model_relation.relation_operation.operations_bodies,
+                                      session=session)
+
 
     if not model_relation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -89,7 +120,8 @@ async def check_model_relation_operation_in(
                     model_relation_operation_parameter_in=model_relation_operation_parameter_in)
                 found = True
                 if not operation_body_parameter.flag and model_relation_operation_parameter_in.model_resource_attribute_id is None:
-                    raise OperationParameterOutputError(id_=operation_body_parameter.operation_body_parameter_id, name=operation_body_parameter.name)
+                    raise OperationParameterOutputError(id_=operation_body_parameter.operation_body_parameter_id,
+                                                        name=operation_body_parameter.name)
 
         if not found:
             raise OperationParameterNotExistError(parameter=operation_body_parameter.name, operation=operation.name,
@@ -179,8 +211,9 @@ async def update_model_relation_operation_parameter(
         )
     )
 
-    await update_model_relation_operation(model_relation_operation_in=model_relation_operation_parameter_in.model_relation_operation,
-                                          session=session)
+    await update_model_relation_operation(
+        model_relation_operation_in=model_relation_operation_parameter_in.model_relation_operation,
+        session=session)
 
 
 async def update_model_relation_operation(model_relation_operation_in: ModelRelationOperationUpdateIn | None,
@@ -240,17 +273,18 @@ async def update_model_relation(guid: str, relation_update_in: ModelRelationUpda
 
 
 async def delete_child_operations(parent_id: int, session: AsyncSession):
-    childs = await session.execute(
+    children = await session.execute(
         select(ModelRelationOperation)
         .filter(ModelRelationOperation.parent_id == parent_id)
     )
-    childs = childs.scalars().first()
-    for child in childs:
+    children = children.scalars().first()
+    for child in children:
         await delete_child_operations(parent_id=child.id, session=session)
         await session.execute(
             delete(ModelRelationOperation)
             .where(ModelRelationOperation.guid == parent_id)
         )
+
 
 async def delete_model_relation(guid: str, session: AsyncSession):
     model_relation = await session.execute(
