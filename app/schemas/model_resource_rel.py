@@ -4,7 +4,7 @@ from pydantic import BaseModel
 class ModelResourceRelOut(BaseModel):
     resource_attr: str
     mapped_resource: str
-    key_attr: str
+    mapped_resource_key_attr: str
     gid: int
 
 

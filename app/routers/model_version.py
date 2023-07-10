@@ -66,5 +66,5 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
 
 
 @router.get('/{guid}/resources', response_model=list[ModelResourceOutRelIn])
-async def get_resources(guid: str, exclude_resource: str, session=Depends(db_session), _=Depends(get_user)):
-    return await read_resources(guid, exclude_resource, session)
+async def get_resources(guid: str, session=Depends(db_session), _=Depends(get_user)):
+    return await read_resources(guid, session)

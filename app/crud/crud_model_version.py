@@ -411,7 +411,7 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
     return False
 
 
-async def read_resources(guid: str, exclude_resource: str, session: AsyncSession) -> list[ModelResourceOutRelIn]:
+async def read_resources(guid: str, session: AsyncSession) -> list[ModelResourceOutRelIn]:
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.model_resources))
@@ -424,5 +424,4 @@ async def read_resources(guid: str, exclude_resource: str, session: AsyncSession
     return [
         ModelResourceOutRelIn.from_orm(resource)
         for resource in model_version.model_resources
-        if resource.name != exclude_resource
     ]

@@ -338,7 +338,7 @@ def _read_model_resource_rels(graph_name: str, model_resource_name: str, age_ses
     return [
         ModelResourceRelOut(
             resource_attr=model_resource_rel[0][1], mapped_resource=model_resource_rel[1],
-            key_attr=model_resource_rel[0][0], gid=model_resource_rel[2]
+            mapped_resource_key_attr=model_resource_rel[0][0], gid=model_resource_rel[2]
         )
         for model_resource_rel in cursor
     ]
