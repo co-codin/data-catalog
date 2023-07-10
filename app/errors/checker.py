@@ -14,6 +14,20 @@ def init_model_resource_errors(model_resource: ModelResource):
         setattr(model_resource, 'errors', [])
 
 
+objects = []
+
+
+async def get_objects_list(session: AsyncSession) -> list:
+    global objects
+    if not len(objects):
+        objects = await session.execute(
+            select(Object.db_path)
+        )
+        objects = objects.scalars().all()
+
+    return objects
+
+
 async def check_model_resources_error(model_version: ModelVersion, status_in: str, session: AsyncSession):
     if model_version.status == ModelVersionStatus.ARCHIVE.value and status_in == ModelVersionStatus.APPROVED.value:
         exist_errors = {}
@@ -39,6 +53,7 @@ async def check_model_resources_error(model_version: ModelVersion, status_in: st
 
 
 async def check_resource_for_errors(model_resource: ModelResource, session: AsyncSession):
+    objects = await get_objects_list(session=session)
     init_model_resource_errors(model_resource=model_resource)
 
     for attribute in model_resource.attributes:
@@ -48,14 +63,8 @@ async def check_resource_for_errors(model_resource: ModelResource, session: Asyn
 
     if model_resource.db_link is None or model_resource.db_link == '':
         model_resource.errors.append('db_link_error')
-    else:
-        objects = await session.execute(
-            select(Object.id)
-            .filter(Object.db_path == model_resource.db_link)
-        )
-        object = objects.scalars().first()
-        if object:
-            model_resource.errors.append('db_link_error')
+    elif model_resource.db_link not in objects:
+        model_resource.errors.append('db_link_error')
 
     if len(model_resource.attributes) == 0:
         model_resource.errors.append('empty_resource')
@@ -69,18 +78,13 @@ async def check_resource_for_errors(model_resource: ModelResource, session: Asyn
 
 async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttribute,
                                      session: AsyncSession) -> str | None:
+    objects = await get_objects_list(session=session)
     if model_resource_attribute.db_link is None or model_resource_attribute.db_link == '':
         model_resource_attribute.db_link_error = True
         return 'attribute_db_link_error'
-    else:
-        objects = await session.execute(
-            select(Object.id)
-            .filter(Object.db_path == model_resource_attribute.db_link)
-        )
-        object = objects.scalars().first()
-        if object:
-            model_resource_attribute.db_link_error = True
-            return 'attribute_db_link_error'
+    elif model_resource_attribute.db_link not in objects:
+        model_resource_attribute.db_link_error = True
+        return 'attribute_db_link_error'
 
     if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
         model_resource_attribute.data_type_errors = 'data_type_error'
