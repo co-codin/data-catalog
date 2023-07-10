@@ -188,7 +188,7 @@ class ModelRelation(Base):
 
     model_version = relationship('ModelVersion', back_populates='model_relations')
     tags = relationship('Tag', secondary=model_relation_tags, order_by='Tag.id')
-    relation_operation = relationship('ModelRelationOperation', back_populates='model_relation')
+    relation_operation = relationship('ModelRelationOperation', back_populates='model_relation', uselist=False)
 
 
 class ModelRelationOperation(Base):
@@ -200,10 +200,10 @@ class ModelRelationOperation(Base):
     operation_body_id = Column(BigInteger, ForeignKey(OperationBody.operation_body_id, ondelete='CASCADE'))
     parent_id = Column(BigInteger, nullable=True)
 
-    model_relation = relationship('ModelRelation', back_populates='relation_operation')
+    model_relation = relationship('ModelRelation', back_populates='relation_operation', uselist=False)
     operations_bodies = relationship('OperationBody', back_populates='model_relation_operations')
-    model_relation_operations = relationship('ModelRelationOperationParameter',
-                                             back_populates='model_relation_operation')
+    model_relation_operation_parameters = relationship('ModelRelationOperationParameter',
+                                                       back_populates='model_relation_operation')
 
 
 class ModelRelationOperationParameter(Base):
@@ -218,7 +218,8 @@ class ModelRelationOperationParameter(Base):
 
     model_resource_attributes = relationship('ModelResourceAttribute',
                                              back_populates='model_relation_operation_parameters')
-    model_relation_operation = relationship('ModelRelationOperation', back_populates='model_relation_operations')
+    model_relation_operation = relationship('ModelRelationOperation',
+                                            back_populates='model_relation_operation_parameters')
 
 
 class ModelResource(Base):
@@ -263,6 +264,7 @@ class ModelResourceAttribute(Base):
     cardinality = Column(String(100), nullable=True)
     parent_id = Column(BigInteger, nullable=True, index=True)
     additional = Column(JSONB, nullable=True)
+    access_flag = Column(Boolean, nullable=False, default=False)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
     model_resource_id = Column(BigInteger, index=True, nullable=True)
