@@ -1,5 +1,6 @@
 import json
 import uuid
+import logging
 
 from datetime import datetime
 from enum import Enum
@@ -11,8 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from app.crud.crud_tag import remove_redundant_tags, add_tags
+from app.enums.enums import Cardinality
 from app.models import (
-    SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute, Cardinality
+    SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute
 )
 from app.mq import create_channel
 from app.schemas.migration import MigrationOut, FieldToCreate, MigrationPattern
@@ -20,6 +22,9 @@ from app.schemas.model import ModelCommon
 from app.database import db_session
 from app.constants.data_types import SYS_DATA_TYPE_TO_ID, ID_TO_SYS_DATA_TYPE
 from app.config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class MigrationRequestStatus(Enum):
@@ -68,6 +73,7 @@ async def update_data_catalog_data(graph_migration: str):
 
 
 async def process_graph_migration_success(graph_migration: dict):
+    logger.info("Processing graph migration success...")
     if graph_migration:
         applied_migration = MigrationOut(**graph_migration['graph_migration'])
         source_registry_guid = graph_migration['source_registry_guid']
@@ -128,9 +134,11 @@ async def process_graph_migration_success(graph_migration: dict):
 
 
 async def process_graph_migration_failure(graph_migration: dict):
+    logger.info("Processing graph migration failure...")
+    logger.info(f"Received failure msg: {graph_migration}")
+
     source_registry_guid = graph_migration['source_registry_guid']
     object_guid = graph_migration['object_guid']
-
     async with db_session() as session:
         await session.execute(
             update(SourceRegister)

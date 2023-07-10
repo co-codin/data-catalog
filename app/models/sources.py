@@ -96,7 +96,7 @@ class Object(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
     name = Column(String, nullable=False)
     owner = Column(String(36*4), nullable=False)
-    db_path = Column(String)
+    db_path = Column(String, index=True)
 
     source_created_at = Column(DateTime)
     source_updated_at = Column(DateTime)

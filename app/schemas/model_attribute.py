@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Any
 from datetime import datetime
 
-from app.models.models import Cardinality
+from app.enums.enums import Cardinality
 from app.schemas.tag import TagOut
 
 
@@ -70,6 +70,13 @@ class ModelResourceAttributeOut(BaseModel):
     resources: Any
 
     data_type_errors: str | None
+    db_link_error: bool = False
 
     class Config:
         orm_mode = True
+
+
+class ModelResourceAttrOutRelIn(BaseModel):
+    name: str
+    type: str | None = None
+    key: bool

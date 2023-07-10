@@ -29,6 +29,9 @@ class Settings(BaseSettings):
         '*'
     ]
 
+    # age constants
+    age_connection_string: str = 'postgresql://postgres:dwh@graphdb.lan:5432/postgres'
+
     mq_connection_string: str = 'amqp://dwh:dwh@rabbit.lan:5672'
     migration_exchange = 'graph_migration'
     migration_request_queue = 'migration_requests'

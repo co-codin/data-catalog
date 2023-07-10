@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import Enum
 
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Text, Boolean, LargeBinary
 from sqlalchemy.sql import func
@@ -7,14 +6,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.database import Base
+from app.enums.enums import ModelVersionStatus, PipelineStatus
 from app.models.sources import Model
-
-
-class Cardinality(Enum):
-    ZERO_TO_ONE = '0..1'
-    ZERO_TO_MANY = '0..*'
-    ONE_TO_ONE = '1..1'
-    ONE_TO_MANY = '1..*'
 
 
 model_version_tags = Table(
@@ -138,7 +131,7 @@ class ModelVersion(Base):
     guid = Column(String(36), nullable=False, index=True, unique=True)
 
     model_id = Column(BigInteger, ForeignKey(Model.id, ondelete='CASCADE'))
-    status = Column(String, nullable=False, default='draft')
+    status = Column(String, nullable=False, default=ModelVersionStatus.DRAFT.value)
     version = Column(String(100), nullable=True)
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(Text)
@@ -239,7 +232,7 @@ class ModelResource(Base):
     owner = Column(String(36 * 4), nullable=False)
     desc = Column(Text, nullable=True)
     type = Column(String(500), default="Ресурс")
-    db_link = Column(String(500), nullable=True)
+    db_link = Column(String(500), nullable=True, index=True)
 
     json = Column(JSONB, nullable=True)
     xml = Column(Text, nullable=True)
@@ -253,8 +246,6 @@ class ModelResource(Base):
     attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
                                                                     '.resource_id',
                               order_by='ModelResourceAttribute.name')
-    typed_attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
-                                                                          '.model_resource_id')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
 
@@ -267,14 +258,14 @@ class ModelResourceAttribute(Base):
 
     name = Column(String(200), nullable=False)
     key = Column(Boolean, index=True, nullable=True)
-    db_link = Column(String(500), nullable=True)
+    db_link = Column(String(500), nullable=True, index=True)
     desc = Column(Text, nullable=True)
     cardinality = Column(String(100), nullable=True)
-    parent_id = Column(BigInteger, nullable=True)
+    parent_id = Column(BigInteger, nullable=True, index=True)
     additional = Column(JSONB, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
-    model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
+    model_resource_id = Column(BigInteger, index=True, nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id, ondelete='CASCADE'), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -282,7 +273,6 @@ class ModelResourceAttribute(Base):
                         server_onupdate=func.now())
 
     resources = relationship('ModelResource', back_populates='attributes', foreign_keys=[resource_id])
-    model_resources = relationship('ModelResource', back_populates='typed_attributes', foreign_keys=[model_resource_id])
     model_data_types = relationship('ModelDataType', back_populates='model_resource_attributes')
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
     query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='model_resource_attribute')
@@ -313,12 +303,6 @@ class ModelAttitude(Base):
                                    foreign_keys=[left_attribute_id])
     right_attributes = relationship('ModelResourceAttribute', back_populates='right_attribute_attitudes',
                                     foreign_keys=[right_attribute_id])
-
-
-class PipelineStatus(Enum):
-    EXPECTED = 0
-    ERROR = 1
-    SUCCESS = 2
 
 
 class Pipeline(Base):

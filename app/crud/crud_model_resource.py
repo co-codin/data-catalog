@@ -3,29 +3,43 @@ import uuid
 
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, load_only
+
 from fastapi import HTTPException, status
 
+from age import Age
+
+from app.age_queries.node_queries import match_model_resource_rels, set_link_between_nodes, delete_link_between_nodes
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
-from app.crud.crud_model_version import VersionLevel, generate_version_number
-from app.errors.errors import AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError, \
-    AttributeRelationError
+from app.crud.crud_model_version import generate_version_number
+from app.enums.enums import ModelVersionLevel
+from app.errors.checker import check_resource_for_errors, check_attribute_for_errors, init_model_resource_errors
+from app.errors.errors import (
+    AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError,
+    AttributeRelationError, ModelAttitudeAttributesError
+)
 from app.models.models import ModelResource, ModelResourceAttribute
+from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
 from app.crud.crud_source_registry import add_tags, update_tags
+from app.constants.data_types import ID_TO_SYS_DATA_TYPE
+from app.schemas.model_attribute import ModelResourceAttrOutRelIn
 
 
 async def read_resources_by_version_id(version_id: int, session: AsyncSession):
-    model_resource = await session.execute(
+    model_resources = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
+        .options(selectinload(ModelResource.attributes))
         .filter(ModelResource.model_version_id == version_id)
     )
-    model_resource = model_resource.scalars().all()
+    model_resources = model_resources.scalars().all()
+    for model_resource in model_resources:
+        await check_resource_for_errors(model_resource=model_resource, session=session)
 
-    return model_resource
+    return model_resources
 
 
 async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
@@ -49,6 +63,8 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         )
         set_author_data(model_resource.comments, authors_data)
 
+    await check_resource_for_errors(model_resource=model_resource, session=session)
+
     return model_resource
 
 
@@ -64,7 +80,7 @@ async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSess
     session.add(model_resource)
     await session.commit()
 
-    await generate_version_number(id=resource_in.model_version_id, session=session, level=VersionLevel.MINOR)
+    await generate_version_number(id=resource_in.model_version_id, session=session, level=ModelVersionLevel.MINOR)
 
     return model_resource.guid
 
@@ -117,7 +133,7 @@ async def delete_model_resource(guid: str, session: AsyncSession):
     )
     await session.commit()
 
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.CRITICAL)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.CRITICAL)
 
 
 async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSession):
@@ -150,7 +166,7 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
         .where(ModelResource.id == model_resource_attribute.resource_id)
     )
     model_resource = model_resource.scalars().first()
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.MINOR)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.MINOR)
 
     return model_resource_attribute.guid
 
@@ -177,26 +193,6 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     return parents
 
 
-async def check_attribute_for_type(model_resource_attribute: ModelResourceAttribute,
-                                   model_resource_attribute_out: ModelResourceAttributeOut, session: AsyncSession):
-    if model_resource_attribute.model_data_type_id is None and model_resource_attribute.model_resource_id is None:
-        model_resource_attribute_out.data_type_errors = 'data_type_error'
-    elif model_resource_attribute.model_resource_id is not None:
-        model_resource = await session.execute(
-            select(ModelResource)
-            .options(selectinload(ModelResource.attributes))
-            .filter(ModelResource.id == model_resource_attribute.model_resource_id)
-        )
-        model_resource = model_resource.scalars().first()
-        if len(model_resource.attributes) == 0:
-            model_resource_attribute_out.data_type_errors = 'nested_attribute_data_type_error'
-            return
-        for model_resource_attribute in model_resource.attributes:
-            await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
-                                           model_resource_attribute_out=model_resource_attribute_out,
-                                           session=session)
-
-
 async def get_attribute_by_guid(guid: str, session: AsyncSession):
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
@@ -212,10 +208,12 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
     if not model_resource_attribute:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    error = await check_attribute_for_errors(model_resource_attribute=model_resource_attribute, session=session)
+    if error:
+        init_model_resource_errors(model_resource=model_resource_attribute.resources)
+        model_resource_attribute.resources.errors.append(error)
+
     model_resource_attribute_out = ModelResourceAttributeOut.from_orm(model_resource_attribute)
-    await check_attribute_for_type(model_resource_attribute=model_resource_attribute,
-                                   model_resource_attribute_out=model_resource_attribute_out,
-                                   session=session)
 
     if model_resource_attribute.parent_id is not None:
         parents = await get_attribute_parents(session=session, parents=[], parent_id=model_resource_attribute.parent_id)
@@ -287,9 +285,141 @@ async def remove_attribute(guid: str, session: AsyncSession):
         .where(ModelResource.id == model_resource_attribute.resource_id)
     )
     model_resource = model_resource.scalars().first()
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=VersionLevel.CRITICAL)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.CRITICAL)
 
     await session.execute(
         delete(ModelResourceAttribute)
         .where(ModelResourceAttribute.guid == guid)
     )
+
+
+async def read_model_resource_attrs(guid: str, session: AsyncSession) -> list[ModelResourceAttrOutRelIn]:
+    model_resource = await session.execute(
+        select(ModelResource)
+        .options(selectinload(ModelResource.attributes))
+        .where(ModelResource.guid == guid)
+    )
+    model_resource = model_resource.scalars().first()
+    if not model_resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return [
+        ModelResourceAttrOutRelIn(
+            name=attr.name, type=ID_TO_SYS_DATA_TYPE.get(attr.model_data_type_id, None), key=attr.key
+        )
+        for attr in model_resource.attributes
+    ]
+
+
+async def read_model_resource_rels(guid: str, session: AsyncSession, age_session: Age) -> list[ModelResourceRelOut]:
+    model_resource = await session.execute(
+        select(ModelResource)
+        .options(load_only(ModelResource.name, ModelResource.db_link))
+        .where(ModelResource.guid == guid)
+    )
+    model_resource = model_resource.scalars().first()
+    if not model_resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="model resource doesn't exist")
+
+    graph_name = model_resource.db_link.rsplit('.', maxsplit=1)[0]
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, _read_model_resource_rels, graph_name, model_resource.name, age_session
+    )
+
+
+def _read_model_resource_rels(graph_name: str, model_resource_name: str, age_session: Age) -> list[ModelResourceRelOut]:
+    age_session.setGraph(graph_name)
+    cursor = age_session.execCypher(
+        match_model_resource_rels,
+        cols=['rel', 't2_name', 'one_to_many_id'],
+        params=(model_resource_name,)
+    )
+    return [
+        ModelResourceRelOut(
+            resource_attr=model_resource_rel[0][1], mapped_resource=model_resource_rel[1],
+            mapped_resource_key_attr=model_resource_rel[0][0], gid=model_resource_rel[2]
+        )
+        for model_resource_rel in cursor
+    ]
+
+
+async def create_model_resource_rel(
+        guid: str, rel_in: ModelResourceRelIn, session: AsyncSession, age_session: Age
+) -> tuple[int, int]:
+    model_resources = await session.execute(
+        select(ModelResource)
+        .options(
+            load_only(ModelResource.guid, ModelResource.name, ModelResource.db_link, ModelResource.model_version_id)
+        )
+        .where(ModelResource.guid.in_((guid, rel_in.mapped_resource_guid)))
+    )
+    model_resources = model_resources.scalars().all()
+
+    if model_resources[0].guid == guid:
+        resource = model_resources[0]
+        mapped_resource = model_resources[1]
+    else:
+        resource = model_resources[1]
+        mapped_resource = model_resources[0]
+
+    graph_name = resource.db_link.rsplit('.', maxsplit=1)[0]
+    loop = asyncio.get_running_loop()
+    one_to_many_rel_id = await loop.run_in_executor(
+        None, _create_model_resource_rel, graph_name, mapped_resource.name, resource.name,
+        rel_in.mapped_resource_key_attr, rel_in.resource_attr, age_session
+    )
+
+    return one_to_many_rel_id, resource.model_version_id
+
+
+def _create_model_resource_rel(
+        graph_name: str, mapped_resource_name: str, resource_name: str,
+        mapped_resource_key_attr: str, resource_attr: str, age_session: Age
+) -> int:
+    age_session.setGraph(graph_name)
+    cursor = age_session.execCypher(
+        set_link_between_nodes,
+        cols=['r_one_to_many_id'],
+        params=(
+            mapped_resource_name, resource_name,
+            mapped_resource_key_attr, resource_attr,
+            resource_attr, mapped_resource_key_attr
+        )
+    )
+    one_to_many_rel_id = next(cursor)[0]
+    return one_to_many_rel_id
+
+
+async def check_on_model_resources_len(resource_guid: str, mapped_resource_guid: str, session: AsyncSession) -> None:
+    model_resources_count = await session.execute(
+        select(func.count(ModelResource.id))
+        .where(ModelResource.guid.in_(
+            (resource_guid, mapped_resource_guid))
+        )
+    )
+    model_resources_count = model_resources_count.scalars().first()
+    if model_resources_count != 2:
+        raise ModelAttitudeAttributesError()
+
+
+def remove_model_resource_rel(gid: int, graph_name: str, age_session: Age) -> None:
+    age_session.setGraph(graph_name)
+    age_session.execCypher(
+        delete_link_between_nodes,
+        cols=['r_one_to_many BIGINT'],
+        params=(gid,)
+    )
+
+
+async def read_model_resource(resource_guid: str, session: AsyncSession) -> ModelResource:
+    model_resource = await session.execute(
+        select(ModelResource)
+        .options(load_only(ModelResource.db_link, ModelResource.model_version_id))
+        .where(ModelResource.guid == resource_guid)
+    )
+    model_resource = model_resource.scalars().first()
+    if not model_resource:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="model resource doesn't exist")
+    return model_resource
+

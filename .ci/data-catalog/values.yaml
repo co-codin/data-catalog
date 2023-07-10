@@ -18,6 +18,7 @@ secrets:
   neo4j_connection_password: "password"
   db_connection_string: ""
   db_migration_connection_string: ""
+  age_connection_string: ""
   encryption_key: ""
   mq_connection_string: ""
   migration_exchange: ""
