@@ -405,6 +405,15 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
             for tag in last_approved_model_version.tags:
                 tags.append(tag.name)
             if tags:
+                model_version = await session.execute(
+                    select(ModelVersion)
+                    .options(selectinload(ModelVersion.tags))
+                    .options(selectinload(ModelVersion.comments))
+                    .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.tags))
+                    .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.comments))
+                    .filter(ModelVersion.guid == model_version.guid)
+                )
+                model_version = model_version.scalars().first()
                 await update_tags(model_version, session, tags)
 
             return True
