@@ -36,8 +36,8 @@ async def read_resources_by_version_id(version_id: int, session: AsyncSession):
         .filter(ModelResource.model_version_id == version_id)
     )
     model_resources = model_resources.scalars().all()
-    #for model_resource in model_resources:
-    #    await check_resource_for_errors(model_resource=model_resource, session=session)
+    for model_resource in model_resources:
+        await check_resource_for_errors(model_resource=model_resource, session=session)
 
     return model_resources
 
