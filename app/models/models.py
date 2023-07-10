@@ -246,8 +246,6 @@ class ModelResource(Base):
     attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
                                                                     '.resource_id',
                               order_by='ModelResourceAttribute.name')
-    typed_attributes = relationship('ModelResourceAttribute', primaryjoin='ModelResource.id==ModelResourceAttribute'
-                                                                          '.model_resource_id')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
     comments = relationship('Comment', order_by='Comment.id')
 
@@ -267,7 +265,7 @@ class ModelResourceAttribute(Base):
     additional = Column(JSONB, nullable=True)
 
     resource_id = Column(BigInteger, ForeignKey(ModelResource.id, ondelete='CASCADE'))
-    model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id), nullable=True)
+    model_resource_id = Column(BigInteger, index=True, nullable=True)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id, ondelete='CASCADE'), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -275,7 +273,6 @@ class ModelResourceAttribute(Base):
                         server_onupdate=func.now())
 
     resources = relationship('ModelResource', back_populates='attributes', foreign_keys=[resource_id])
-    model_resources = relationship('ModelResource', back_populates='typed_attributes', foreign_keys=[model_resource_id])
     model_data_types = relationship('ModelDataType', back_populates='model_resource_attributes')
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
     query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='model_resource_attribute')
