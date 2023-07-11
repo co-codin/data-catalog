@@ -188,7 +188,6 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.resources))
-        .options(selectinload(ModelResourceAttribute.model_resources))
         .options(selectinload(ModelResourceAttribute.model_data_types))
         .options(selectinload(ModelResourceAttribute.tags))
         .options(selectinload(ModelResourceAttribute.resources))
@@ -210,7 +209,6 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.resources))
-        .options(selectinload(ModelResourceAttribute.model_resources))
         .options(selectinload(ModelResourceAttribute.model_data_types))
         .options(selectinload(ModelResourceAttribute.tags))
         .options(selectinload(ModelResourceAttribute.resources))
