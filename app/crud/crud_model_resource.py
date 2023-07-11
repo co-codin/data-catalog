@@ -75,8 +75,9 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
             .filter(ModelRelationOperationParameter.model_resource_attribute_id == attribute.id)
         )
         attribute.relations = relations.scalars().first()
-        await check_newest_version_exists(operation_body=attribute.relations.model_relation_operation.operations_bodies,
-                                          session=session)
+        if attribute.relations:
+            await check_newest_version_exists(operation_body=attribute.relations.model_relation_operation.operations_bodies,
+                                              session=session)
 
     return model_resource
 
@@ -196,12 +197,12 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     model_resource_attribute = model_resource_attribute.scalars().first()
 
     parents.append(model_resource_attribute)
+    if model_resource_attribute:
+        if model_resource_attribute.parent_id is None:
+            return parents
 
-    if model_resource_attribute.parent_id is None:
-        return parents
-
-    parents = await get_attribute_parents(session=session, parents=parents,
-                                          parent_id=model_resource_attribute.parent_id)
+        parents = await get_attribute_parents(session=session, parents=parents,
+                                              parent_id=model_resource_attribute.parent_id)
     return parents
 
 
