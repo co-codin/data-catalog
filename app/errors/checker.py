@@ -29,27 +29,26 @@ async def get_objects_list(session: AsyncSession) -> list:
 
 
 async def check_model_resources_error(model_version: ModelVersion, status_in: str, session: AsyncSession):
-    if model_version.status == ModelVersionStatus.ARCHIVE.value and status_in == ModelVersionStatus.APPROVED.value:
-        exist_errors = {}
-        for model_resource in model_version.model_resources:
-            await check_resource_for_errors(model_resource=model_resource, session=session)
-            for error in model_resource.errors:
-                exist_errors[error] = True
+    exist_errors = {}
+    for model_resource in model_version.model_resources:
+        await check_resource_for_errors(model_resource=model_resource, session=session)
+        for error in model_resource.errors:
+            exist_errors[error] = True
 
-        if 'db_link_error' in exist_errors:
-            raise ModelVersionDBLinkError()
+    if 'db_link_error' in exist_errors:
+        raise ModelVersionDBLinkError()
 
-        if 'empty_resource' in exist_errors:
-            raise ModelVersionEmptyResourceError()
+    if 'empty_resource' in exist_errors:
+        raise ModelVersionEmptyResourceError()
 
-        if 'data_type_error' in exist_errors:
-            raise ModelVersionDataTypeError()
+    if 'data_type_error' in exist_errors:
+        raise ModelVersionDataTypeError()
 
-        if 'nested_attribute_data_type_error' in exist_errors:
-            raise ModelVersionNestedAttributeDataTypeError()
+    if 'nested_attribute_data_type_error' in exist_errors:
+        raise ModelVersionNestedAttributeDataTypeError()
 
-        if 'attribute_db_link_error' in exist_errors:
-            raise ModelVersionAttributeDBLinkError()
+    if 'attribute_db_link_error' in exist_errors:
+        raise ModelVersionAttributeDBLinkError()
 
 
 async def check_resource_for_errors(model_resource: ModelResource, session: AsyncSession):
