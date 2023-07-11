@@ -35,7 +35,7 @@ class ResourceAttributeUpdateIn(BaseModel):
     @validator('cardinality')
     def cardinality_validator(cls, v):
         accepted = ["0..1", "1..1", "1..*", "0..*"]
-        if v not in accepted:
+        if v and (v not in accepted):
             raise ValueError('Invalid cardinality')
 
         return v
