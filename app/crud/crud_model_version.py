@@ -101,7 +101,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     }
 
     if model_version.status == ModelVersionStatus.DRAFT.value and not model_version.version:
-        model_version_update_in_data['version'] = str(uuid.uuid4())
+        model_version_update_in_data['version'] = '0.0.0'
 
     await session.execute(
         update(ModelVersion)

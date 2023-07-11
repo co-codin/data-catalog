@@ -11,6 +11,7 @@ from age import Age
 
 from app.age_queries.node_queries import match_model_resource_rels, set_link_between_nodes, delete_link_between_nodes
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
+from app.crud.crud_model_relation import check_newest_version_exists
 from app.crud.crud_model_version import generate_version_number
 from app.enums.enums import ModelVersionLevel
 from app.errors.checker import check_resource_for_errors, check_attribute_for_errors, init_model_resource_errors
@@ -18,7 +19,9 @@ from app.errors.errors import (
     AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError,
     AttributeRelationError, ModelAttitudeAttributesError
 )
-from app.models.models import ModelResource, ModelResourceAttribute
+
+from app.models.models import ModelResource, ModelResourceAttribute, ModelRelationOperationParameter, \
+    ModelRelationOperation
 from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
@@ -64,6 +67,17 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         set_author_data(model_resource.comments, authors_data)
 
     await check_resource_for_errors(model_resource=model_resource, session=session)
+
+    for attribute in model_resource.attributes:
+        relations = await session.execute(
+            select(ModelRelationOperationParameter)
+            .options(selectinload(ModelRelationOperationParameter.model_relation_operation).selectinload(ModelRelationOperation.operations_bodies))
+            .filter(ModelRelationOperationParameter.model_resource_attribute_id == attribute.id)
+        )
+        attribute.relations = relations.scalars().first()
+        if attribute.relations:
+            await check_newest_version_exists(operation_body=attribute.relations.model_relation_operation.operations_bodies,
+                                              session=session)
 
     return model_resource
 
@@ -175,7 +189,6 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.resources))
-        .options(selectinload(ModelResourceAttribute.model_resources))
         .options(selectinload(ModelResourceAttribute.model_data_types))
         .options(selectinload(ModelResourceAttribute.tags))
         .options(selectinload(ModelResourceAttribute.resources))
@@ -184,12 +197,12 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     model_resource_attribute = model_resource_attribute.scalars().first()
 
     parents.append(model_resource_attribute)
+    if model_resource_attribute:
+        if model_resource_attribute.parent_id is None:
+            return parents
 
-    if model_resource_attribute.parent_id is None:
-        return parents
-
-    parents = await get_attribute_parents(session=session, parents=parents,
-                                          parent_id=model_resource_attribute.parent_id)
+        parents = await get_attribute_parents(session=session, parents=parents,
+                                              parent_id=model_resource_attribute.parent_id)
     return parents
 
 
@@ -197,7 +210,6 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.resources))
-        .options(selectinload(ModelResourceAttribute.model_resources))
         .options(selectinload(ModelResourceAttribute.model_data_types))
         .options(selectinload(ModelResourceAttribute.tags))
         .options(selectinload(ModelResourceAttribute.resources))
