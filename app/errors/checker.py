@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 
 from app.errors.model_version import ModelVersionDBLinkError, ModelVersionDataTypeError, \
     ModelVersionNestedAttributeDataTypeError, ModelVersionEmptyResourceError, ModelVersionAttributeDBLinkError
-from app.models import Object
+from app.models import Object, Field
 from app.models.models import ModelVersion, ModelResource, ModelResourceAttribute
 
 
@@ -14,6 +14,7 @@ def init_model_resource_errors(model_resource: ModelResource):
 
 
 objects = []
+fields = []
 
 
 async def get_objects_list(session: AsyncSession) -> list:
@@ -25,6 +26,17 @@ async def get_objects_list(session: AsyncSession) -> list:
         objects = objects.scalars().all()
 
     return objects
+
+
+async def get_fields_list(session: AsyncSession) -> list:
+    global fields
+    if not len(fields):
+        fields = await session.execute(
+            select(Field.db_path)
+        )
+        fields = fields.scalars().all()
+
+    return fields
 
 
 async def check_model_resources_error(model_version: ModelVersion, session: AsyncSession):
@@ -76,11 +88,11 @@ async def check_resource_for_errors(model_resource: ModelResource, session: Asyn
 
 async def check_attribute_for_errors(model_resource_attribute: ModelResourceAttribute,
                                      session: AsyncSession) -> str | None:
-    objects = await get_objects_list(session=session)
+    fields = await get_fields_list(session=session)
     if model_resource_attribute.db_link is None or model_resource_attribute.db_link == '':
         model_resource_attribute.db_link_error = True
         return 'attribute_db_link_error'
-    elif model_resource_attribute.db_link not in objects:
+    elif model_resource_attribute.db_link not in fields:
         model_resource_attribute.db_link_error = True
         return 'attribute_db_link_error'
 
