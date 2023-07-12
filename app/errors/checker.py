@@ -2,7 +2,6 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.enums.enums import ModelVersionStatus
 from app.errors.model_version import ModelVersionDBLinkError, ModelVersionDataTypeError, \
     ModelVersionNestedAttributeDataTypeError, ModelVersionEmptyResourceError, ModelVersionAttributeDBLinkError
 from app.models import Object
@@ -28,7 +27,7 @@ async def get_objects_list(session: AsyncSession) -> list:
     return objects
 
 
-async def check_model_resources_error(model_version: ModelVersion, status_in: str, session: AsyncSession):
+async def check_model_resources_error(model_version: ModelVersion, session: AsyncSession):
     exist_errors = {}
     for model_resource in model_version.model_resources:
         await check_resource_for_errors(model_resource=model_resource, session=session)
