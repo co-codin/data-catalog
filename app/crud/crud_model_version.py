@@ -77,8 +77,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         .filter(ModelVersion.guid == guid)
     )
     model_version = model_version.scalars().first()
-    await check_model_resources_error(model_version=model_version, status_in=model_version_update_in.status,
-                                      session=session)
+    await check_model_resources_error(model_version=model_version, session=session)
 
     approved_model_version = await session.execute(
         select(ModelVersion)
