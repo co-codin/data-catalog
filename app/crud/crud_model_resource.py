@@ -142,6 +142,14 @@ async def delete_model_resource(guid: str, session: AsyncSession):
         raise ModelResourceHasAttributesError()
 
     await session.execute(
+        update(ModelResourceAttribute)
+        .where(ModelResourceAttribute.model_resource_id == model_resource.id)
+        .values(
+            model_resource_id=None
+        )
+    )
+
+    await session.execute(
         delete(ModelResource)
         .where(ModelResource.guid == guid)
     )
