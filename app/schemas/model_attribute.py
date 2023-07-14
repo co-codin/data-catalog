@@ -47,14 +47,14 @@ class ModelResourceAttributeOut(BaseModel):
 
     name: str
     key: str | None
-    db_link: str| None
+    db_link: str | None
     desc: str | None = None
 
     resource_id: int
     model_resource_id: int | None
     model_data_type_id: int | None
 
-    cardinality: str| None
+    cardinality: str | None
 
     created_at: datetime
     updated_at: datetime
