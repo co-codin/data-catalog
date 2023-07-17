@@ -10,10 +10,11 @@ from fastapi import HTTPException, status
 from age import Age
 
 from app.age_queries.node_queries import match_model_resource_rels, set_link_between_nodes, delete_link_between_nodes
+from app.crud.crud_access_label import add_access_label, update_access_label
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_model_relation import check_newest_version_exists
 from app.crud.crud_model_version import generate_version_number
-from app.enums.enums import ModelVersionLevel
+from app.enums.enums import ModelVersionLevel, AccessLabelType
 from app.errors.checker import check_resource_for_errors, check_attribute_for_errors, init_model_resource_errors
 from app.errors.errors import (
     AttributeDataTypeError, AttributeDataTypeOverflowError, ModelResourceHasAttributesError,
@@ -21,7 +22,7 @@ from app.errors.errors import (
 )
 
 from app.models.models import ModelResource, ModelResourceAttribute, ModelRelationOperationParameter, \
-    ModelRelationOperation
+    ModelRelationOperation, OperationBody
 from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
@@ -35,6 +36,7 @@ async def read_resources_by_version_id(version_id: int, session: AsyncSession):
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
+        .options(selectinload(ModelResource.access_label))
         .options(selectinload(ModelResource.attributes))
         .filter(ModelResource.model_version_id == version_id)
     )
@@ -50,6 +52,7 @@ async def read_resources_by_guid(guid: str, token: str, session: AsyncSession):
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
         .options(selectinload(ModelResource.comments))
+        .options(selectinload(ModelResource.access_label))
         .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .filter(ModelResource.guid == guid)
     )
@@ -86,10 +89,11 @@ async def create_model_resource(resource_in: ModelResourceIn, session: AsyncSess
     guid = str(uuid.uuid4())
 
     model_resource = ModelResource(
-        **resource_in.dict(exclude={'tags'}),
+        **resource_in.dict(exclude={'tags', 'access_label'}),
         guid=guid
     )
     await add_tags(model_resource, resource_in.tags, session)
+    await add_access_label(model_resource, resource_in.access_label)
 
     session.add(model_resource)
     await session.commit()
@@ -103,12 +107,15 @@ async def update_model_resource(guid: str, resource_update_in: ModelResourceUpda
     model_resource = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
+        .options(selectinload(ModelResource.access_label))
         .filter(ModelResource.guid == guid)
     )
     model_resource = model_resource.scalars().first()
+    if not model_resource:
+        return
 
     model_resource_update_in_data = {
-        key: value for key, value in resource_update_in.dict(exclude={'tags'}).items()
+        key: value for key, value in resource_update_in.dict(exclude={'tags', 'access_label'}).items()
         if value is not None
     }
 
@@ -121,6 +128,7 @@ async def update_model_resource(guid: str, resource_update_in: ModelResourceUpda
     )
 
     await update_tags(model_resource, session, resource_update_in.tags)
+    await update_access_label(model_resource, resource_update_in.access_label, session)
 
     session.add(model_resource)
     await session.commit()
@@ -171,7 +179,7 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
     guid = str(uuid.uuid4())
 
     model_resource_attribute = ModelResourceAttribute(
-        **attribute_in.dict(exclude={'tags', 'cardinality'}),
+        **attribute_in.dict(exclude={'tags', 'cardinality', 'access_label'}),
         guid=guid
     )
 
@@ -179,6 +187,7 @@ async def create_attribute(attribute_in: ResourceAttributeIn, session: AsyncSess
         model_resource_attribute.cardinality = attribute_in.cardinality.value
 
     await add_tags(model_resource_attribute, attribute_in.tags, session)
+    await add_access_label(model_resource_attribute, attribute_in.access_label)
 
     session.add(model_resource_attribute)
     await session.commit()
@@ -199,6 +208,7 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
         .options(selectinload(ModelResourceAttribute.resources))
         .options(selectinload(ModelResourceAttribute.model_data_types))
         .options(selectinload(ModelResourceAttribute.tags))
+        .options(selectinload(ModelResourceAttribute.access_label))
         .options(selectinload(ModelResourceAttribute.resources))
         .filter(ModelResourceAttribute.id == parent_id)
     )
@@ -214,12 +224,33 @@ async def get_attribute_parents(session: AsyncSession, parents: list, parent_id:
     return parents
 
 
+async def check_newest_version_exists_for_attribute(model_resource_attribute: ModelResourceAttribute, session: AsyncSession):
+    if ModelResourceAttribute.access_label:
+        for access_label in model_resource_attribute.access_label:
+            if access_label.type == AccessLabelType.PERSONAL.value:
+                current_operation_body = await session.execute(
+                    select(OperationBody)
+                    .filter(OperationBody.operation_body_id == access_label.operation_version_id)
+                )
+                current_operation_body = current_operation_body.scalars().first()
+                print(current_operation_body.operation_id)
+                latest_operation_version = await session.execute(
+                    select(OperationBody.version)
+                    .filter(OperationBody.operation_id == current_operation_body.operation_id)
+                    .order_by(OperationBody.version.desc())
+                )
+                latest_operation_version = latest_operation_version.scalars().first()
+                if latest_operation_version > current_operation_body.version:
+                    access_label.new_version_exists = True
+
+
 async def get_attribute_by_guid(guid: str, session: AsyncSession):
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.resources))
         .options(selectinload(ModelResourceAttribute.model_data_types))
         .options(selectinload(ModelResourceAttribute.tags))
+        .options(selectinload(ModelResourceAttribute.access_label))
         .options(selectinload(ModelResourceAttribute.resources))
         .filter(ModelResourceAttribute.guid == guid)
     )
@@ -233,6 +264,7 @@ async def get_attribute_by_guid(guid: str, session: AsyncSession):
         init_model_resource_errors(model_resource=model_resource_attribute.resources)
         model_resource_attribute.resources.errors.append(error)
 
+    await check_newest_version_exists_for_attribute(model_resource_attribute=model_resource_attribute, session=session)
     model_resource_attribute_out = ModelResourceAttributeOut.from_orm(model_resource_attribute)
 
     if model_resource_attribute.parent_id is not None:
@@ -246,13 +278,16 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
     model_resource_attribute = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.tags))
+        .options(selectinload(ModelResourceAttribute.access_label))
         .filter(ModelResourceAttribute.guid == guid)
     )
     model_resource_attribute = model_resource_attribute.scalars().first()
+    if not model_resource_attribute:
+        return
 
     model_resource_attribute_update_in_data = {
         key: value for key, value in
-        attribute_update_in.dict(exclude={'tags'}).items()
+        attribute_update_in.dict(exclude={'tags', 'access_label'}).items()
         if value is not None
     }
 
@@ -274,6 +309,7 @@ async def edit_attribute(guid: str, attribute_update_in: ResourceAttributeUpdate
     )
 
     await update_tags(model_resource_attribute, session, attribute_update_in.tags)
+    await update_access_label(model_resource_attribute, attribute_update_in.access_label, session)
 
 
 async def delete_children(parent_id: int, session: AsyncSession):

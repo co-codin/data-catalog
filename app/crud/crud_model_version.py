@@ -9,12 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func, and_, desc
 from sqlalchemy.orm import selectinload, joinedload
 
+from app.crud.crud_access_label import add_access_label, update_access_label
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 from app.enums.enums import ModelVersionLevel, ModelVersionStatus
 from app.errors.checker import check_model_resources_error
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
     ModelRelation
+from app.schemas.access_label import AccessLabelIn
 from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
 
@@ -64,6 +66,7 @@ async def read_all(model_id: str, session: AsyncSession):
         select(ModelVersion)
         .filter(ModelVersion.model_id == model_id)
         .options(selectinload(ModelVersion.comments))
+        .options(selectinload(ModelVersion.access_label))
     )
     model_versions = model_versions.scalars().all()
     return model_versions
@@ -73,6 +76,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
+        .options(selectinload(ModelVersion.access_label))
         .options(joinedload(ModelVersion.model_resources).selectinload(ModelResource.attributes))
         .filter(ModelVersion.guid == guid)
     )
@@ -95,7 +99,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         model_version.confirmed_at = datetime.now()
 
     model_version_update_in_data = {
-        key: value for key, value in model_version_update_in.dict(exclude={'tags'}).items()
+        key: value for key, value in model_version_update_in.dict(exclude={'tags', 'access_label'}).items()
         if value is not None
     }
 
@@ -111,6 +115,7 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
     )
 
     await update_tags(model_version, session, model_version_update_in.tags)
+    await update_access_label(model_version, model_version_update_in.access_label, session)
 
     session.add(model_version)
     await session.commit()
@@ -121,6 +126,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelVer
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
         .options(selectinload(ModelVersion.comments))
+        .options(selectinload(ModelVersion.access_label))
         .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.tags))
         .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.comments))
         .filter(ModelVersion.guid == guid)
@@ -192,6 +198,7 @@ async def clone_attributes(old_resource_id: int, new_resource_id: int, session: 
     model_attributes = await session.execute(
         select(ModelResourceAttribute)
         .options(selectinload(ModelResourceAttribute.tags))
+        .options(selectinload(ModelResourceAttribute.access_label))
         .filter(ModelResourceAttribute.resource_id == old_resource_id)
     )
     model_attributes = model_attributes.scalars().all()
@@ -214,6 +221,15 @@ async def clone_attributes(old_resource_id: int, new_resource_id: int, session: 
         for tag in exists_model_resource_attribute.tags:
             tags.append(tag.name)
         await add_tags(model_attribute, tags, session)
+
+        if exists_model_resource_attribute.access_label:
+            for access_label in exists_model_resource_attribute.access_label:
+                access_label_in = AccessLabelIn(
+                    type=access_label.type,
+                    operation_version_id=access_label.operation_version_id
+                )
+                await update_access_label(model_attribute, access_label_in, session)
+
         session.add(model_attribute)
         await session.commit()
 
@@ -261,6 +277,7 @@ async def clone_resources(old_version_id: int, new_version_id: int, session: Asy
     model_resources = await session.execute(
         select(ModelResource)
         .options(selectinload(ModelResource.tags))
+        .options(selectinload(ModelResource.access_label))
         .filter(ModelResource.model_version_id == old_version_id)
     )
     model_resources = model_resources.scalars().all()
@@ -283,6 +300,15 @@ async def clone_resources(old_version_id: int, new_version_id: int, session: Asy
         for tag in exists_model_resource.tags:
             tags.append(tag.name)
         await add_tags(model_resource, tags, session)
+
+        if exists_model_resource.access_label:
+            for access_label in exists_model_resource.access_label:
+                access_label_in = AccessLabelIn(
+                    type=access_label.type,
+                    operation_version_id=access_label.operation_version_id
+                )
+                await update_access_label(model_resource, access_label_in, session)
+
         session.add(model_resource)
         await session.commit()
 
@@ -346,11 +372,12 @@ async def clone_qualities(old_version_id: int, new_version_id: int, session: Asy
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> ModelVersion:
     guid = str(uuid.uuid4())
     model_version = ModelVersion(
-        **model_version_in.dict(exclude={'tags'}),
+        **model_version_in.dict(exclude={'tags', 'access_label'}),
         guid=guid
     )
 
     await add_tags(model_version, model_version_in.tags, session)
+    await add_access_label(model_version, model_version_in.access_label)
     session.add(model_version)
     await session.commit()
 
@@ -371,6 +398,7 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
         last_approved_model_version = await session.execute(
             select(ModelVersion)
             .options(selectinload(ModelVersion.tags))
+            .options(selectinload(ModelVersion.access_label))
             .filter(and_(ModelVersion.model_id == model_version_in.model_id, ModelVersion.status == "approved"))
             .order_by(desc(ModelVersion.updated_at))
         )
@@ -408,12 +436,21 @@ async def clone_model_version(model_version: ModelVersion, model_version_in: Mod
                     select(ModelVersion)
                     .options(selectinload(ModelVersion.tags))
                     .options(selectinload(ModelVersion.comments))
+                    .options(selectinload(ModelVersion.access_label))
                     .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.tags))
                     .options(selectinload(ModelVersion.model_qualities).selectinload(ModelQuality.comments))
                     .filter(ModelVersion.guid == model_version.guid)
                 )
                 model_version = model_version.scalars().first()
                 await update_tags(model_version, session, tags)
+
+            if last_approved_model_version.access_label:
+                for access_label in last_approved_model_version.access_label:
+                    access_label_in = AccessLabelIn(
+                        type=access_label.type,
+                        operation_version_id=access_label.operation_version_id
+                    )
+                    await update_access_label(model_version, access_label_in, session)
 
             return True
     return False
