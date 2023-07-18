@@ -63,6 +63,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut
         .options(selectinload(Model.access_label))
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.tags))
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.comments))
+        .options(joinedload(Model.model_versions).selectinload(ModelVersion.access_label))
         .filter(Model.guid == guid)
     )
 
