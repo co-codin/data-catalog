@@ -1,6 +1,9 @@
+import asyncio
+
 from fastapi import APIRouter, Depends
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
+from app.crud.crud_tag import remove_redundant_tags
 from app.crud.crud_model import (
     check_on_model_uniqueness, create_model, delete_by_guid, edit_model, read_all, read_by_guid
 )
@@ -30,7 +33,7 @@ async def get_model(guid: str, session=Depends(db_session), token=Depends(get_to
 async def update_model(guid: str, model_in: ModelUpdateIn, session=Depends(db_session), _=Depends(get_user)):
     await check_on_model_uniqueness(name=model_in.name, session=session, guid=guid)
     await edit_model(guid, model_in, session)
-    # await remove_redundant_tags(session)
+    asyncio.create_task(remove_redundant_tags())
 
 
 @router.post('/')
