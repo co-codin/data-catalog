@@ -59,7 +59,7 @@ class SimpleFilter(BaseModel):
     operator: Operator
     value: (
             int | float | str | bool | datetime
-            | list[int, int] | list[float, float] | list[str, str] | list[bool, bool] | list[datetime, datetime]
+            | list[int] | list[float] | list[str] | list[bool] | list[datetime]
     )
 
     class Config:
