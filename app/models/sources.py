@@ -55,6 +55,14 @@ model_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_access_labels = Table(
+    "model_access_labels",
+    Base.metadata,
+    Column("model_access_labels", ForeignKey("models.id", ondelete='CASCADE'),
+           primary_key=True),
+    Column("access_label_id", ForeignKey("access_labels.id"), primary_key=True)
+)
+
 
 class SourceRegister(Base):
     __tablename__ = 'source_registers'
@@ -163,5 +171,6 @@ class Model(Base):
                         server_onupdate=func.now())
 
     tags = relationship('Tag', secondary=model_tags, order_by='Tag.id')
+    access_label = relationship('AccessLabel', secondary=model_access_labels, order_by='AccessLabel.id')
     model_versions = relationship('ModelVersion', back_populates='model')
     comments = relationship('Comment', order_by='Comment.id')

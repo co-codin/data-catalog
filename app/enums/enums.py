@@ -26,3 +26,7 @@ class PipelineStatus(Enum):
     SUCCESS = 2
 
 
+class AccessLabelType(Enum):
+    PERSONAL = 'personal'
+    CONFIDENTIAL = 'confidential'
+    FREE = 'free'

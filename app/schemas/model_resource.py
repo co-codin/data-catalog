@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any
+
+from app.schemas.access_label import AccessLabelIn
 
 
 class ModelResourceIn(BaseModel):
@@ -10,6 +12,7 @@ class ModelResourceIn(BaseModel):
     db_link: str | None = None
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = []
+    access_label: Optional[AccessLabelIn] = None
 
 
 class ModelResourceUpdateIn(BaseModel):
@@ -19,6 +22,7 @@ class ModelResourceUpdateIn(BaseModel):
     db_link: Optional[str] = Field(None, max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
+    access_label: Optional[AccessLabelIn] = None
 
 
 class ModelResourceOutRelIn(BaseModel):
