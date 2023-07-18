@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Dict, Set
 
 from fastapi import APIRouter, Depends, Body
@@ -54,7 +55,7 @@ async def update_source_registry(
         guid=guid, name=source_registry.name, conn_string=source_registry.conn_string, session=session
     )
     await edit_source_registry(guid, source_registry, session)
-    await remove_redundant_tags(session)
+    asyncio.create_task(remove_redundant_tags())
     return {'msg': 'source registry has been updated'}
 
 

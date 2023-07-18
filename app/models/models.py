@@ -173,7 +173,6 @@ class ModelVersion(Base):
     model_qualities = relationship('ModelQuality', back_populates='model_version')
     model_relations = relationship('ModelRelation', back_populates='model_version')
     model_resources = relationship('ModelResource', back_populates='model_version')
-    query_constructor_body = relationship('QueryConstructorBody', back_populates='model_version')
 
 
 class ModelQuality(Base):
@@ -305,7 +304,6 @@ class ModelResourceAttribute(Base):
     model_data_types = relationship('ModelDataType', back_populates='model_resource_attributes')
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
     access_label = relationship('AccessLabel', secondary=model_resource_attribute_access_labels, order_by='AccessLabel.id')
-    query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='model_resource_attribute')
 
     left_attribute_attitudes = relationship('ModelAttitude', primaryjoin='ModelResourceAttribute.id==ModelAttitude'
                                                                          '.left_attribute_id')

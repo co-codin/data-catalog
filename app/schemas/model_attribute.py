@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Any
 from datetime import datetime
@@ -67,7 +69,7 @@ class ModelResourceAttributeOut(BaseModel):
 
     parent_id: int | None
     additional: str | None
-    parents: list[__name__] = []
+    parents: list[ModelResourceAttributeOut] = []
 
     model_data_types: Any
     model_resources: Any

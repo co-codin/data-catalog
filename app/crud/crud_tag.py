@@ -4,16 +4,20 @@ from sqlalchemy import select, delete, and_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.queries import QueryConstructor
-from app.models.models import Operation, ModelQuality, ModelRelation, ModelResource, ModelResourceAttribute, \
-    ModelVersion, Pipeline
+from app.models.models import (
+    Operation, ModelQuality, ModelRelation, ModelResource, ModelResourceAttribute, ModelVersion, Pipeline
+)
+from app.models.queries import Query
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
+from app.database import db_session
 
 
 async def add_tags(
-        tags_like_model: SourceRegister | Object | Field | Model | Operation | QueryConstructor | ModelQuality
-                         | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline,
+        tags_like_model: (
+                SourceRegister | Object | Field | Model | Operation | ModelQuality
+                | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline | Query
+        ),
         tags_in: Iterable[str],
         session: AsyncSession
 ):
@@ -34,8 +38,10 @@ async def add_tags(
 
 
 async def update_tags(
-        tags_like_model: SourceRegister | Object | Model | Field | Operation | QueryConstructor | ModelQuality
-                         | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline,
+        tags_like_model: (
+                SourceRegister | Object | Model | Field | Operation | ModelQuality
+                | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline | Query
+        ),
         session: AsyncSession, tags_update_in: list[str] | None
 ):
     if tags_update_in is not None:
@@ -51,49 +57,50 @@ async def update_tags(
         await add_tags(tags_like_model, tags_to_create, session)
 
 
-async def remove_redundant_tags(session: AsyncSession):
-    tags = await session.execute(
-        select(Tag)
-        .options(
-            load_only(Tag.id),
-            joinedload(Tag.source_registries),
-            joinedload(Tag.objects),
-            joinedload(Tag.fields),
-            joinedload(Tag.models),
-            joinedload(Tag.model_versions),
-            joinedload(Tag.model_qualities),
-            joinedload(Tag.model_relations),
-            joinedload(Tag.model_resources),
-            joinedload(Tag.model_resource_attributes),
-            joinedload(Tag.operations),
-            joinedload(Tag.queries),
-            joinedload(Tag.pipelines)
-        )
-        .where(
-            and_(
-                ~Tag.source_registries.any(),
-                ~Tag.objects.any(),
-                ~Tag.fields.any(),
-                ~Tag.models.any(),
-                ~Tag.model_versions.any(),
-                ~Tag.model_qualities.any(),
-                ~Tag.model_relations.any(),
-                ~Tag.model_resources.any(),
-                ~Tag.model_resource_attributes.any(),
-                ~Tag.operations.any(),
-                ~Tag.queries.any(),
-                ~Tag.pipelines.any()
+async def remove_redundant_tags():
+    async with db_session() as session:
+        tags = await session.execute(
+            select(Tag)
+            .options(
+                load_only(Tag.id),
+                joinedload(Tag.source_registries),
+                joinedload(Tag.objects),
+                joinedload(Tag.fields),
+                joinedload(Tag.models),
+                joinedload(Tag.model_versions),
+                joinedload(Tag.model_qualities),
+                joinedload(Tag.model_relations),
+                joinedload(Tag.model_resources),
+                joinedload(Tag.model_resource_attributes),
+                joinedload(Tag.operations),
+                joinedload(Tag.queries),
+                joinedload(Tag.pipelines)
+            )
+            .where(
+                and_(
+                    ~Tag.source_registries.any(),
+                    ~Tag.objects.any(),
+                    ~Tag.fields.any(),
+                    ~Tag.models.any(),
+                    ~Tag.model_versions.any(),
+                    ~Tag.model_qualities.any(),
+                    ~Tag.model_relations.any(),
+                    ~Tag.model_resources.any(),
+                    ~Tag.model_resource_attributes.any(),
+                    ~Tag.operations.any(),
+                    ~Tag.queries.any(),
+                    ~Tag.pipelines.any()
+                )
             )
         )
-    )
 
-    tags = tags.scalars().unique()
-    if not tags:
-        return
+        tags = tags.scalars().unique()
+        if not tags:
+            return
 
-    tag_ids = [tag.id for tag in tags]
-    await session.execute(
-        delete(Tag)
-        .where(Tag.id.in_(tag_ids))
-    )
-    await session.commit()
+        tag_ids = [tag.id for tag in tags]
+        await session.execute(
+            delete(Tag)
+            .where(Tag.id.in_(tag_ids))
+        )
+        await session.commit()
