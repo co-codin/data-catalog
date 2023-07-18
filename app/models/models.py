@@ -17,6 +17,15 @@ model_version_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+model_version_access_labels = Table(
+    "model_version_access_labels",
+    Base.metadata,
+    Column("model_version_access_labels", ForeignKey("model_versions.id", ondelete='CASCADE'), primary_key=True),
+    Column("access_label_id", ForeignKey("access_labels.id"), primary_key=True)
+)
+
+access_labels = relationship('AccessLabel', secondary=model_version_access_labels, order_by='AccessLabel.id')
+
 model_quality_tags = Table(
     "model_quality_tags",
     Base.metadata,
@@ -36,6 +45,13 @@ model_resource_tags = Table(
     Base.metadata,
     Column("model_resource_tags", ForeignKey("model_resources.id", ondelete='CASCADE'), primary_key=True),
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+model_resource_access_labels = Table(
+    "model_resource_access_labels",
+    Base.metadata,
+    Column("model_resource_access_labels", ForeignKey("model_resources.id", ondelete='CASCADE'), primary_key=True),
+    Column("access_label_id", ForeignKey("access_labels.id"), primary_key=True)
 )
 
 model_resource_attribute_tags = Table(
@@ -58,6 +74,14 @@ pipeline_tags = Table(
     Base.metadata,
     Column("pipeline_id", ForeignKey("pipelines.id", ondelete='CASCADE'), primary_key=True),
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
+model_resource_attribute_access_labels = Table(
+    "model_resource_attribute_access_labels",
+    Base.metadata,
+    Column("model_resource_attribute_access_labels", ForeignKey("model_resource_attributes.id", ondelete='CASCADE'),
+           primary_key=True),
+    Column("access_label_id", ForeignKey("access_labels.id"), primary_key=True)
 )
 
 
@@ -108,6 +132,7 @@ class OperationBody(Base):
     operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
     operation = relationship('Operation', back_populates='operation_body')
     model_relation_operations = relationship('ModelRelationOperation', back_populates='operations_bodies')
+    access_labels = relationship('AccessLabel', back_populates='operation_bodies')
 
 
 class OperationBodyParameter(Base):
@@ -143,11 +168,11 @@ class ModelVersion(Base):
 
     model = relationship('Model', back_populates='model_versions')
     tags = relationship('Tag', secondary=model_version_tags, order_by='Tag.id')
+    access_label = relationship('AccessLabel', secondary=model_version_access_labels, order_by='AccessLabel.id')
     comments = relationship('Comment', order_by='Comment.id')
     model_qualities = relationship('ModelQuality', back_populates='model_version')
     model_relations = relationship('ModelRelation', back_populates='model_version')
     model_resources = relationship('ModelResource', back_populates='model_version')
-    query_constructor_body = relationship('QueryConstructorBody', back_populates='model_version')
 
 
 class ModelQuality(Base):
@@ -248,6 +273,7 @@ class ModelResource(Base):
                                                                     '.resource_id',
                               order_by='ModelResourceAttribute.name')
     tags = relationship('Tag', secondary=model_resource_tags, order_by='Tag.id')
+    access_label = relationship('AccessLabel', secondary=model_resource_access_labels, order_by='AccessLabel.id')
     comments = relationship('Comment', order_by='Comment.id')
 
 
@@ -277,7 +303,7 @@ class ModelResourceAttribute(Base):
     resources = relationship('ModelResource', back_populates='attributes', foreign_keys=[resource_id])
     model_data_types = relationship('ModelDataType', back_populates='model_resource_attributes')
     tags = relationship('Tag', secondary=model_resource_attribute_tags, order_by='Tag.id')
-    query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='model_resource_attribute')
+    access_label = relationship('AccessLabel', secondary=model_resource_attribute_access_labels, order_by='AccessLabel.id')
 
     left_attribute_attitudes = relationship('ModelAttitude', primaryjoin='ModelResourceAttribute.id==ModelAttitude'
                                                                          '.left_attribute_id')

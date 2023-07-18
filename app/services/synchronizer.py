@@ -130,7 +130,7 @@ async def process_graph_migration_success(graph_migration: dict):
                     await set_object_synchronized_at(object_)
 
         await session.commit()
-        await remove_redundant_tags(session)
+        await remove_redundant_tags()
 
 
 async def process_graph_migration_failure(graph_migration: dict):

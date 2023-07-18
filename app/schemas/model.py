@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.access_label import AccessLabelIn
 from app.schemas.comment import CommentIn, CommentOut
 from app.schemas.model_version import ModelVersionManyOut
 from app.schemas.tag import TagOut
@@ -17,6 +18,7 @@ class ModelCommon(BaseModel):
 
 class ModelIn(ModelCommon):
     owner: str = Field(..., max_length=36*4)
+    access_label: Optional[AccessLabelIn] = None
 
 
 class ModelUpdateIn(BaseModel):
@@ -25,6 +27,7 @@ class ModelUpdateIn(BaseModel):
     short_desc: Optional[str] = Field(None, max_length=200)
     business_desc: Optional[str] = Field(None, max_length=2000)
     tags: Optional[List[str]] = None
+    access_label: Optional[AccessLabelIn] = None
 
 
 class ModelManyOut(BaseModel):
@@ -42,6 +45,7 @@ class ModelManyOut(BaseModel):
 
     tags: list[TagOut] = []
     comments: list[CommentIn] = []
+    access_label: Any | None
 
     class Config:
         orm_mode = True
@@ -63,6 +67,7 @@ class ModelOut(BaseModel):
     tags: list[TagOut] = []
     comments: list[CommentOut] = []
     model_versions: list[ModelVersionManyOut] = []
+    access_label: Any | None
 
     class Config:
         orm_mode = True

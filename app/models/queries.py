@@ -1,110 +1,93 @@
+import uuid
+
+from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Table, Integer
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, BigInteger, String, Text, DateTime, JSON, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
 
 from app.database import Base
-from app.models.models import ModelVersion, ModelResourceAttribute
+from app.models.models import ModelVersion
 
 
-class QueryStatus(Enum):
-    CREATED = 0
-    PROCESSING = 1
-    FINISHED = 2
-    STOPPED = 3
-    FAULT = 4
+class QueryRunningStatus(Enum):
+    CREATED = 'created'
+    RUNNING = 'running'
+    RESULT = 'result'
+    CANCELED = 'canceled'
+    ERROR = 'error'
 
 
-query_constructor_tags = Table(
-    "query_constructor_tags",
+class QueryRunningPublishStatus(Enum):
+    PUBLISHING = 'publishing'
+    PUBLISHED = 'published'
+    ERROR = 'error'
+
+
+query_viewers = Table(
+    'query_query_viewers',
     Base.metadata,
-    Column("id", ForeignKey("query_constructors.id", ondelete='CASCADE'), primary_key=True),
-    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+    Column("query_id", ForeignKey("queries.id"), primary_key=True),
+    Column("viewer_id", ForeignKey("query_viewers.id"), primary_key=True)
+)
+
+query_tags = Table(
+    'query_tags',
+    Base.metadata,
+    Column('query_id', ForeignKey('queries.id', ondelete='CASCADE'), primary_key=True),
+    Column('tag_id', ForeignKey('tags.id'), primary_key=True)
 )
 
 
-class QueryConstructor(Base):
-    __tablename__ = 'query_constructors'
+class QueryViewer(Base):
+    __tablename__ = 'query_viewers'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
+    id = Column(BigInteger, nullable=False, unique=True, index=True, autoincrement=True, primary_key=True)
+    guid = Column(String(100), nullable=False, unique=True)
 
+    queries = relationship('Query', secondary=query_viewers)
+
+
+class Query(Base):
+    __tablename__ = 'queries'
+
+    id = Column(BigInteger, nullable=False, unique=True, index=True, autoincrement=True, primary_key=True)
+    guid = Column(String(100), nullable=False, unique=True, index=True, default=str(uuid.uuid4()))
     name = Column(String(200), nullable=False)
-    owner = Column(String(36 * 4), nullable=False)
-    desc = Column(String(1000), nullable=True)
-    status = Column(Integer, nullable=False, default=QueryStatus.CREATED.value)
+    desc = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
-    tags = relationship('Tag', secondary=query_constructor_tags, order_by='Tag.id')
-    query_constructor_body = relationship('QueryConstructorBody', back_populates='query_constructor')
-    query_constructor_reviewer = relationship('QueryConstructorReviewer', back_populates='query_constructor')
-    query_constructor_history = relationship('QueryConstructorHistory', back_populates='query_constructor')
+    json = Column(JSON, nullable=False)
+
+    owner_guid = Column(String(100), nullable=False)
+    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
+
+    viewers = relationship('QueryViewer', secondary=query_viewers)
+    model_version = relationship('ModelVersion')
+    tags = relationship('Tag', secondary=query_tags)
+    executions = relationship('QueryExecution')
 
 
-class QueryConstructorBody(Base):
-    __tablename__ = 'query_constructor_bodies'
+class QueryExecution(Base):
+    __tablename__ = 'query_executions'
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
+    id = Column(BigInteger, nullable=False, unique=True, index=True, autoincrement=True, primary_key=True)
+    guid = Column(String(100), nullable=False, unique=True, index=True, default=str(uuid.uuid4()))
 
-    query_constructor_id = Column(BigInteger, ForeignKey(QueryConstructor.id, ondelete='CASCADE'))
-    model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id, ondelete='CASCADE'))
+    query_id = Column(BigInteger, ForeignKey(Query.id, ondelete='CASCADE'), nullable=False)
+    query_run_id = Column(BigInteger, nullable=True)
+    status = Column(String(20), nullable=False)
 
-    filters = Column(JSONB, nullable=True)
-    aggregators = Column(JSONB, nullable=True)
+    status_updated_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
 
-    query_constructor = relationship('QueryConstructor', back_populates='query_constructor_body')
-    query_constructor_body_field = relationship('QueryConstructorBodyField', back_populates='query_constructor_body')
-    model_version = relationship('ModelVersion', back_populates='query_constructor_body')
+    publish_name = Column(String(500), nullable=True)
+    publish_status = Column(String(20), nullable=True)
 
-
-class QueryConstructorBodyField(Base):
-    __tablename__ = 'query_constructor_body_fields'
-
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
-    model_resource_attribute_id = Column(BigInteger, ForeignKey(ModelResourceAttribute.id, ondelete='CASCADE'))
-    query_constructor_body_id = Column(BigInteger, ForeignKey(QueryConstructorBody.id, ondelete='CASCADE'))
-
-    query_constructor_body = relationship('QueryConstructorBody', back_populates='query_constructor_body_field')
-    model_resource_attribute = relationship('ModelResourceAttribute', back_populates='query_constructor_body_field')
-
-
-class QueryConstructorReviewer(Base):
-    __tablename__ = 'query_constructor_reviewers'
-
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
-
-    query_constructor_id = Column(BigInteger, ForeignKey(QueryConstructor.id, ondelete='CASCADE'))
-    name = Column(String(100), nullable=False)
-
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                        server_onupdate=func.now())
-
-    query_constructor = relationship('QueryConstructor', back_populates='query_constructor_reviewer')
-
-
-class QueryConstructorHistory(Base):
-    __tablename__ = 'query_constructor_history'
-
-    id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
-    guid = Column(String(36), nullable=False, index=True, unique=True)
-
-    query_constructor_id = Column(BigInteger, ForeignKey(QueryConstructor.id, ondelete='CASCADE'))
-
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
-                        server_onupdate=func.now())
-
-    ended_at = Column(DateTime, nullable=True)
-    status = Column(Integer, nullable=False, default=QueryStatus.PROCESSING.value)
-
-    query_constructor = relationship('QueryConstructor', back_populates='query_constructor_history')
+    query = relationship('Query')

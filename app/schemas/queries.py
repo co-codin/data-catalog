@@ -1,0 +1,191 @@
+from __future__ import annotations
+from enum import Enum
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+from app.models.queries import QueryRunningStatus, QueryRunningPublishStatus
+from app.schemas.tag import TagOut
+
+
+class Operator(Enum):
+    EQ = '='
+    LT = '<'
+    GT = '>'
+    LE = '<='
+    GE = '>='
+    BETWEEN = 'between'
+    IN = 'in'
+    IS_NULL = 'is null'
+    LIKE = 'like'
+
+
+class BooleanOperator(Enum):
+    AND = 'and'
+    OR = 'or'
+    NOT = 'not'
+
+
+class AggregateFunc(Enum):
+    SUM = 'sum'
+    MIN = 'min'
+    MAX = 'max'
+    AVG = 'avg'
+    COUNT = 'count'
+
+
+class Attr(BaseModel):
+    db_link: str
+
+
+class AliasAttr(BaseModel):
+    attr: Attr
+
+
+class Aggregate(BaseModel):
+    function: AggregateFunc
+    db_link: str
+
+    class Config:
+        use_enum_values = True
+
+
+class AliasAggregate(BaseModel):
+    aggregate: Aggregate
+
+
+class SimpleFilter(BaseModel):
+    alias: str
+    operator: Operator
+    value: (
+            int | float | str | bool | datetime
+            | list[int, int] | list[float, float] | list[str, str] | list[bool, bool] | list[datetime, datetime]
+    )
+
+    class Config:
+        use_enum_values = True
+
+
+class BooleanFilter(BaseModel):
+    operator: BooleanOperator
+    values: list[SimpleFilter | BooleanFilter]
+
+    class Config:
+        use_enum_values = True
+
+
+class QueryIn(BaseModel):
+    name: str
+    owner_guid: str
+    desc: str | None = None
+    model_version_id: int
+
+    tags: list[str] = []
+
+    aliases: dict[str, AliasAttr | AliasAggregate]
+    filter: SimpleFilter | BooleanFilter | None = None
+    having: SimpleFilter | BooleanFilter | None = None
+
+    run_immediately: bool
+
+
+class QueryManyOut(BaseModel):
+    id: int
+    guid: str
+
+    name: str
+    desc: str | None = None
+    model_name: str
+    updated_at: datetime
+    status: QueryRunningStatus
+    tags: list[TagOut] = []
+
+    class Config:
+        orm_mode = True
+
+
+class QueryModelManyOut(BaseModel):
+    id: int
+    guid: str
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class QueryModelVersionManyOut(BaseModel):
+    id: str
+    guid: str
+    version: str | None
+
+    class Config:
+        orm_mode = True
+
+
+class QueryModelResourceAttributeOut(BaseModel):
+    id: int
+    guid: str
+    name: str
+    db_link: str
+    json_db_link: str
+
+    class Config:
+        orm_mode = True
+
+
+class QueryOut(BaseModel):
+    id: int
+    guid: str
+
+    status: QueryRunningStatus
+    name: str
+    desc: str | None = None
+
+    created_at: datetime
+    updated_at: datetime
+
+    tags: list[TagOut] = []
+
+    json_: str = Field(..., alias='json')
+
+    class Config:
+        orm_mode = True
+
+
+class FullQueryOut(QueryOut):
+    owner: str
+    attrs: list[QueryModelResourceAttributeOut]
+    model: QueryModelManyOut
+    model_version: QueryModelVersionManyOut
+
+
+class QueryUpdateIn(BaseModel):
+    ...
+
+
+class QueryExecutionOut(BaseModel):
+    id: int
+    guid: str
+
+    status: QueryRunningStatus
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    publish_name: str | None = None
+    publish_status: QueryRunningPublishStatus | None = None
+
+    class Config:
+        orm_mode = True
+
+
+class AllowedResourcesIn(BaseModel):
+    attribute_ids: list[int] = []
+    model_version_id: int
+
+
+class ModelResourceOut(BaseModel):
+    id: int
+    guid: str
+    name: str
+
+    class Config:
+        orm_mode = True

@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, List
 
 from fastapi import APIRouter, Depends
@@ -55,7 +56,7 @@ async def update_object(
         guid: str, object_update_in: ObjectUpdateIn, session=Depends(db_session), _=Depends(get_user)
 ):
     await edit_object(guid, object_update_in, session)
-    await remove_redundant_tags(session)
+    asyncio.create_task(remove_redundant_tags())
     return {'msg': 'object has been updated'}
 
 

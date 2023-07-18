@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Any
 from datetime import datetime
 
 from app.enums.enums import Cardinality
+from app.schemas.access_label import AccessLabelIn
 from app.schemas.tag import TagOut
 
 
@@ -18,6 +21,7 @@ class ResourceAttributeIn(BaseModel):
     parent_id: Optional[int] = Field(None)
     tags: Optional[List[str]] = []
     additional: Optional[str] = Field(None)
+    access_label: Optional[AccessLabelIn] = None
 
 
 class ResourceAttributeUpdateIn(BaseModel):
@@ -31,6 +35,7 @@ class ResourceAttributeUpdateIn(BaseModel):
     parent_id: Optional[int] = Field(None)
     tags: Optional[List[str]] = Field(None)
     additional: Optional[str] = Field(None)
+    access_label: Optional[AccessLabelIn] = None
 
     @validator('cardinality')
     def cardinality_validator(cls, v):
@@ -60,10 +65,11 @@ class ModelResourceAttributeOut(BaseModel):
     updated_at: datetime
 
     tags: list[TagOut] = []
+    access_label: Any | None
 
     parent_id: int | None
     additional: str | None
-    parents: list[__name__] = []
+    parents: list[ModelResourceAttributeOut] = []
 
     model_data_types: Any
     model_resources: Any

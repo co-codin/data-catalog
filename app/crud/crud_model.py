@@ -8,6 +8,7 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.crud.crud_access_label import add_access_label, update_access_label
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 
@@ -21,10 +22,11 @@ async def create_model(model_in: ModelIn, session: AsyncSession) -> Model:
     guid = str(uuid.uuid4())
 
     model = Model(
-        **model_in.dict(exclude={'tags'}),
+        **model_in.dict(exclude={'tags', 'access_label'}),
         guid=guid,
     )
     await add_tags(model, model_in.tags, session)
+    await add_access_label(model, model_in.access_label)
 
     session.add(model)
     return model
@@ -46,6 +48,7 @@ async def read_all(session: AsyncSession) -> list[ModelManyOut]:
         select(Model)
         .options(selectinload(Model.tags))
         .options(selectinload(Model.comments))
+        .options(selectinload(Model.access_label))
         .order_by(Model.created_at)
     )
     models = models.scalars().all()
@@ -57,8 +60,10 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut
         select(Model)
         .options(selectinload(Model.tags))
         .options(selectinload(Model.comments))
+        # .options(selectinload(Model.access_label))
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.tags))
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.comments))
+        .options(joinedload(Model.model_versions).selectinload(ModelVersion.access_label))
         .filter(Model.guid == guid)
     )
 
@@ -90,7 +95,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut
 
 async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSession):
     model_update_in_data = {
-        key: value for key, value in model_update_in.dict(exclude={'tags'}).items()
+        key: value for key, value in model_update_in.dict(exclude={'tags', 'access_label'}).items()
         if value is not None
     }
 
@@ -105,6 +110,7 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
     model = await session.execute(
         select(Model)
         .options(selectinload(Model.tags))
+        .options(selectinload(Model.access_label))
         .filter(Model.guid == guid)
     )
     model = model.scalars().first()
@@ -112,6 +118,7 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
         return
 
     await update_tags(model, session, model_update_in.tags)
+    await update_access_label(model, model_update_in.access_label, session)
 
     session.add(model)
     await session.commit()
