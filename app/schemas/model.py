@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel, Field
 
@@ -45,7 +45,7 @@ class ModelManyOut(BaseModel):
 
     tags: list[TagOut] = []
     comments: list[CommentIn] = []
-    access_label: AccessLabelIn = None
+    access_label: Any | None
 
     class Config:
         orm_mode = True
@@ -67,6 +67,7 @@ class ModelOut(BaseModel):
     tags: list[TagOut] = []
     comments: list[CommentOut] = []
     model_versions: list[ModelVersionManyOut] = []
+    access_label: Any | None
 
     class Config:
         orm_mode = True
