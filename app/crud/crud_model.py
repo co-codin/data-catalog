@@ -13,7 +13,7 @@ from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 
 from app.errors.errors import ModelNameAlreadyExist
-from app.models.models import Model, ModelVersion
+from app.models.models import Model, ModelVersion, ModelRelationOperation, ModelRelation, OperationBody, Operation
 from app.schemas.model import ModelIn, ModelUpdateIn, ModelManyOut, ModelOut
 from app.services.log import log_remove
 
@@ -51,6 +51,20 @@ async def read_all(session: AsyncSession) -> list[ModelManyOut]:
         .options(selectinload(Model.access_label))
         .order_by(Model.created_at)
     )
+    models = models.scalars().all()
+    return [ModelManyOut.from_orm(model) for model in models]
+
+
+async def get_models_by_operation(guid: str, session: AsyncSession) -> list[ModelManyOut]:
+    models = await session.execute(
+        select(Model)
+        .join(ModelVersion).join(ModelRelation).join(ModelRelationOperation).join(OperationBody).join(Operation)
+        .options(selectinload(Model.tags))
+        .options(selectinload(Model.comments))
+        .options(selectinload(Model.access_label))
+        .filter(Operation.guid == guid)
+    )
+
     models = models.scalars().all()
     return [ModelManyOut.from_orm(model) for model in models]
 

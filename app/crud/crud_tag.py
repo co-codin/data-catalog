@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
-    Operation, ModelQuality, ModelRelation, ModelResource, ModelResourceAttribute, ModelVersion, Pipeline
+    Operation, ModelQuality, ModelRelation, ModelResource, ModelResourceAttribute, ModelVersion, Pipeline, OperationBody
 )
 from app.models.queries import Query
 from app.models.sources import SourceRegister, Object, Field, Model
@@ -15,7 +15,7 @@ from app.database import db_session
 
 async def add_tags(
         tags_like_model: (
-                SourceRegister | Object | Field | Model | Operation | ModelQuality
+                SourceRegister | Object | Field | Model | Operation | ModelQuality | OperationBody
                 | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline | Query
         ),
         tags_in: Iterable[str],
@@ -39,7 +39,7 @@ async def add_tags(
 
 async def update_tags(
         tags_like_model: (
-                SourceRegister | Object | Model | Field | Operation | ModelQuality
+                SourceRegister | Object | Model | Field | Operation | ModelQuality | OperationBody
                 | ModelRelation | ModelResource | ModelResourceAttribute | ModelVersion | Pipeline | Query
         ),
         session: AsyncSession, tags_update_in: list[str] | None
@@ -73,6 +73,7 @@ async def remove_redundant_tags():
                 joinedload(Tag.model_resources),
                 joinedload(Tag.model_resource_attributes),
                 joinedload(Tag.operations),
+                joinedload(Tag.operation_bodies),
                 joinedload(Tag.queries),
                 joinedload(Tag.pipelines)
             )
@@ -88,6 +89,7 @@ async def remove_redundant_tags():
                     ~Tag.model_resources.any(),
                     ~Tag.model_resource_attributes.any(),
                     ~Tag.operations.any(),
+                    ~Tag.operation_bodies.any(),
                     ~Tag.queries.any(),
                     ~Tag.pipelines.any()
                 )

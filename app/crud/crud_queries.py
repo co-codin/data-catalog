@@ -3,6 +3,7 @@ import json
 import uuid
 
 from datetime import datetime
+from typing import Iterable
 
 from age import Age
 
@@ -35,7 +36,7 @@ async def select_model_resource_attrs(attr_ids: list[int], session: AsyncSession
     return [attr.db_link for attr in attrs]
 
 
-def match_linked_resources(resource_names: list[str], graph_name: str, age_session: Age) -> list[str]:
+def match_linked_resources(resource_names: set[str], graph_name: str, age_session: Age) -> set[str]:
     constructed_tables = construct_match_connected_tables(resource_names)
     constructed_tables = constructed_tables.as_string(age_session.connection)
 
@@ -44,7 +45,7 @@ def match_linked_resources(resource_names: list[str], graph_name: str, age_sessi
         match_neighbor_tables.format(resources=constructed_tables),
         cols=['t_neighbor']
     )
-    return [table[0]['name'] for table in cursor]
+    return {table[0]['name'] for table in cursor} | resource_names
 
 
 async def filter_connected_resources(
@@ -111,7 +112,8 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
 
 async def create_query_execution(query: Query, session: AsyncSession):
     query_execution = QueryExecution(
-        status=QueryRunningStatus.RUNNING.value, started_at=datetime.utcnow(), status_updated_at=datetime.utcnow()
+        guid=str(uuid.uuid4()), status=QueryRunningStatus.RUNNING.value, started_at=datetime.utcnow(),
+        status_updated_at=datetime.utcnow()
     )
     query.status = QueryRunningStatus.RUNNING.value
     query.executions.append(query_execution)
@@ -143,14 +145,14 @@ async def check_model_version_for_existence(model_version_id: int, session: Asyn
         )
 
 
-async def is_allowed_to_view(identity_guid: str, query_owner_guid: str, query_viewers: list[QueryViewer]) -> bool:
-    is_owner = True if identity_guid == query_owner_guid else False
-    is_viewer = False
+async def is_allowed_to_view(identity_guid: str, query_owner_guid: str, query_viewers: Iterable[QueryViewer]) -> bool:
+    if identity_guid == query_owner_guid:
+        return True
+
     for identity in query_viewers:
         if identity.guid == identity_guid:
-            is_viewer = True
-            break
-    return is_owner or is_viewer
+            return True
+    return False
 
 
 async def get_identity_queries(identity_guid: str, session: AsyncSession) -> list[QueryManyOut]:
