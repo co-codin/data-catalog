@@ -21,6 +21,7 @@ class OperationIn(BaseModel):
 class OperationBodyIn(BaseModel):
     owner: str = Field(..., max_length=36 * 4)
     desc: Optional[str] = Field(None, max_length=1000)
+    tags: Optional[List[str]] = None
     input: List[OperationParameterIn] = []
     output: OperationParameterIn
     code: str = Field(None, max_length=10 ** 8)

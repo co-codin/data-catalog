@@ -111,6 +111,7 @@ async def create_operation_version(guid: str, operation_body_in: OperationBodyIn
         version=version
     )
 
+    await add_tags(operation_body, operation_body_in.tags, session)
     session.add(operation_body)
     await session.commit()
 
@@ -172,6 +173,14 @@ async def edit_operation_version(guid: str, operation_body_update_in: OperationB
                 **operation_version_update_in_data,
             )
         )
+
+        operation_version = await session.execute(
+            select(OperationBody)
+            .options(selectinload(OperationBody.tags))
+            .filter(OperationBody.guid == guid)
+        )
+        operation_version = operation_version.scalars().first()
+        await update_tags(operation_version, session, operation_body_update_in.tags)
 
         await session.execute(
             delete(OperationBodyParameter)

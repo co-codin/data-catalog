@@ -69,6 +69,13 @@ operation_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True)
 )
 
+operation_body_tags =  Table(
+    "operation_body_tags",
+    Base.metadata,
+    Column("operation_body_id", ForeignKey("operation_bodies.operation_body_id", ondelete='CASCADE'), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True)
+)
+
 pipeline_tags = Table(
     "pipeline_tags",
     Base.metadata,
@@ -125,12 +132,13 @@ class OperationBody(Base):
     version = Column(BigInteger, default=1)
     owner = Column(String(36 * 4), nullable=True)
     desc = Column(String(1000), nullable=True)
+    code = Column(Text, nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
-    code = Column(Text, nullable=False)
+    tags = relationship('Tag', secondary=operation_body_tags, order_by='Tag.id')
     operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
     operation = relationship('Operation', back_populates='operation_body')
     model_relation_operations = relationship('ModelRelationOperation', back_populates='operations_bodies')
