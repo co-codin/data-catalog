@@ -112,7 +112,8 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
 
 async def create_query_execution(query: Query, session: AsyncSession):
     query_execution = QueryExecution(
-        status=QueryRunningStatus.RUNNING.value, started_at=datetime.utcnow(), status_updated_at=datetime.utcnow()
+        guid=str(uuid.uuid4()), status=QueryRunningStatus.RUNNING.value, started_at=datetime.utcnow(),
+        status_updated_at=datetime.utcnow()
     )
     query.status = QueryRunningStatus.RUNNING.value
     query.executions.append(query_execution)

@@ -77,7 +77,7 @@ class QueryExecution(Base):
     __tablename__ = 'query_executions'
 
     id = Column(BigInteger, nullable=False, unique=True, index=True, autoincrement=True, primary_key=True)
-    guid = Column(String(100), nullable=False, unique=True, index=True, default=str(uuid.uuid4()))
+    guid = Column(String(100), nullable=False, unique=True, index=True)
 
     query_id = Column(BigInteger, ForeignKey(Query.id, ondelete='CASCADE'), nullable=False)
     query_run_id = Column(BigInteger, nullable=True)
