@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     encryption_key: str = 'e4f0d87c56a99e57d4470da7396783d7003cec28ef3abf0ff3a1daf37002470a'
 
+    clickhouse_connection_string: str = os.environ.get('dwh_query_executor_db_sources_clickhouse', 'clickhouse://clickhouse:dwh@clickhouse.lan:8123/dwh')
+
     origins: List[str] = [
         '*'
     ]
