@@ -11,6 +11,26 @@ from app.config import settings
 
 LOG = logging.getLogger(__name__)
 
+class ClickhouseService:
+    def __init__(self):
+        self._conn_string = settings.clickhouse_connection_string
+        self.client = None
+    
+    def connect(self):
+        self.client = clickhouse_connect.get_client(dsn=settings.clickhouse_connection_string)
 
-client = clickhouse_connect.get_client(dsn=settings.clickhouse_connection_string)
+    def createPublishTable(self):
+        self.client.command(
+            "CREATE TABLE IF NOT EXISTS {} (query_id UInt32, dest_type String, published_at String, status UInt32, finished_at Datetime) ENGINE MergeTree ORDER BY query_id"
+            .format("publish")
+        )
 
+    def insert(self, query_id, dest_type, published_at, status, finished_at):
+        self.client.insert(
+            "publish",
+            query_id=query_id,
+            dest_type=dest_type,
+            published_at=published_at,
+            status=status,
+            finished_at=finished_at
+        )
