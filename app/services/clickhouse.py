@@ -21,16 +21,23 @@ class ClickhouseService:
 
     def createPublishTable(self):
         self.client.command(
-            "CREATE TABLE IF NOT EXISTS {} (query_id UInt32, dest_type String, published_at String, status UInt32, finished_at Datetime) ENGINE MergeTree ORDER BY query_id"
+            "CREATE TABLE IF NOT EXISTS {} (query_id UInt32, dest_type String, publish_name String, publish_status String, published_at String, status UInt32, finished_at Datetime) ENGINE MergeTree ORDER BY query_id"
             .format("publish")
         )
 
-    def insert(self, query_id, dest_type, published_at, status, finished_at):
+    def insert(self, query_id, dest_type, published_at, publish_name, publish_status, status, finished_at):
         self.client.insert(
             "publish",
             query_id=query_id,
             dest_type=dest_type,
             published_at=published_at,
+            publish_name=publish_name,
+            publish_status=publish_status,
             status=status,
             finished_at=finished_at
+        )
+
+    def getByName(self, publish_name):
+        return self.client.query(
+            "SELECT * FROM publish WHERE publish_name = '{}'".format(publish_name)
         )
