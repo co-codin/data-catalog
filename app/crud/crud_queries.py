@@ -36,7 +36,7 @@ async def select_model_resource_attrs(attr_ids: list[int], session: AsyncSession
     return [attr.db_link for attr in attrs]
 
 
-def match_linked_resources(resource_names: list[str], graph_name: str, age_session: Age) -> list[str]:
+def match_linked_resources(resource_names: set[str], graph_name: str, age_session: Age) -> set[str]:
     constructed_tables = construct_match_connected_tables(resource_names)
     constructed_tables = constructed_tables.as_string(age_session.connection)
 
@@ -45,7 +45,7 @@ def match_linked_resources(resource_names: list[str], graph_name: str, age_sessi
         match_neighbor_tables.format(resources=constructed_tables),
         cols=['t_neighbor']
     )
-    return [table[0]['name'] for table in cursor]
+    return {table[0]['name'] for table in cursor} | resource_names
 
 
 async def filter_connected_resources(
