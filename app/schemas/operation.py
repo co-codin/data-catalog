@@ -6,53 +6,57 @@ from app.schemas.tag import TagOut
 
 
 class OperationParameterIn(BaseModel):
-    flag: bool = Field(...)
     name: str = Field(..., max_length=200)
-    name_for_relation: str = Field(..., max_length=200)
-    model_data_type_id: int = Field(...)
+    display_name: str = Field(..., max_length=200)
+    model_data_type_id: int
 
 
 class OperationIn(BaseModel):
     name: str = Field(..., max_length=200)
     owner: str = Field(..., max_length=36 * 4)
-    status: str = Field(..., max_length=50)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
-    code: str = Field(...)
-    parameters: list[OperationParameterIn] = []
 
 
-class OperationBodyParametersManyOut(BaseModel):
-    operation_body_parameter_id: int
-    guid: str
+class OperationBodyIn(BaseModel):
+    owner: str = Field(..., max_length=36 * 4)
+    desc: Optional[str] = Field(None, max_length=1000)
+    tags: Optional[List[str]] = None
+    input: List[OperationParameterIn] = []
+    output: OperationParameterIn
+    code: str = Field(None, max_length=10 ** 8)
 
-    flag: bool
-    name: str
-    name_for_relation: str
-    model_data_type_id: int
 
-    class Config:
-        orm_mode = True
+class OperationBodyUpdateIn(OperationBodyIn):
+    confirm: bool = False
+
+class ConfirmIn(BaseModel):
+    confirm: bool = False
+
+class WarningOut(BaseModel):
+    in_relations: int
+    in_attributes: int
 
 
 class OperationBodyOut(BaseModel):
     operation_body_id: int
     guid: str
+    version: int
+    owner: str
+    desc: str
 
-    code: str
-    operation_body_parameters: list[OperationBodyParametersManyOut] = []
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True
 
 
 class OperationManyOut(BaseModel):
-    operation_id: int
     guid: str
 
     name: str
     owner: str
-    status: str
     desc: str | None
 
     created_at: datetime
@@ -62,34 +66,23 @@ class OperationManyOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class OperationBodyInfoOut(BaseModel):
+    guid: str
+    version: int
 
 
 class OperationOut(BaseModel):
-    operation_id: int
-    guid: str
-
     name: str
     owner: str
-    status: str
     desc: str | None
 
     created_at: datetime
     updated_at: datetime
 
     tags: list[TagOut] = []
-    operation_body: list[OperationBodyOut] = []
+    last_version: OperationBodyInfoOut | None
 
     class Config:
         orm_mode = True
-
-
-class OperationUpdateIn(BaseModel):
-    name: Optional[str] = Field(None, max_length=200)
-    owner: Optional[str] = Field(None, max_length=36 * 4)
-    status: Optional[str] = Field(None, max_length=50)
-    desc: Optional[str] = Field(None, max_length=1000)
-    tags: Optional[List[str]] = None
-    code: Optional[str] = None
-    parameters: Optional[list[OperationParameterIn]] = None
-    version_owner: Optional[str] = Field(None, max_length=36 * 4)
-    version_desc: Optional[str] = Field(None, max_length=1000)

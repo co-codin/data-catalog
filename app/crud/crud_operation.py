@@ -1,16 +1,17 @@
 import uuid
 
-from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import select, update, delete, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from typing import Optional
 
 from app.crud.crud_tag import add_tags, update_tags
-from app.errors.errors import OperationNameAlreadyExist, OperationInputParametersNotExists, \
-    OperationOutputParameterNotExists, OperationParametersNameAlreadyExist
-from app.models.models import Operation, OperationBody, OperationBodyParameter
-from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationUpdateIn, OperationManyOut
+from app.errors.errors import OperationNameAlreadyExist, OperationInputParametersNotExists
+from app.models import AccessLabel
+from app.models.models import Operation, OperationBody, OperationBodyParameter, ModelRelationOperation
+from app.schemas.operation import OperationOut, OperationParameterIn, OperationIn, OperationManyOut, \
+    OperationBodyOut, OperationBodyIn, ConfirmIn, OperationBodyUpdateIn, WarningOut, OperationBodyInfoOut
 
 
 async def read_all(session: AsyncSession) -> list[OperationManyOut]:
@@ -23,52 +24,194 @@ async def read_all(session: AsyncSession) -> list[OperationManyOut]:
     return [OperationManyOut.from_orm(operation) for operation in operations]
 
 
+async def get_last_version(operation_id: int, session: AsyncSession):
+    last_version = await session.execute(
+        select(OperationBody)
+        .filter(OperationBody.operation_id == operation_id)
+        .order_by(OperationBody.version.desc())
+    )
+    return last_version.scalars().first()
+
 async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
     operation = await session.execute(
         select(Operation)
         .options(selectinload(Operation.tags))
-        .options(joinedload(Operation.operation_body).selectinload(OperationBody.operation_body_parameters))
         .filter(Operation.guid == guid)
     )
 
     operation = operation.scalars().first()
-
     if not operation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     operation_out = OperationOut.from_orm(operation)
+    last_version = await get_last_version(operation.operation_id, session)
+    operation_out.last_version = OperationBodyInfoOut(
+        guid=last_version.guid,
+        version=last_version.version
+    )
 
     return operation_out
 
 
-async def create_operation_version(version: int, operation_id: int, data_in: OperationIn | OperationUpdateIn,
-                                   session: AsyncSession, author_guid=""):
-    guid = str(uuid.uuid4())
+async def read_versions_list(guid: str, session: AsyncSession) -> [OperationBodyOut]:
+    operation = await session.execute(
+        select(Operation)
+        .options(selectinload(Operation.tags))
+        .filter(Operation.guid == guid)
+    )
+    operation = operation.scalars().first()
+    if not operation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    operation_versions = await session.execute(
+        select(OperationBody)
+        .filter(OperationBody.operation_id == operation.operation_id)
+    )
+    operation_versions = operation_versions.scalars().all()
+    return [OperationBodyOut.from_orm(operation_version) for operation_version in operation_versions]
+
+
+async def create_parameter(body_id: int, data_in: OperationParameterIn, session: AsyncSession, flag: bool):
+    parameter = OperationBodyParameter(
+        guid=str(uuid.uuid4()),
+        flag=flag,
+        operation_body_id=body_id,
+        **data_in.dict()
+    )
+    session.add(parameter)
+    await session.commit()
+
+
+async def create_operation_version(guid: str, operation_body_in: OperationBodyIn, session: AsyncSession, author_guid: str):
+    if not len(operation_body_in.input):
+        raise OperationInputParametersNotExists
+
+    operation = await session.execute(
+        select(Operation)
+        .options(selectinload(Operation.tags))
+        .filter(Operation.guid == guid)
+    )
+    operation = operation.scalars().first()
+    if not operation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    last_version = await get_last_version(operation.operation_id, session)
+    if last_version:
+        version = last_version.version + 1
+    else:
+        version = 1
+
+    if operation_body_in.owner is None:
+        operation_body_in.owner = author_guid
+
     operation_body = OperationBody(
-        code=data_in.code,
-        guid=guid,
-        operation_id=operation_id,
+        **operation_body_in.dict(exclude={'tags', 'input', 'output', 'confirm'}),
+        guid=str(uuid.uuid4()),
+        operation_id=operation.operation_id,
         version=version
     )
 
-    if isinstance(data_in, OperationUpdateIn):
-        operation_body.version_desc = data_in.version_desc
-        if data_in.version_owner is None:
-            data_in.version_owner = author_guid
-        operation_body.version_owner = data_in.version_owner
-
+    await add_tags(operation_body, operation_body_in.tags, session)
     session.add(operation_body)
     await session.commit()
 
-    for parameter_in in data_in.parameters:
-        guid = str(uuid.uuid4())
-        parameter = OperationBodyParameter(
-            **parameter_in.dict(),
-            guid=guid,
-            operation_body_id=operation_body.operation_body_id
+    for parameter_in in operation_body_in.input:
+        await create_parameter(operation_body.operation_body_id, parameter_in, session, True)
+
+    await create_parameter(operation_body.operation_body_id, operation_body_in.output, session, False)
+
+
+async def check_operation_version_in_use(id: int, session: AsyncSession):
+    relation_count = await session.execute(
+        select((func.count(ModelRelationOperation.id)))
+        .filter(ModelRelationOperation.operation_body_id == id)
+    )
+    relation_count = relation_count.scalars().first()
+
+    access_label_count = await session.execute(
+        select(func.count(AccessLabel.id))
+        .filter(AccessLabel.operation_version_id == id)
+    )
+    access_label_count = access_label_count.scalars().first()
+
+    if relation_count or access_label_count:
+        return WarningOut(
+            in_relations=relation_count,
+            in_attributes=access_label_count
         )
-        session.add(parameter)
-        await session.commit()
+
+    return False
+
+
+async def edit_operation_version(guid: str, operation_body_update_in: OperationBodyUpdateIn, session: AsyncSession, author_guid: str):
+    operation_version = await session.execute(
+        select(OperationBody)
+        .options(selectinload(OperationBody.operation))
+        .filter(OperationBody.guid == guid)
+    )
+    operation_version = operation_version.scalars().first()
+    if not operation_version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    check_in_use = await check_operation_version_in_use(operation_version.operation_body_id, session)
+
+    if check_in_use:
+        if operation_body_update_in.confirm:
+            await create_operation_version(operation_version.operation.guid, operation_body_update_in, session, author_guid)
+        else:
+            return check_in_use
+    else:
+        operation_version_update_in_data = {
+            key: value for key, value in operation_body_update_in.dict(exclude={'tags', 'confirm', 'input', 'output'}).items()
+            if value is not None
+        }
+
+        await session.execute(
+            update(OperationBody)
+            .where(OperationBody.guid == guid)
+            .values(
+                **operation_version_update_in_data,
+            )
+        )
+
+        operation_version = await session.execute(
+            select(OperationBody)
+            .options(selectinload(OperationBody.tags))
+            .filter(OperationBody.guid == guid)
+        )
+        operation_version = operation_version.scalars().first()
+        await update_tags(operation_version, session, operation_body_update_in.tags)
+
+        await session.execute(
+            delete(OperationBodyParameter)
+            .where(OperationBodyParameter.operation_body_id == operation_version.operation_body_id)
+        )
+
+        for parameter_in in operation_body_update_in.input:
+            await create_parameter(operation_version.operation_body_id, parameter_in, session, True)
+
+        await create_parameter(operation_version.operation_body_id, operation_body_update_in.output, session, False)
+
+
+async def delete_operation_version(guid: str, confirm_in: ConfirmIn, session: AsyncSession):
+    if confirm_in.confirm == False:
+        operation_version = await session.execute(
+            select(OperationBody)
+            .options(selectinload(OperationBody.operation))
+            .filter(OperationBody.guid == guid)
+        )
+        operation_version = operation_version.scalars().first()
+        if not operation_version:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+        check_in_use = await check_operation_version_in_use(operation_version.operation_body_id, session)
+        if check_in_use:
+            return check_in_use
+
+    await session.execute(
+        delete(OperationBody)
+        .where(OperationBody.guid == guid)
+    )
 
 
 async def create_operation(operation_in: OperationIn, session: AsyncSession, author_guid: str) -> Operation:
@@ -78,7 +221,7 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession, aut
         operation_in.owner = author_guid
 
     operation = Operation(
-        **operation_in.dict(exclude={'tags', 'code', 'parameters'}),
+        **operation_in.dict(exclude={'tags'}),
         guid=guid
     )
 
@@ -86,18 +229,12 @@ async def create_operation(operation_in: OperationIn, session: AsyncSession, aut
     session.add(operation)
     await session.commit()
 
-    await create_operation_version(version=1, operation_id=operation.operation_id, data_in=operation_in, session=session)
-
     return operation
 
 
-def need_create_version(operation_update_in: OperationUpdateIn) -> bool:
-    return operation_update_in.code is not None or operation_update_in.parameters is not None
-
-
-async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, session: AsyncSession, author_guid: str):
+async def edit_operation(guid: str, operation_update_in: OperationIn, session: AsyncSession, author_guid: str):
     operation_update_in_data = {
-        key: value for key, value in operation_update_in.dict(exclude={'tags', 'code', 'parameters'}).items()
+        key: value for key, value in operation_update_in.dict(exclude={'tags'}).items()
         if value is not None
     }
 
@@ -120,24 +257,25 @@ async def edit_operation(guid: str, operation_update_in: OperationUpdateIn, sess
 
     await update_tags(operation, session, operation_update_in.tags)
 
-    if need_create_version(operation_update_in=operation_update_in):
-        operation_body = await session.execute(
-            select(OperationBody)
-            .options(selectinload(OperationBody.operation_body_parameters))
-            .filter(OperationBody.operation_id == operation.operation_id)
-            .order_by(OperationBody.version.desc())
+
+async def delete_by_guid(guid: str, confirm_in: ConfirmIn, session: AsyncSession):
+    if confirm_in.confirm == False:
+        operation = await session.execute(
+            select(Operation)
+            .filter(Operation.guid == guid)
         )
-        operation_body = operation_body.scalars().first()
-        await create_operation_version(version=operation_body.version+1, operation_id=operation.operation_id,
-                                       data_in=operation_update_in, session=session, author_guid=author_guid)
+        operation = operation.scalars().first()
+        if not operation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+        check_in_use = await check_operation_version_in_use(operation.operation_id, session)
+        if check_in_use:
+            return check_in_use
 
-async def delete_by_guid(guid: str, session: AsyncSession):
     await session.execute(
         delete(Operation)
         .where(Operation.guid == guid)
     )
-    await session.commit()
 
 
 async def check_on_operation_name_uniqueness(name: str, session: AsyncSession, guid: Optional[str] = None):
@@ -149,37 +287,3 @@ async def check_on_operation_name_uniqueness(name: str, session: AsyncSession, g
     for operation in operations:
         if operation.name == name and operation.guid != guid:
             raise OperationNameAlreadyExist(name)
-
-
-async def check_on_operation_parameters_uniqueness(parameters: list[OperationParameterIn], session: AsyncSession,
-                                                   guid: Optional[str] = None):
-    list_parameters_in = []
-    list_parameters_out = []
-    for parameter in parameters:
-        if parameter.flag:
-            list_parameters_in.append(parameter.name)
-        else:
-            list_parameters_out.append(parameter.name)
-
-    operation_body = await session.execute(
-        select(OperationBody)
-        .options(selectinload(OperationBody.operation_body_parameters))
-        .filter(OperationBody.guid == guid)
-    )
-    operation_body = operation_body.scalars().first()
-    if operation_body:
-        for parameter in operation_body.operation_body_parameters:
-            if parameter.flag:
-                list_parameters_in.append(parameter.name)
-            else:
-                list_parameters_out.append(parameter.name)
-
-    if not len(list_parameters_in):
-        raise OperationInputParametersNotExists()
-
-    if len(list_parameters_out) != 1:
-        raise OperationOutputParameterNotExists()
-
-    set_parameters_in = set(list_parameters_in)
-    if len(list_parameters_in) != len(set_parameters_in):
-        raise OperationParametersNameAlreadyExist()
