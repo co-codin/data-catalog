@@ -3,6 +3,7 @@ import json
 import uuid
 
 from datetime import datetime
+from typing import Iterable
 
 from age import Age
 
@@ -143,14 +144,14 @@ async def check_model_version_for_existence(model_version_id: int, session: Asyn
         )
 
 
-async def is_allowed_to_view(identity_guid: str, query_owner_guid: str, query_viewers: list[QueryViewer]) -> bool:
-    is_owner = True if identity_guid == query_owner_guid else False
-    is_viewer = False
+async def is_allowed_to_view(identity_guid: str, query_owner_guid: str, query_viewers: Iterable[QueryViewer]) -> bool:
+    if identity_guid == query_owner_guid:
+        return True
+
     for identity in query_viewers:
         if identity.guid == identity_guid:
-            is_viewer = True
-            break
-    return is_owner or is_viewer
+            return True
+    return False
 
 
 async def get_identity_queries(identity_guid: str, session: AsyncSession) -> list[QueryManyOut]:
