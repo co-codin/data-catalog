@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.crud.crud_tag import remove_redundant_tags
 from app.crud.crud_model import (
-    check_on_model_uniqueness, create_model, delete_by_guid, edit_model, read_all, read_by_guid
+    check_on_model_uniqueness, create_model, delete_by_guid, edit_model, read_all, read_by_guid, get_models_by_operation
 )
 
 from app.dependencies import db_session, get_token, get_user
@@ -66,3 +66,8 @@ async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)
     return {'msg': 'comment has been deleted'}
+
+
+@router.get('/operation/{guid}')
+async def read_models_by_operaion(guid: str, session=Depends(db_session), _=Depends(get_user)):
+    return await get_models_by_operation(guid, session)

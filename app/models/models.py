@@ -106,7 +106,6 @@ class Operation(Base):
 
     name = Column(String(200), nullable=False)
     owner = Column(String(36 * 4), nullable=False)
-    status = Column(String(50), nullable=False)
     desc = Column(String(1000), nullable=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
@@ -124,9 +123,12 @@ class OperationBody(Base):
     operation_body_id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
     guid = Column(String(36), nullable=False, index=True, unique=True)
     version = Column(BigInteger, default=1)
+    owner = Column(String(36 * 4), nullable=True)
+    desc = Column(String(1000), nullable=True)
+
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
-    version_owner = Column(String(36 * 4), nullable=True)
-    version_desc = Column(String(1000), nullable=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
+                        server_onupdate=func.now())
 
     code = Column(Text, nullable=False)
     operation_body_parameters = relationship('OperationBodyParameter', back_populates='operation_body')
@@ -144,7 +146,7 @@ class OperationBodyParameter(Base):
 
     flag = Column(Boolean, unique=False, default=True)
     name = Column(String(200), nullable=False)
-    name_for_relation = Column(String(200), nullable=False)
+    display_name = Column(String(200), nullable=False)
     model_data_type_id = Column(BigInteger, ForeignKey(ModelDataType.id))
     operation_body = relationship('OperationBody', back_populates='operation_body_parameters')
 
