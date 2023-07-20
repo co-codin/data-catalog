@@ -303,6 +303,7 @@ async def alter_query(guid: str, query_update_in: QueryIn, session: AsyncSession
     query_json = query_update_in.dict(include={'aliases', 'filter', 'having'})
     await session.execute(
         update(Query)
+        .where(Query.guid == guid)
         .values(
             json=json.dumps(query_json),
             **query_update_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid'})
