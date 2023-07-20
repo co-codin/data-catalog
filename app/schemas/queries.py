@@ -55,6 +55,7 @@ class AliasAggregate(BaseModel):
 
 
 class SimpleFilter(BaseModel):
+    key: str
     alias: str
     operator: Operator
     value: (
@@ -67,6 +68,7 @@ class SimpleFilter(BaseModel):
 
 
 class BooleanFilter(BaseModel):
+    key: str
     operator: BooleanOperator
     values: list[SimpleFilter | BooleanFilter]
 
