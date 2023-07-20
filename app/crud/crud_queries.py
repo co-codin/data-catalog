@@ -10,7 +10,7 @@ from age import Age
 
 from fastapi import HTTPException, status
 
-from sqlalchemy import select, update, and_, func
+from sqlalchemy import select, update, and_, func, delete
 from sqlalchemy.orm import selectinload, joinedload, load_only
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
@@ -320,4 +320,30 @@ async def alter_query(guid: str, query_update_in: QueryIn, session: AsyncSession
 
 
 async def remove_query(guid: str, identity_guid: str, session: AsyncSession):
-    ...
+    query = await session.execute(
+        select(Query)
+        .options(load_only(Query.owner_guid))
+        .where(Query.guid == guid)
+    )
+    query = query.scalars().first()
+
+    if query.owner_guid != identity_guid:
+        query_viewer = await session.execute(
+            select(QueryViewer)
+            .where(QueryViewer.query_guid == guid)
+        )
+        query_viewer = query_viewer.scalars().first()
+
+        # TODO TEST
+        await session.execute(
+            delete('query_query_viewers')
+            .where(QueryViewer.query_guid == guid)
+            .where(QueryViewer.viewer_guid == query_viewer.guid)
+        )
+
+    else:
+        await session.execute(
+            delete(Query)
+            .where(Query.guid == guid)
+        )
+    await session.commit()
