@@ -337,8 +337,8 @@ async def remove_query(guid: str, identity_guid: str, session: AsyncSession):
         )
         query_viewer = query_viewer.scalars().first()
 
-        if query.owner_guid != identity_guid:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        if not query_viewer:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
         await session.execute(
             delete(query_viewers)
