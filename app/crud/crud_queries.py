@@ -4,6 +4,7 @@ import uuid
 
 from datetime import datetime
 from typing import Iterable
+from typing import Optional
 
 from age import Age
 
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids
+from app.errors.query_errors import QueryNameAlreadyExist
 from app.models.queries import Query, QueryRunningStatus, QueryExecution, QueryViewer
 from app.models.models import ModelResource, ModelResourceAttribute, ModelVersion
 from app.models.sources import Model
@@ -94,6 +96,16 @@ async def check_alias_attrs_for_existence(aliases: dict[str, AliasAttr | AliasAg
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "some of the given attributes don't exist"}
         )
+
+async def check_on_query_uniqueness(name: str, session: AsyncSession, guid: Optional[str] = None):
+    queries = await session.execute(
+        select(Query)
+        .where(Query.name.ilike(name))
+    )
+    queries = queries.scalars().all()
+    for query in queries:
+        if query.name == name and query.guid != guid:
+            raise QueryNameAlreadyExist(name)
 
 
 async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
