@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict
+
+from starlette import status
+
 from app.models.queries import QueryExecution
 from app.dependencies import db_session, get_user
 from sqlalchemy import update, select
@@ -21,50 +24,43 @@ async def publish_query_execution(
         .where(QueryExecution.guid == guid)
     )
     query_execution = query_execution.scalars().first()
-    print('111111111111111111')
-    print(query_execution.query_id)
+
+    if not query_execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     clickhouseService = ClickhouseService()
     clickhouseService.connect()
     clickhouseService.createPublishTable()
     search_result = clickhouseService.getByName(publish_name)
-
     if force:
         if len(search_result.result_set):
-            clickhouseService.update(
-                query_id=query_execution.query_id,
-                published_at=query_execution.started_at,
-                publish_name=publish_name,
-                publish_status=publish_status,
-                status=publish_status,
-                finished_at=query_execution.finished_at
-            )
-
             await session.execute(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_name=publish_name,
+                    publish_name=publish_name
                 )
             )
         else:
             clickhouseService.insert(
                 query_id=query_execution.query_id,
-                published_at=query_execution.started_at,
+                published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
                 publish_name=publish_name,
                 publish_status=publish_status,
                 status=publish_status,
-                finished_at=query_execution.finished_at
+                finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
             )
     else:
         if len(search_result.result_set):
-            return 'Publish name exists. Try change it'
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Publish name exists. Try change it')
         else:
             clickhouseService.insert(
                 query_id=query_execution.query_id,
-                published_at=query_execution.started_at,
+                published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
                 publish_name=publish_name,
                 publish_status=publish_status,
                 status=publish_status,
-                finished_at=query_execution.finished_at
+                finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
             )
+
+    return {"publish_name": publish_name, "publish_status": publish_name}
