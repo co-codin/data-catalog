@@ -14,17 +14,22 @@ class ClickhouseService:
     def connect(self):
         self.client = clickhouse_connect.get_client(dsn=settings.clickhouse_connection_string)
 
-    def createPublishTable(self):
+    def createPublishTable(self, guid: str):
         self.client.command(
-            "CREATE TABLE IF NOT EXISTS {} (query_id UInt32, publish_name String, publish_status String, published_at String, status String, finished_at String) ENGINE MergeTree ORDER BY query_id"
-            .format("publish")
+            "CREATE TABLE IF NOT EXISTS {}_{} (query_id UInt32, publish_name String, publish_status String, published_at String, status String, finished_at String) ENGINE MergeTree ORDER BY query_id"
+            .format("publish", guid)
         )
 
-    def insert(self, query_id, published_at, publish_name, publish_status, status, finished_at):
-        data = [[query_id, published_at, publish_name, publish_status, status, finished_at]]
-        self.client.insert('publish', data, column_names=['query_id','published_at','publish_name','publish_status','status','finished_at'])
+    async def dropPublishTable(self, guid: str):
+        self.client.command(
+            "DROP TABLE {}_{}".format("publish", guid)
+        )
 
-    def getByName(self, publish_name):
+    def insert(self, guid, query_id, published_at, publish_name, publish_status, status, finished_at):
+        data = [[query_id, published_at, publish_name, publish_status, status, finished_at]]
+        self.client.insert('publish_'+guid, data, column_names=['query_id','published_at','publish_name','publish_status','status','finished_at'])
+
+    def getByName(self, guid, publish_name):
         return self.client.query(
-            "SELECT * FROM publish WHERE publish_name = '{}'".format(publish_name)
+            "SELECT * FROM publish_{} WHERE publish_name = '{}'".format(guid, publish_name)
         )
