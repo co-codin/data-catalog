@@ -6,7 +6,7 @@ from app.crud.crud_queries import (
     select_model_resource_attrs, match_linked_resources, filter_connected_resources, select_all_resources,
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
     remove_query, check_owner_for_existence, create_query_execution, get_query_running_history,
-    check_model_version_for_existence, check_on_query_owner
+    check_model_version_for_existence, check_on_query_owner, check_on_query_uniqueness
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.schemas.queries import (
@@ -62,6 +62,10 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
     4) create json query for task broker using aliases, filter and having
     5) send query to task broker
     """
+    await check_on_query_uniqueness(
+        name=query_in.name,
+        session=session
+    )
     await check_alias_attrs_for_existence(query_in.aliases, session)
     await check_owner_for_existence(query_in.owner_guid, token)
     await check_model_version_for_existence(query_in.model_version_id, session)
@@ -86,6 +90,11 @@ async def update_query(
         guid: str, query_update_in: QueryIn, session=Depends(db_session), token=Depends(get_token),
         user=Depends(get_user)
 ):
+    await check_on_query_uniqueness(
+        name=query_update_in.name,
+        session=session,
+        guid=guid
+    )
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
     await check_on_query_owner(guid, user['identity_id'], session)
