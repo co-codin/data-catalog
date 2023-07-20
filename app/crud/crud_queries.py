@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids
 from app.errors.query_errors import QueryNameAlreadyExist
-from app.models.queries import Query, QueryRunningStatus, QueryExecution, QueryViewer
+from app.models.queries import Query, QueryRunningStatus, QueryExecution, QueryViewer, query_viewers
 from app.models.models import ModelResource, ModelResourceAttribute, ModelVersion
 from app.models.sources import Model
 from app.schemas.queries import (
@@ -322,23 +322,28 @@ async def alter_query(guid: str, query_update_in: QueryIn, session: AsyncSession
 async def remove_query(guid: str, identity_guid: str, session: AsyncSession):
     query = await session.execute(
         select(Query)
-        .options(load_only(Query.owner_guid))
+        .options(load_only(Query.owner_guid, Query.id))
         .where(Query.guid == guid)
     )
     query = query.scalars().first()
 
+    if not query:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
     if query.owner_guid != identity_guid:
         query_viewer = await session.execute(
             select(QueryViewer)
-            .where(QueryViewer.query_guid == guid)
+            .where(QueryViewer.guid == identity_guid)
         )
         query_viewer = query_viewer.scalars().first()
 
-        # TODO TEST
+        if query.owner_guid != identity_guid:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
         await session.execute(
-            delete('query_query_viewers')
-            .where(QueryViewer.query_guid == guid)
-            .where(QueryViewer.viewer_guid == query_viewer.guid)
+            delete(query_viewers)
+            .where(QueryViewer.id == query_viewer.id)
+            .where(Query.id == query.id)
         )
 
     else:
