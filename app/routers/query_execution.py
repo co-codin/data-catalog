@@ -15,6 +15,7 @@ router = APIRouter(
 )
 
 
+
 @router.put('/{guid}/publish', response_model=Dict[str, str])
 async def publish_query_execution(
         guid: str, publish_name: str, publish_status: str, force: bool = True, session=Depends(db_session), _=Depends(get_user)
@@ -30,8 +31,8 @@ async def publish_query_execution(
 
     clickhouseService = ClickhouseService()
     clickhouseService.connect()
-    clickhouseService.createPublishTable()
-    search_result = clickhouseService.getByName(publish_name)
+    clickhouseService.createPublishTable(guid)
+    search_result = clickhouseService.getByName(guid, publish_name)
     if force:
         if len(search_result.result_set):
             await session.execute(
@@ -41,8 +42,20 @@ async def publish_query_execution(
                     publish_name=publish_name
                 )
             )
+            await clickhouseService.dropPublishTable(guid)
+            clickhouseService.createPublishTable(guid)
+            clickhouseService.insert(
+                guid=guid,
+                query_id=query_execution.query_id,
+                published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
+                publish_name=publish_name,
+                publish_status=publish_status,
+                status=publish_status,
+                finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
+            )
         else:
             clickhouseService.insert(
+                guid=guid,
                 query_id=query_execution.query_id,
                 published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
                 publish_name=publish_name,
@@ -55,6 +68,7 @@ async def publish_query_execution(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Publish name exists. Try change it')
         else:
             clickhouseService.insert(
+                guid=guid,
                 query_id=query_execution.query_id,
                 published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
                 publish_name=publish_name,
