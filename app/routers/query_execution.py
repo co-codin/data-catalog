@@ -21,6 +21,8 @@ async def publish_query_execution(
         .where(QueryExecution.guid == guid)
     )
     query_execution = query_execution.scalars().first()
+    print('111111111111111111')
+    print(query_execution.query_id)
 
     clickhouseService = ClickhouseService()
     clickhouseService.connect()
@@ -31,8 +33,7 @@ async def publish_query_execution(
         if len(search_result.result_set):
             clickhouseService.update(
                 query_id=query_execution.query_id,
-                dest_type=query_execution.desc_type,
-                published_at=query_execution.publiches_at,
+                published_at=query_execution.started_at,
                 publish_name=publish_name,
                 publish_status=publish_status,
                 status=publish_status,
@@ -49,8 +50,7 @@ async def publish_query_execution(
         else:
             clickhouseService.insert(
                 query_id=query_execution.query_id,
-                dest_type=query_execution.dest_type,
-                published_at=query_execution.published_at,
+                published_at=query_execution.started_at,
                 publish_name=publish_name,
                 publish_status=publish_status,
                 status=publish_status,
@@ -62,8 +62,7 @@ async def publish_query_execution(
         else:
             clickhouseService.insert(
                 query_id=query_execution.query_id,
-                dest_type=query_execution.dest_type,
-                published_at=query_execution.published_at,
+                published_at=query_execution.started_at,
                 publish_name=publish_name,
                 publish_status=publish_status,
                 status=publish_status,
