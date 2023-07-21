@@ -90,11 +90,6 @@ async def update_query(
         guid: str, query_update_in: QueryIn, session=Depends(db_session), token=Depends(get_token),
         user=Depends(get_user)
 ):
-    await check_on_query_uniqueness(
-        name=query_update_in.name,
-        session=session,
-        guid=guid
-    )
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
     await check_on_query_owner(guid, user['identity_id'], session)
