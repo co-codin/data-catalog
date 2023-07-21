@@ -93,6 +93,9 @@ class QueryIn(BaseModel):
 
     run_immediately: bool
 
+    class Config:
+        use_enum_values = True
+
 
 class QueryManyOut(BaseModel):
     id: int
