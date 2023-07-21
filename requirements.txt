@@ -16,4 +16,3 @@ apache-age-python==0.0.5
 antlr4-python3-runtime==4.11.1
 clickhouse-connect==0.5.10
 numpy==1.24.2
-pandas==1.5.3
