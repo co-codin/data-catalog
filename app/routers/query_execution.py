@@ -7,7 +7,7 @@ from app.models.queries import QueryExecution
 from app.dependencies import db_session, get_user
 from sqlalchemy import update, select
 
-from app.services.clickhouse import ClickhouseService
+# from app.services.clickhouse import ClickhouseService
 
 router = APIRouter(
     prefix='/query_executions',
