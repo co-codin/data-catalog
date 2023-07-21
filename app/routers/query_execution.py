@@ -29,6 +29,7 @@ async def publish_query_execution(
     if not query_execution:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
+    '''
     clickhouseService = ClickhouseService()
     clickhouseService.connect()
     clickhouseService.createPublishTable(guid)
@@ -76,5 +77,5 @@ async def publish_query_execution(
                 status=publish_status,
                 finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
             )
-
+    '''
     return {"publish_name": publish_name, "publish_status": publish_name}
