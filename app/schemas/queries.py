@@ -36,6 +36,7 @@ class AggregateFunc(Enum):
 
 class Attr(BaseModel):
     db_link: str
+    display: bool
 
 
 class AliasAttr(BaseModel):
@@ -45,6 +46,7 @@ class AliasAttr(BaseModel):
 class Aggregate(BaseModel):
     function: AggregateFunc
     db_link: str
+    display: bool
 
     class Config:
         use_enum_values = True
