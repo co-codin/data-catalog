@@ -109,11 +109,11 @@ async def check_on_query_uniqueness(name: str, session: AsyncSession, guid: Opti
 
 
 async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
-    query_json = query_in.dict(include={'aliases', 'filter', 'having', 'filter_type'})
+    query_json = query_in.dict(include={'aliases', 'filter', 'having'})
     query = Query(
         guid=str(uuid.uuid4()),
         status=QueryRunningStatus.CREATED.value,
-        **query_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid'}),
+        **query_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid', 'filter_type'}),
         json=json.dumps(query_json)
     )
 
@@ -308,13 +308,13 @@ async def check_on_query_owner(guid: str, identity_guid: str, session: AsyncSess
 
 
 async def alter_query(guid: str, query_update_in: QueryIn, session: AsyncSession):
-    query_json = query_update_in.dict(include={'aliases', 'filter', 'having', 'filter_type'})
+    query_json = query_update_in.dict(include={'aliases', 'filter', 'having'})
     await session.execute(
         update(Query)
         .where(Query.guid == guid)
         .values(
             json=json.dumps(query_json),
-            **query_update_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid'})
+            **query_update_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid', 'filter_type'})
         )
     )
     query = await session.execute(
