@@ -268,11 +268,17 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
 
 
 async def get_query_running_history(guid: str, identity_guid: str, session: AsyncSession) -> list[QueryExecutionOut]:
+    query = await session.execute(
+        select(Query.id)
+        .where(Query.guid == guid)
+    )
+    query_id = query.scalars().first()
+
     query_running_history = await session.execute(
         select(QueryExecution)
         .options(joinedload(QueryExecution.query, innerjoin=True).load_only(Query.guid, Query.owner_guid))
         .options(joinedload(QueryExecution.query, innerjoin=True).selectinload(Query.viewers))
-        .where(Query.guid == guid)
+        .where(QueryExecution.query_id == query_id)
     )
     query_running_history = query_running_history.scalars().all()
     if query_running_history:
