@@ -159,14 +159,13 @@ async def check_model_version_for_existence(model_version_id: int, session: Asyn
         )
 
 
-async def is_allowed_to_view(identity_guid: str, query_owner_guid: str, query_viewers: Iterable[QueryViewer]) -> bool:
-    if identity_guid == query_owner_guid:
-        return True
+async def is_allowed_to_view(identity_guid: str, query: Query) -> int | None:
+    if identity_guid == query.owner_guid:
+        return query.id
 
-    for identity in query_viewers:
+    for identity in query.viewers:
         if identity.guid == identity_guid:
-            return True
-    return False
+            return query.id
 
 
 async def get_identity_queries(identity_guid: str, session: AsyncSession) -> list[QueryManyOut]:
@@ -183,7 +182,7 @@ async def get_identity_queries(identity_guid: str, session: AsyncSession) -> lis
     queries = queries.scalars().all()
 
     is_allowed_to_see_to_queries = {
-        await is_allowed_to_view(identity_guid, query.owner_guid, query.viewers): query
+        await is_allowed_to_view(identity_guid, query): query
         for query in queries
     }
 
@@ -216,7 +215,7 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
     if not query:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    is_allowed_to_see = await is_allowed_to_view(identity_guid, query.owner_guid, query.viewers)
+    is_allowed_to_see = await is_allowed_to_view(identity_guid, query)
     if not is_allowed_to_see:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
@@ -284,9 +283,7 @@ async def get_query_running_history(guid: str, identity_guid: str, session: Asyn
     )
     query_running_history = query_running_history.scalars().all()
     if query_running_history:
-        is_allowed_to_see = await is_allowed_to_view(
-            identity_guid, query_running_history[0].query.owner_guid, query_running_history[0].query.viewers
-        )
+        is_allowed_to_see = await is_allowed_to_view(identity_guid, query_running_history[0].query)
         if not is_allowed_to_see:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         return [QueryExecutionOut.from_orm(query_execution) for query_execution in query_running_history]
