@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.queries import QueryRunningStatus, QueryRunningPublishStatus
+from app.models.queries import QueryFilterType, QueryRunningStatus, QueryRunningPublishStatus
 from app.schemas.tag import TagOut
 
 
@@ -81,6 +81,7 @@ class QueryIn(BaseModel):
     owner_guid: str
     desc: str | None = None
     model_version_id: int
+    filter_type: QueryFilterType
 
     tags: list[str] = []
 
