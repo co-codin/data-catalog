@@ -18,6 +18,9 @@ class QueryRunningStatus(Enum):
     CANCELED = 'canceled'
     ERROR = 'error'
 
+class QueryFilterType(Enum):
+    CONSTRUCTOR = 'constructor'
+    JSON = 'json'
 
 class QueryRunningPublishStatus(Enum):
     PUBLISHING = 'publishing'
@@ -57,6 +60,8 @@ class Query(Base):
     name = Column(String(200), nullable=False)
     desc = Column(Text, nullable=True)
     status = Column(String(20), nullable=False)
+
+    filter_type = Column(String, nullable=True, index=True)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,

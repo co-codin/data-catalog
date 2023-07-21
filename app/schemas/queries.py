@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.queries import QueryRunningStatus, QueryRunningPublishStatus
+from app.models.queries import QueryFilterType, QueryRunningStatus, QueryRunningPublishStatus
 from app.schemas.tag import TagOut
 
 
@@ -36,6 +36,7 @@ class AggregateFunc(Enum):
 
 class Attr(BaseModel):
     db_link: str
+    display: bool
 
 
 class AliasAttr(BaseModel):
@@ -45,6 +46,7 @@ class AliasAttr(BaseModel):
 class Aggregate(BaseModel):
     function: AggregateFunc
     db_link: str
+    display: bool
 
     class Config:
         use_enum_values = True
@@ -81,6 +83,7 @@ class QueryIn(BaseModel):
     owner_guid: str
     desc: str | None = None
     model_version_id: int
+    filter_type: QueryFilterType
 
     tags: list[str] = []
 
