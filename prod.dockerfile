@@ -8,7 +8,7 @@ RUN apk update \
     && apk del .build-deps
 
 FROM python:3.10-alpine
-RUN apk add libpq
+RUN apk add libpq lz4-libs
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY app/ /app/app/
 WORKDIR /app
