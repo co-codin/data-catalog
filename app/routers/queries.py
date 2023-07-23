@@ -92,7 +92,7 @@ async def update_query(
 ):
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
-    await check_on_query_owner(guid, user['identity_id'], session)
+    # await check_on_query_owner(guid, user['identity_id'], session)
     await alter_query(guid, query_update_in, session)
     asyncio.create_task(remove_redundant_tags())
 
