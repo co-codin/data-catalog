@@ -201,7 +201,7 @@ class QueryExecutionOut(BaseModel):
         orm_mode = True
 
 
-class AllowedResourcesIn(BaseModel):
+class LinkedResourcesIn(BaseModel):
     attribute_ids: list[int] = []
     model_version_id: int
 
