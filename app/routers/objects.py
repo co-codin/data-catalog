@@ -11,6 +11,7 @@ from app.crud.crud_comment import create_comment, verify_comment_owner, edit_com
 from app.crud.crud_tag import remove_redundant_tags
 
 from app.dependencies import db_session, get_user, get_token
+from app.enums.enums import SyncType
 
 from app.schemas.objects import ObjectIn, ObjectManyOut, ObjectOut, ObjectUpdateIn, FieldManyOut
 from app.schemas.source_registry import CommentIn
@@ -26,18 +27,20 @@ router = APIRouter(
 
 
 @router.post('/')
-async def add_object(
-        object_in: ObjectIn, migration_pattern: MigrationPattern, session=Depends(db_session), _=Depends(get_user)
-):
+async def add_object(object_in: ObjectIn, migration_pattern: MigrationPattern, session=Depends(db_session),
+                     user=Depends(get_user)):
     object_to_synch = await create_object(object_in, session)
-    await send_for_synchronization(**object_to_synch.dict(), migration_pattern=migration_pattern)
+    await send_for_synchronization(**object_to_synch.dict(), migration_pattern=migration_pattern,
+                                   identity_id=user['identity_id'],  sync_type=SyncType.ADD_SOURCE.value)
     return {'guid': object_to_synch.object_guid}
 
 
 @router.post('/{guid}/synchronize')
-async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), _=Depends(get_user)):
+async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session),
+                      user=Depends(get_user)):
     object_synch = await read_object_by_guid(guid, session)
-    await send_for_synchronization(**object_synch.dict(), migration_pattern=migration_pattern)
+    await send_for_synchronization(**object_synch.dict(), migration_pattern=migration_pattern,
+                                   identity_id=user['identity_id'],  sync_type=SyncType.SYNC_OBJECT.value)
     return {'msg': 'object has been sent to synchronize'}
 
 

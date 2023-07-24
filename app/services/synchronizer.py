@@ -12,17 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 from app.crud.crud_tag import remove_redundant_tags, add_tags
-from app.enums.enums import Cardinality
+from app.enums.enums import Cardinality, SyncType
 from app.models import (
-    SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute
+    SourceRegister, Object, Field, Status, Model, ModelVersion, ModelResource, ModelResourceAttribute, LogType
 )
 from app.mq import create_channel
+from app.schemas.log import LogIn
 from app.schemas.migration import MigrationOut, FieldToCreate, MigrationPattern
 from app.schemas.model import ModelCommon
 from app.database import db_session
 from app.constants.data_types import SYS_DATA_TYPE_TO_ID, ID_TO_SYS_DATA_TYPE
 from app.config import settings
-
+from app.services.log import add_log
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,9 @@ class MigrationRequestStatus(Enum):
 
 
 async def send_for_synchronization(
-        source_registry_guid: str, conn_string: str, migration_pattern: MigrationPattern,
-        model_in: ModelCommon | None = None, object_name: str | None = None, object_guid: str | None = None,
-        object_db_path: str | None = None
+        source_registry_guid: str, conn_string: str, migration_pattern: MigrationPattern, identity_id: str,
+        sync_type: int, model_in: ModelCommon | None = None, object_name: str | None = None,
+        object_guid: str | None = None, object_db_path: str | None = None, source_registry_name: str | None = None
 ):
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
@@ -50,9 +51,12 @@ async def send_for_synchronization(
         'migration_pattern': migration_pattern.dict(),
         'source_registry_guid': source_registry_guid,
         'object_name': object_name,
+        'source_registry_name': source_registry_name,
         'model': model_in.dict() if model_in else None,
         'object_guid': object_guid,
-        'object_db_path': object_db_path
+        'object_db_path': object_db_path,
+        'identity_id': identity_id,
+        'sync_type': sync_type
     }
 
     async with create_channel() as channel:
@@ -129,6 +133,20 @@ async def process_graph_migration_success(graph_migration: dict):
 
                     await set_object_synchronized_at(object_)
 
+                    source_registry = await session.execute(
+                        select(SourceRegister)
+                        .where(SourceRegister.guid == source_registry_guid)
+                    )
+                    source_registry = source_registry.scalars().first()
+
+                    await add_log(session, LogIn(
+                        type=LogType.DATA_CATALOG.value,
+                        log_name="Изменение объекта на источнике",
+                        text="{{name}} {{guid}} был изменён на {{source_registry_name}} {{source_registry_guid}}".format(object_name, object_.guid, source_registry.name, object_.source_registry_guid),
+                        identity_id="Системное событие",
+                        event="Объект был изменен на источнике",
+                    ))
+
         await session.commit()
         await remove_redundant_tags()
 
@@ -151,6 +169,45 @@ async def process_graph_migration_failure(graph_migration: dict):
                 .where(Object.guid == object_guid)
                 .values(is_synchronizing=False)
             )
+
+        match graph_migration['sync_type']:
+            case SyncType.SYNC_OBJECT:
+                await add_log(session, LogIn(
+                    type=LogType.DATA_CATALOG.value,
+                    log_name="Добавление объекта",
+                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(graph_migration['object_name'],
+                                                                                       graph_migration['object_guid']),
+                    identity_id=graph_migration['identity_id'],
+                    event="Синхронизация объекта через Карточку объекта",
+                ))
+            case SyncType.ADD_OBJECT:
+                await add_log(session, LogIn(
+                    type=LogType.DATA_CATALOG.value,
+                    log_name="Добавление объекта",
+                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(graph_migration['object_name'],
+                                                                                       graph_migration['object_guid']),
+                    identity_id=graph_migration['identity_id'],
+                    event="Добавление объекта вручнуя из подключеннного источника",
+                ))
+            case SyncType.SYNC_SOURCE:
+                await add_log(session, LogIn(
+                    type=LogType.SOURCE_REGISTRY.value,
+                    log_name="Добавление источника",
+                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(graph_migration['source_registry_name'],
+                                                                                       graph_migration['source_registry_guid']),
+                    identity_id=graph_migration['identity_id'],
+                    event="Синхронизация при добавление источника",
+                ))
+            case SyncType.ADD_SOURCE:
+                await add_log(session, LogIn(
+                    type=LogType.SOURCE_REGISTRY.value,
+                    log_name="Синхронизация источника",
+                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(
+                        graph_migration['source_registry_name'],
+                        graph_migration['source_registry_guid']),
+                    identity_id=graph_migration['identity_id'],
+                    event="Синхронизация из Реестра источников",
+                ))
 
 
 async def add_model_version_resources(migration: MigrationOut, db_source: str, model_version: ModelVersion):
@@ -224,12 +281,12 @@ async def get_object(source_registry_guid: str, object_name: str, session: Async
 async def add_objects(
         applied_migration: MigrationOut, db_source: str, source_registry: SourceRegister, session: AsyncSession
 ):
-    objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry.owner, session)
+    objects = await create_objects_from_migration_out(applied_migration, db_source, source_registry, session)
     source_registry.objects.extend(objects)
 
 
 async def create_objects_from_migration_out(
-        migration: MigrationOut, db_source: str, owner: str, session: AsyncSession
+        migration: MigrationOut, db_source: str, source_registry: SourceRegister, session: AsyncSession
 ) -> list[Object]:
     tables = []
     for schema in migration.schemas:
@@ -238,11 +295,20 @@ async def create_objects_from_migration_out(
             now = datetime.utcnow()
             guid = str(uuid.uuid4())
             object_ = Object(
-                name=table.name, owner=owner, db_path=object_db_path, source_created_at=now, guid=guid,
+                name=table.name, owner=source_registry.owner, db_path=object_db_path, source_created_at=now, guid=guid,
                 source_updated_at=now, local_updated_at=now, synchronized_at=now, is_synchronizing=False
             )
             session.add(object_)
-            fields = await create_fields(table.fields, object_db_path, owner, session)
+
+            await add_log(session, LogIn(
+                type=LogType.DATA_CATALOG.value,
+                log_name="Добавление объекта на источник",
+                text="{{name}} {{guid}} был добавлен на {{source_registry_name}} {{source_registry_guid}}".format(table.name, guid, source_registry.name, source_registry.id),
+                identity_id="Системное событие",
+                event="Объект был добавлен на источник",
+            ))
+
+            fields = await create_fields(table.fields, object_db_path, source_registry.owner, session)
             object_.fields.extend(fields)
             tables.append(object_)
     return tables
@@ -255,6 +321,21 @@ async def delete_objects(applied_migration: MigrationOut, db_source: str, sessio
         for table in schema.tables_to_delete
     ]
     if tables_to_delete:
+        objects = await session.execute(
+            select(Object)
+            .selectinload(Object.source)
+            .where(Object.db_path.in_(tables_to_delete))
+        )
+        objects = objects.scalars().all()
+        for object in objects:
+            await add_log(session, LogIn(
+                type=LogType.DATA_CATALOG.value,
+                log_name="Удаление объекта на источнике",
+                text="{{name}} {{guid}} был удалён с {{source_registry_name}} {{source_registry_guid}}".format(object.name, object.guid, object.source.name, object.source_registry_guid),
+                identity_id="Системное событие",
+                event="Объект был удалён с источника",
+            ))
+
         await session.execute(
             delete(Object)
             .where(Object.db_path.in_(tables_to_delete))

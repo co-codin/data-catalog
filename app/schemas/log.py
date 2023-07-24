@@ -9,5 +9,4 @@ class LogIn(BaseModel):
     text: str
     identity_id: str
     event: str
-    description: str
     properties: Optional[str] = Field(None)

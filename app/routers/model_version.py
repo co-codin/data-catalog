@@ -33,8 +33,8 @@ async def add_model_version(model_version_in: ModelVersionIn, session=Depends(db
 
 
 @router.put('/{guid}')
-async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, session=Depends(db_session), _=Depends(get_user)):
-    return await update_model_version(guid, model_version_update_in, session)
+async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, session=Depends(db_session), user=Depends(get_user)):
+    return await update_model_version(guid, model_version_update_in, session, user['identity_id'])
 
 
 @router.delete('/{guid}')

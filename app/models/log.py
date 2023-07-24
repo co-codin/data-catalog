@@ -12,6 +12,7 @@ class LogType(Enum):
     SOURCE_REGISTRY = 'Реестр источников'
     QUERY_CONSTRUCTOR = 'Конструктор запросов'
     OPERATION_REGISTRY = 'Реестр операций'
+    MODEL_CATALOG = 'Каталог моделей'
 
 
 class LogText(Enum):
@@ -37,7 +38,6 @@ class Log(Base):
     text = Column(Text, nullable=False)
     identity_id = Column(String(36), nullable=False, index=True)
     event = Column(String(36), nullable=False)
-    description = Column(Text, nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
 

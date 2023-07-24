@@ -15,7 +15,7 @@ async def get_all_logs(session: AsyncSession):
     return logs
 
 
-async def create_log(session: AsyncSession, log_in: LogIn):
+async def add_log(session: AsyncSession, log_in: LogIn):
     log = Log(
         **log_in.dict()
     )
@@ -24,13 +24,12 @@ async def create_log(session: AsyncSession, log_in: LogIn):
     return log
 
 
-async def log_remove(session: AsyncSession, guid: str, author_guid: str, name: str, description: str):
+async def log_remove(session: AsyncSession, guid: str, author_guid: str, name: str):
     log_in = LogIn(
         type=LogType.DATA_CATALOG.value,
         log_name=name,
         text=LogText.REMOVE.value.format(guid),
         identity_id=author_guid,
         event=LogEvent.REMOVE.value,
-        description=description
     )
-    await create_log(session=session, log_in=log_in)
+    await add_log(session=session, log_in=log_in)

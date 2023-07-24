@@ -164,7 +164,7 @@ async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> Sour
 
     decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
     source_registry_synch = SourceRegistrySynch(
-        source_registry_guid=source_registry.guid, conn_string=decrypted_conn_string
+        source_registry_guid=source_registry.guid, conn_string=decrypted_conn_string, source_registry_name=source_registry.name
     )
     return source_registry_synch
 

@@ -9,6 +9,7 @@ from app.crud.crud_source_registry import (
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.crud.crud_comment import create_comment, edit_comment, remove_comment, verify_comment_owner, CommentOwnerTypes
+from app.enums.enums import SyncType
 from app.models import Status
 
 from app.schemas.migration import MigrationPattern
@@ -30,20 +31,23 @@ router = APIRouter(
 @router.post('/', response_model=Dict[str, str])
 async def add_source_registry(
         source_registry: SourceRegistryIn, migration_pattern: MigrationPattern,
-        model_in: ModelCommon = Body(None), session=Depends(db_session), _=Depends(get_user)
+        model_in: ModelCommon = Body(None), session=Depends(db_session), user=Depends(get_user)
 ):
     await check_on_uniqueness(name=source_registry.name, conn_string=source_registry.conn_string, session=session)
     source_registry_model = await create_source_registry(source_registry, session)
     await send_for_synchronization(
-        source_registry_model.guid, source_registry.conn_string, migration_pattern, model_in
+        source_registry_guid=source_registry_model.guid, conn_string=source_registry.conn_string,
+        migration_pattern=migration_pattern, model_in=model_in, identity_id=user['identity_id'],
+        sync_type=SyncType.ADD_SOURCE.value
     )
     return {'guid': source_registry_model.guid}
 
 
 @router.post('/{guid}/synchronize')
-async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), _=Depends(get_user)):
+async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), user=Depends(get_user)):
     source_registry_synch = await read_source_registry_by_guid(guid, session)
-    await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern)
+    await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern,
+                                   identity_id=user['identity_id'],  sync_type=SyncType.SYNC_SOURCE.value)
     return {'msg': 'source registry has been sent to synchronize'}
 
 

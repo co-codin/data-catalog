@@ -118,6 +118,7 @@ async def edit_object(guid: str, object_update_in: ObjectUpdateIn, session: Asyn
 
     await update_tags(object_model, session, object_update_in.tags)
 
+
     session.add(object_model)
     await session.commit()
 
