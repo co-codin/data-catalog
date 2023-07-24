@@ -22,7 +22,7 @@ from app.models.models import ModelResource, ModelResourceAttribute, ModelVersio
 from app.models.sources import Model
 from app.schemas.queries import (
     ModelResourceOut, AliasAttr, AliasAggregate, QueryIn, QueryManyOut, QueryOut, QueryModelManyOut,
-    QueryModelVersionManyOut, FullQueryOut, QueryModelResourceAttributeOut, QueryExecutionOut
+    QueryModelVersionManyOut, FullQueryOut, QueryModelResourceAttributeOut, QueryExecutionOut, QueryUpdateIn
 )
 from app.age_queries.node_queries import construct_match_connected_tables, match_neighbor_tables
 from app.schemas.tag import TagOut
@@ -304,14 +304,28 @@ async def check_on_query_owner(guid: str, identity_guid: str, session: AsyncSess
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
 
-async def alter_query(guid: str, query_update_in: QueryIn, session: AsyncSession):
-    query_json = query_update_in.dict(include={'aliases', 'filter', 'having'})
+async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncSession):
+    query_update_in_data = {
+        key: value for key, value in query_update_in.dict().items()
+        if value is not None
+    }
+    query_json = {}
+    if 'aliases' in query_update_in_data:
+        query_json['aliases'] = query_update_in_data['aliases']
+
+    if 'filter' in query_update_in_data:
+        query_json['filter'] = query_update_in_data['filter']
+
+    if 'having' in query_update_in_data:
+        query_json['having'] = query_update_in_data['having']
+
+
     await session.execute(
         update(Query)
         .where(Query.guid == guid)
         .values(
             json=json.dumps(query_json),
-            **query_update_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid', 'filter_type'})
+            **query_update_in_data
         )
     )
     query = await session.execute(
