@@ -85,7 +85,7 @@ async def read_query(guid: str, session=Depends(db_session), token=Depends(get_t
     return await get_query(guid, session, user['identity_id'], token)
 
 
-@router.put('/{guid}')
+@router.patch('/{guid}')
 async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
