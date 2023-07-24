@@ -30,3 +30,10 @@ class AccessLabelType(Enum):
     PERSONAL = 'personal'
     CONFIDENTIAL = 'confidential'
     FREE = 'free'
+
+
+class SyncType(Enum):
+    ADD_OBJECT = 1
+    SYNC_OBJECT = 2
+    ADD_SOURCE = 3
+    SYNC_SOURCE = 4

@@ -319,6 +319,8 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
     if 'having' in query_update_in_data:
         query_json['having'] = query_update_in_data['having']
 
+    for key in ['aliases', 'filter', 'having']:
+        del query_update_in_data[key]
 
     await session.execute(
         update(Query)

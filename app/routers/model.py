@@ -45,7 +45,7 @@ async def add_model(model_in: ModelIn, session=Depends(db_session), _=Depends(ge
 
 @router.delete('/{guid}')
 async def delete_model(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    await delete_by_guid(guid=guid, session=session, author_guid=user['identity_id'])
+    await delete_by_guid(guid=guid, session=session, identity_id=user['identity_id'])
 
 
 @router.post('/{guid}/comments')

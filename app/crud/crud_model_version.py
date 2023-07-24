@@ -14,11 +14,14 @@ from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 from app.enums.enums import ModelVersionLevel, ModelVersionStatus
 from app.errors.checker import check_model_resources_error
+from app.models import LogType
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
     ModelRelation
 from app.schemas.access_label import AccessLabelIn
+from app.schemas.log import LogIn
 from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn, ModelVersionOut
+from app.services.log import add_log
 
 
 async def generate_version_number(id: int, session: AsyncSession, level: ModelVersionLevel):
@@ -72,12 +75,13 @@ async def read_all(model_id: str, session: AsyncSession):
     return model_versions
 
 
-async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession):
+async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession, identity_id: str):
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
         .options(selectinload(ModelVersion.access_label))
         .options(joinedload(ModelVersion.model_resources).selectinload(ModelResource.attributes))
+        .options(selectinload(ModelVersion.model))
         .filter(ModelVersion.guid == guid)
     )
     model_version = model_version.scalars().first()
@@ -97,6 +101,14 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
             and model_version_update_in.status == ModelVersionStatus.APPROVED.value:
         approved_model_version.status = ModelVersionStatus.ARCHIVE.value
         model_version.confirmed_at = datetime.now()
+        await add_log(session, LogIn(
+            type=LogType.MODEL_CATALOG.value,
+            log_name="Утверждение версии",
+            text="{{version}} {{guid}} в {{name}} {{model_guid}} утверждена".format(
+                model_version.version, model_version.guid, model_version.model.name, model_version.model.guid),
+            identity_id=identity_id,
+            event="Утверждение версии модели",
+        ))
 
     model_version_update_in_data = {
         key: value for key, value in model_version_update_in.dict(exclude={'tags', 'access_label'}).items()
