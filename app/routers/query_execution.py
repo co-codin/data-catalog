@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict
-
+import io
 from starlette import status
+from starlette.responses import StreamingResponse
+
 
 from app.models.queries import QueryExecution
 from app.dependencies import db_session, get_user
 from sqlalchemy import update, select
+import pandas as pd
 
 from app.services.clickhouse import ClickhouseService
 
@@ -14,6 +17,39 @@ router = APIRouter(
     tags=['query executions']
 )
 
+@router.get('/{guid}', response_model=Dict[str, str])
+async def get_query_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
+    query_execution = await session.execute(
+        select(QueryExecution)
+        .where(QueryExecution.guid == guid)
+    )
+    query_execution = query_execution.scalars().first()
+
+    if not query_execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return query_execution.dict()
+
+
+router.get('/{guid}/download')
+async def download_uery_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
+    query_execution = await session.execute(
+        select(QueryExecution)
+        .where(QueryExecution.guid == guid)
+    )
+    query_execution = query_execution.scalars().first()
+
+    if not query_execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+    df = pd.DataFrame([query_execution.dict()])
+    stream = io.StringIO()
+    df.to_csv(stream, index=False)
+
+    response = StreamingResponse(
+        iter([stream.getvalue()]), media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    return response
 
 
 @router.put('/{guid}/publish', response_model=Dict[str, str])
