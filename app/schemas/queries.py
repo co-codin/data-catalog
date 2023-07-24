@@ -97,6 +97,25 @@ class QueryIn(BaseModel):
         use_enum_values = True
 
 
+class QueryUpdateIn(BaseModel):
+    name: str | None = None
+    owner_guid: str | None = None
+    desc: str | None = None
+    model_version_id: int | None = None
+    filter_type: QueryFilterType | None = None
+
+    tags: list[str] = []
+
+    aliases: dict[str, AliasAttr | AliasAggregate] | None = None
+    filter: SimpleFilter | BooleanFilter | None = None
+    having: SimpleFilter | BooleanFilter | None = None
+
+    run_immediately: bool | None = None
+
+    class Config:
+        use_enum_values = True
+
+
 class QueryManyOut(BaseModel):
     id: int
     guid: str
@@ -166,9 +185,6 @@ class FullQueryOut(QueryOut):
     model: QueryModelManyOut
     model_version: QueryModelVersionManyOut
 
-
-class QueryUpdateIn(BaseModel):
-    ...
 
 
 class QueryExecutionOut(BaseModel):
