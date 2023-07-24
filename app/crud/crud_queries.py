@@ -309,6 +309,7 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
         key: value for key, value in query_update_in.dict().items()
         if value is not None
     }
+
     query_json = {}
     if 'aliases' in query_update_in_data:
         query_json['aliases'] = query_update_in_data['aliases']
@@ -319,14 +320,17 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
     if 'having' in query_update_in_data:
         query_json['having'] = query_update_in_data['having']
 
-    for key in ['aliases', 'filter', 'having']:
-        del query_update_in_data[key]
 
-    await session.execute(
+    for key in ['aliases', 'filter', 'having']:
+        if key in query_update_in_data:
+            del query_update_in_data[key]
+
+
+    session.execute(
         update(Query)
         .where(Query.guid == guid)
         .values(
-            json=json.dumps(query_json),
+           json=json.dumps(query_json),
             **query_update_in_data
         )
     )
@@ -335,7 +339,9 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
         .options(selectinload(Query.tags))
         .where(Query.guid == guid)
     )
+    
     query = query.scalars().first()
+
     if query:
         await update_tags(query, session, query_update_in.tags)
         session.add(query)
