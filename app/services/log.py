@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.log import Log, LogType, LogName, LogEvent
+from app.models.log import Log, LogType, LogText, LogEvent
 from app.schemas.log import LogIn
 
 
@@ -28,7 +28,7 @@ async def log_remove(session: AsyncSession, guid: str, author_guid: str, name: s
     log_in = LogIn(
         type=LogType.DATA_CATALOG.value,
         log_name=name,
-        text=LogName.REMOVE.value.format(guid),
+        text=LogText.REMOVE.value.format(guid),
         identity_id=author_guid,
         event=LogEvent.REMOVE.value,
         description=description

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.schemas.log import LogIn
 
-from app.dependencies import db_session, get_user, get_token
+from app.dependencies import db_session, get_user
 from app.services.log import create_log
 
 router = APIRouter(
