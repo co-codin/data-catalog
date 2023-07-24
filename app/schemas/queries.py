@@ -35,7 +35,7 @@ class AggregateFunc(Enum):
 
 
 class Attr(BaseModel):
-    db_link: str
+    db_link: str = Field(None, min_length=1)
     display: bool
 
 
@@ -79,7 +79,7 @@ class BooleanFilter(BaseModel):
 
 
 class QueryIn(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     owner_guid: str
     desc: str | None = None
     model_version_id: int
