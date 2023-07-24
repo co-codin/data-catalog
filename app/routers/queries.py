@@ -11,7 +11,7 @@ from app.crud.crud_queries import (
 from app.crud.crud_tag import remove_redundant_tags
 from app.schemas.queries import (
     AllowedResourcesIn, QueryIn, ModelResourceOut, QueryManyOut, QueryExecutionOut,
-    FullQueryOut
+    FullQueryOut, QueryUpdateIn
 )
 from app.dependencies import db_session, ag_session, get_user, get_token
 
@@ -87,12 +87,12 @@ async def read_query(guid: str, session=Depends(db_session), token=Depends(get_t
 
 @router.put('/{guid}')
 async def update_query(
-        guid: str, query_update_in: QueryIn, session=Depends(db_session), token=Depends(get_token),
+        guid: str, query_update_in: QueryUpdateIn, session=Depends(db_session), token=Depends(get_token),
         user=Depends(get_user)
 ):
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
-    # await check_on_query_owner(guid, user['identity_id'], session)
+    await check_on_query_owner(guid, user['identity_id'], session)
     await alter_query(guid, query_update_in, session)
     asyncio.create_task(remove_redundant_tags())
 
