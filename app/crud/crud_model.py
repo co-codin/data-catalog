@@ -13,9 +13,11 @@ from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 
 from app.errors.errors import ModelNameAlreadyExist
+from app.models import LogType
 from app.models.models import Model, ModelVersion, ModelRelationOperation, ModelRelation, OperationBody, Operation
+from app.schemas.log import LogIn
 from app.schemas.model import ModelIn, ModelUpdateIn, ModelManyOut, ModelOut
-from app.services.log import log_remove
+from app.services.log import log_remove, add_log
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> Model:
@@ -138,11 +140,23 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
     await session.commit()
 
 
-async def delete_by_guid(guid: str, session: AsyncSession, author_guid: str):
+async def delete_by_guid(guid: str, session: AsyncSession, identity_id: str):
+    model = await session.execute(
+        select(Model)
+        .where(Model.guid == guid)
+    )
+    model = model.scalars().first()
+
+    await add_log(session, LogIn(
+        type=LogType.MODEL_CATALOG.value,
+        log_name="Удаление модели",
+        text="{{name}} {{guid}} удалена".format(model.name, model.guid),
+        identity_id=identity_id,
+        event="Удаление модели",
+    ))
+
     await session.execute(
         delete(Model)
         .where(Model.guid == guid)
     )
     await session.commit()
-
-    await log_remove(session=session, guid=guid, author_guid=author_guid, name="Удаление модели", description="")

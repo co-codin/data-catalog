@@ -122,3 +122,4 @@ class ObjectSynch(BaseModel):
     conn_string: str
     source_registry_guid: str
     object_guid: str
+    identity_guid: str
