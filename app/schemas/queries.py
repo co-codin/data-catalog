@@ -35,7 +35,7 @@ class AggregateFunc(Enum):
 
 
 class Attr(BaseModel):
-    db_link: str = Field(..., min_length=1)
+    db_link: str = Field(None, min_length=1)
     display: bool
 
 
