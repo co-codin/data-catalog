@@ -34,9 +34,9 @@ async def read_linked_resources(
     5) match all directly connected tables with the ones from step 3
     6) filter them with model version id and db_link field
     """
-    model_resource_attrs = await select_model_resource_attrs(LinkedResourcesIn.attribute_ids, session)
+    model_resource_attrs = await select_model_resource_attrs(linked_resources_in.attribute_ids, session)
     if not model_resource_attrs:
-        return await select_all_resources(LinkedResourcesIn.model_version_id, session)
+        return await select_all_resources(linked_resources_in.model_version_id, session)
 
     db, ns, _ = model_resource_attrs[0].split('.', maxsplit=2)
     graph_name = f'{db}.{ns}'
@@ -48,7 +48,7 @@ async def read_linked_resources(
     )
     connected_db_links = [f'{graph_name}.{connected_resource}' for connected_resource in connected_resources]
     model_resources = await filter_connected_resources(
-        connected_db_links, LinkedResourcesIn.model_version_id, session
+        connected_db_links, linked_resources_in.model_version_id, session
     )
     return model_resources
 
