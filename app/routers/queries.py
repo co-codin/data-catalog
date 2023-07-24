@@ -10,7 +10,7 @@ from app.crud.crud_queries import (
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.schemas.queries import (
-    AllowedResourcesIn, QueryIn, ModelResourceOut, QueryManyOut, QueryExecutionOut,
+    LinkedResourcesIn, QueryIn, ModelResourceOut, QueryManyOut, QueryExecutionOut,
     FullQueryOut, QueryUpdateIn
 )
 from app.dependencies import db_session, ag_session, get_user, get_token
@@ -21,9 +21,9 @@ router = APIRouter(
 )
 
 
-@router.get('/allowed_resources', response_model=list[ModelResourceOut])
-async def read_allowed_resources(
-        allowed_resources_in: AllowedResourcesIn, session=Depends(db_session), age_session=Depends(ag_session),
+@router.get('/linked_resources', response_model=list[ModelResourceOut])
+async def read_linked_resources(
+        linked_resources_in: LinkedResourcesIn, session=Depends(db_session), age_session=Depends(ag_session),
         _=Depends(get_user)
 ):
     """
@@ -34,9 +34,9 @@ async def read_allowed_resources(
     5) match all directly connected tables with the ones from step 3
     6) filter them with model version id and db_link field
     """
-    model_resource_attrs = await select_model_resource_attrs(allowed_resources_in.attribute_ids, session)
+    model_resource_attrs = await select_model_resource_attrs(linked_resources_in.attribute_ids, session)
     if not model_resource_attrs:
-        return await select_all_resources(allowed_resources_in.model_version_id, session)
+        return await select_all_resources(linked_resources_in.model_version_id, session)
 
     db, ns, _ = model_resource_attrs[0].split('.', maxsplit=2)
     graph_name = f'{db}.{ns}'
@@ -48,7 +48,7 @@ async def read_allowed_resources(
     )
     connected_db_links = [f'{graph_name}.{connected_resource}' for connected_resource in connected_resources]
     model_resources = await filter_connected_resources(
-        connected_db_links, allowed_resources_in.model_version_id, session
+        connected_db_links, linked_resources_in.model_version_id, session
     )
     return model_resources
 
@@ -85,7 +85,7 @@ async def read_query(guid: str, session=Depends(db_session), token=Depends(get_t
     return await get_query(guid, session, user['identity_id'], token)
 
 
-@router.put('/{guid}')
+@router.patch('/{guid}')
 async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
