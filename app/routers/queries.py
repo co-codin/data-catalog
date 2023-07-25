@@ -90,9 +90,12 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
     await check_on_query_owner(guid, user['identity_id'], session)
-    result = await alter_query(guid, query_update_in, session)
+
+    query = await alter_query(guid, query_update_in, session)
     asyncio.create_task(remove_redundant_tags())
-    return result
+    if query_update_in.run_immediately:
+        await create_query_execution(query, session)
+
 
 @router.get('/{guid}/executions/', response_model=list[QueryExecutionOut])
 async def read_query_running_history(guid: str, session=Depends(db_session), user=Depends(get_user)):
