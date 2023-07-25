@@ -320,13 +320,14 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
     if 'having' in query_update_in_data:
         query_json['having'] = query_update_in_data['having']
 
+    tags = query_update_in_data['tags']
 
-    for key in ['aliases', 'filter', 'having']:
+    for key in ['aliases', 'filter', 'having', 'run_immediately', 'tags']:
         if key in query_update_in_data:
             del query_update_in_data[key]
 
 
-    session.execute(
+    await session.execute(
         update(Query)
         .where(Query.guid == guid)
         .values(
@@ -343,8 +344,10 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
     query = query.scalars().first()
 
     if query:
-        await update_tags(query, session, query_update_in.tags)
+        await update_tags(query, session, tags)
         session.add(query)
+    
+    return query
 
 
 async def remove_query(guid: str, identity_guid: str, session: AsyncSession):
