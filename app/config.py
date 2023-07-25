@@ -1,7 +1,6 @@
 import os
 
 from collections import namedtuple
-from typing import List
 
 from pydantic import BaseSettings
 
@@ -22,12 +21,14 @@ class Settings(BaseSettings):
 
     api_iam: str = 'http://iam.lan:8000'
     api_graph_db_migrater: str = 'http://graph_db_migrater.lan:8081'
+    api_task_broker: str = 'http://task-broker.lan:8000'
+    api_query_executor: str = 'http://query-executor.lan:8000'
 
     encryption_key: str = 'e4f0d87c56a99e57d4470da7396783d7003cec28ef3abf0ff3a1daf37002470a'
 
     clickhouse_connection_string: str = os.environ.get('dwh_query_executor_db_sources_clickhouse', 'clickhouse://clickhouse:dwh@clickhouse.lan:8123/dwh')
 
-    origins: List[str] = [
+    origins: list[str] = [
         '*'
     ]
 
@@ -35,9 +36,9 @@ class Settings(BaseSettings):
     age_connection_string: str = 'postgresql://postgres:dwh@graphdb.lan:5432/postgres'
 
     mq_connection_string: str = 'amqp://dwh:dwh@rabbit.lan:5672'
-    migration_exchange = 'graph_migration'
-    migration_request_queue = 'migration_requests'
-    migrations_result_queue = 'migration_results'
+    migration_exchange: str = 'graph_migration'
+    migration_request_queue: str = 'migration_requests'
+    migrations_result_queue: str = 'migration_results'
 
     class Config:
         env_prefix = "dwh_data_catalog_"

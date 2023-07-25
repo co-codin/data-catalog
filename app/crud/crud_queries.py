@@ -1,9 +1,9 @@
 import asyncio
 import json
 import uuid
+import httpx
 
 from datetime import datetime
-from typing import Iterable
 from typing import Optional
 
 from age import Age
@@ -11,21 +11,24 @@ from age import Age
 from fastapi import HTTPException, status
 
 from sqlalchemy import select, update, and_, func, delete
-from sqlalchemy.orm import selectinload, joinedload, load_only
+from sqlalchemy.orm import selectinload, joinedload, load_only, contains_eager
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids
-from app.errors.query_errors import QueryNameAlreadyExist
+from app.errors.query_errors import QueryNameAlreadyExist, QueryIsRunningError, QueryIsNotRunningError
 from app.models.queries import Query, QueryRunningStatus, QueryExecution, QueryViewer, query_viewers
 from app.models.models import ModelResource, ModelResourceAttribute, ModelVersion
-from app.models.sources import Model
+from app.models.sources import Model, SourceRegister
+from app.services.crypto import decrypt
 from app.schemas.queries import (
     ModelResourceOut, AliasAttr, AliasAggregate, QueryIn, QueryManyOut, QueryOut, QueryModelManyOut,
     QueryModelVersionManyOut, FullQueryOut, QueryModelResourceAttributeOut, QueryExecutionOut, QueryUpdateIn
 )
 from app.age_queries.node_queries import construct_match_connected_tables, match_neighbor_tables
 from app.schemas.tag import TagOut
+
+from app.config import settings
 
 
 async def select_model_resource_attrs(attr_ids: list[int], session: AsyncSession) -> list[str]:
@@ -97,6 +100,7 @@ async def check_alias_attrs_for_existence(aliases: dict[str, AliasAttr | AliasAg
             status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "some of the given attributes don't exist"}
         )
 
+
 async def check_on_query_uniqueness(name: str, session: AsyncSession, guid: Optional[str] = None):
     queries = await session.execute(
         select(Query)
@@ -132,6 +136,7 @@ async def create_query_execution(query: Query, session: AsyncSession):
     query.status = QueryRunningStatus.RUNNING.value
     query.executions.append(query_execution)
     session.add(query)
+    return query_execution.guid
 
 
 async def check_owner_for_existence(owner_guid: str, token: str):
@@ -288,7 +293,7 @@ async def get_query_running_history(guid: str, identity_guid: str, session: Asyn
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         return [QueryExecutionOut.from_orm(query_execution) for query_execution in query_running_history]
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={'msg': 'query is not found'})
+        return []
 
 
 async def check_on_query_owner(guid: str, identity_guid: str, session: AsyncSession):
@@ -305,6 +310,15 @@ async def check_on_query_owner(guid: str, identity_guid: str, session: AsyncSess
 
 
 async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncSession):
+    query = await session.execute(
+        select(Query)
+        .options(selectinload(Query.tags))
+        .where(Query.guid == guid)
+    )
+    query = query.scalars().first()
+    if query.status == QueryRunningStatus.RUNNING.value:
+        raise QueryIsRunningError()
+
     query_update_in_data = {
         key: value for key, value in query_update_in.dict().items()
         if value is not None
@@ -326,27 +340,19 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
         if key in query_update_in_data:
             del query_update_in_data[key]
 
-
     await session.execute(
         update(Query)
         .where(Query.guid == guid)
         .values(
-           json=json.dumps(query_json),
+            json=json.dumps(query_json),
             **query_update_in_data
         )
     )
-    query = await session.execute(
-        select(Query)
-        .options(selectinload(Query.tags))
-        .where(Query.guid == guid)
-    )
-    
-    query = query.scalars().first()
 
     if query:
         await update_tags(query, session, tags)
         session.add(query)
-    
+
     return query
 
 
@@ -383,3 +389,94 @@ async def remove_query(guid: str, identity_guid: str, session: AsyncSession):
             .where(Query.guid == guid)
         )
     await session.commit()
+
+
+async def send_query_to_task_broker(query: dict, conn_string: str, run_guid: str, token: str):
+    async with httpx.AsyncClient() as aclient:
+        headers = {'Authorization': f'Bearer {token}'}
+        response = await aclient.post(
+            f'{settings.api_task_broker}/query/',
+            headers=headers,
+            json={
+                'conn_string': conn_string,
+                'query': query,
+                'run_guid': run_guid
+            }
+        )
+        response.raise_for_status()
+
+
+async def set_query_status(query_exec_guid: str, running_status: QueryRunningStatus, session: AsyncSession):
+    query_exec = await session.execute(
+        select(QueryExecution).with_for_update(nowait=True)
+        .options(joinedload(QueryExecution.query, innerjoin=True))
+        .where(QueryExecution.guid == query_exec_guid)
+    )
+    query_exec = query_exec.scalars().first()
+    if not query_exec:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    query_exec.status = running_status.value
+    query_exec.query.status = running_status.value
+
+    session.add(query_exec)
+    session.add(query_exec.query)
+
+
+async def select_conn_string(model_version_id: int, session: AsyncSession) -> str:
+    model_version = await session.execute(
+        select(ModelVersion)
+        .options(joinedload(ModelVersion.model).load_only(Model.id))
+        .options(joinedload(ModelVersion.model).load_only(Model.source_registry_id))
+        .where(ModelVersion.id == model_version_id)
+    )
+    model_version = model_version.scalars().first()
+
+    source = await session.execute(
+        select(SourceRegister)
+        .options(load_only(SourceRegister.conn_string))
+        .where(SourceRegister.id == model_version.model.source_registry_id)
+    )
+    source = source.scalars().first()
+    conn_string_decrypted = decrypt(settings.encryption_key, source.conn_string)
+    return conn_string_decrypted
+
+
+async def select_running_query_exec(query_guid: str, session: AsyncSession) -> QueryExecution:
+    query_exec = await session.execute(
+        select(QueryExecution)
+        .join(QueryExecution.query)
+        .options(load_only(QueryExecution.guid))
+        .options(contains_eager(QueryExecution.query))
+        .where(
+            and_(
+                Query.guid == query_guid,
+                Query.status == QueryRunningStatus.RUNNING.value,
+                QueryExecution.status == QueryRunningStatus.RUNNING.value
+            )
+        )
+    )
+    query_exec = query_exec.scalars().first()
+
+    if not query_exec:
+        raise QueryIsNotRunningError()
+    return query_exec
+
+
+async def terminate_query(query_guid: str):
+    async with httpx.AsyncClient() as aclient:
+        response = await aclient.delete(f'{settings.api_query_executor}/v1/queries/{query_guid}')
+        response.raise_for_status()
+
+
+async def get_query_to_run(query_guid: str, session: AsyncSession) -> Query:
+    query = await session.execute(
+        select(Query)
+        .options(selectinload(Query.executions))
+        .where(Query.guid == query_guid)
+    )
+    query = query.scalars().first()
+
+    if query.status == QueryRunningStatus.RUNNING.value:
+        raise QueryIsRunningError()
+    return query
