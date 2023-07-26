@@ -69,7 +69,9 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
     await check_alias_attrs_for_existence(query_in.aliases, session)
     await check_owner_for_existence(query_in.owner_guid, token)
     await check_model_version_for_existence(query_in.model_version_id, session)
+    
     query = await create_query(query_in, session)
+
     if query_in.run_immediately:
         query_exec_guid = await create_query_execution(query, session)
         conn_string = await select_conn_string(query.model_version_id, session)
@@ -97,8 +99,14 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
 
     query = await alter_query(guid, query_update_in, session)
     asyncio.create_task(remove_redundant_tags())
+
     if query_update_in.run_immediately:
-        await create_query_execution(query, session)
+        query_exec_guid = await create_query_execution(query, session)
+        conn_string = await select_conn_string(query.model_version_id, session)
+        await send_query_to_task_broker(
+            query=query_update_in.dict(include={'aliases', 'filter', 'having'}), conn_string=conn_string,
+            run_guid=query_exec_guid, token=token
+        )
 
 
 @router.get('/{guid}/executions/', response_model=list[QueryExecutionOut])
