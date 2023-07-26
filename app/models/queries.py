@@ -71,6 +71,9 @@ class Query(Base):
 
     json = Column(JSON, nullable=False)
 
+    filters_displayed = Column(Text, nullable=False)
+    having_displayed = Column(Text, nullable=False)
+
     owner_guid = Column(String(100), nullable=False)
     model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
 

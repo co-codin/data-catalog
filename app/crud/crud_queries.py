@@ -117,7 +117,11 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
     query = Query(
         guid=str(uuid.uuid4()),
         status=QueryRunningStatus.CREATED.value,
-        **query_in.dict(include={'name', 'desc', 'model_version_id', 'owner_guid', 'filter_type'}),
+        **query_in.dict(include={
+            'name', 'desc', 'model_version_id',
+            'owner_guid', 'filter_type',
+            'filters_displayed', 'having_displayed',
+            }),
         json=json.dumps(query_json)
     )
 
