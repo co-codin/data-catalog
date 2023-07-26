@@ -3,6 +3,7 @@ import typing
 import logging
 
 from neo4j import AsyncSession
+from age import Age
 from collections import deque
 
 from app.errors.errors import (
@@ -88,13 +89,15 @@ async def describe_entity(session: AsyncSession, name: str, path: str = None):
     }
 
 
-async def get_attr_db_info(session: AsyncSession, attr: str):
+async def get_attr_db_info(session: Age, attr: str):
     """
     Get table and join chain for attribute
     :param attr: comma separated attributes list
     :param session:
     :return:
     """
+    db, ns, attr = attr.split('.', maxsplit=2)
+    session.setGraph(f'{db}.{ns}')
     current_obj, *remainder = attr.split('.')
 
     db_table = None
@@ -103,47 +106,45 @@ async def get_attr_db_info(session: AsyncSession, attr: str):
     abac_attrs = None
     db_joins = []
 
-    result = await session.run("MATCH (o:Entity {name: $name}) RETURN id(o) as node_id", name=current_obj)
-    entity = await result.single()
-    if entity is None:
-        raise NoNodeNameError('Entity', current_obj)
+    cursor = session.execCypher(
+        "MATCH (o:Table {name: %s}) RETURN id(o) as node_id",
+        cols=['node_id'],
+        params=(current_obj,)
+    )
+    table = {'node_id': next(cursor)[0]}
 
-    current_node_id = entity['node_id']
+    if table is None:
+        raise NoNodeNameError('Table', current_obj)
+
+    current_node_id = table['node_id']
     visited_node_ids = {current_node_id}
 
     while remainder:
         field, *remainder = remainder
         LOG.debug(f'{field}{remainder}')
 
-        result = await session.run("MATCH (o)-[r]->(f) WHERE id(o) = $node RETURN f, r, o", node=current_node_id)
-        by_name = {node['name']: (node, rel, obj) async for node, rel, obj in result}
+        result = session.execCypher(
+            "MATCH (o:Table)-[r]->(f) WHERE id(o) = %s RETURN f, r, o",
+            cols=['f', 'r', 'o'],
+            params=(current_node_id,)
+        )
+        by_name = {node['name']: (node, rel, obj) for node, rel, obj in result}
         if field not in by_name:
             raise NoNodeNameError('Field', field)
         node, rel, obj = by_name[field]
 
-        if rel.type == 'ATTR':
-            db_table = obj['db']
-            db_field = node['db']
-            db_type = node.get('dbtype', 'string')
-            abac_attrs = node.get('attrs')
-        elif rel.type == 'SAT':
-            db_joins.append(
-                {'table': obj['db'], 'on': tuple(rel['on'])}
-            )
-        elif rel.type == 'LINK':
-            db_joins.append(
-                {'table': obj['db'], 'on': tuple(rel['on'])}
-            )
-            result = await session.run("MATCH (o)-[r]->(n) WHERE id(o) = $node RETURN n, r, o", node=int(node.element_id))
-            node, rel, obj = await result.peek()
+        match rel.label:
+            case 'ATTR':
+                db_table, db_field, db_type = obj['db'], node['db'], node['dbtype']
+                abac_attrs = None
+            case 'ONE_TO_MANY' | 'MANY_TO_ONE':
+                db_joins.append(
+                    {'table': obj['db'], 'on': tuple(rel['on'])}
+                )
+            case _:
+                raise UnknownRelationTypeError(rel.type)
 
-            db_joins.append(
-                {'table': obj['db'], 'on': tuple(rel['on'])}
-            )
-        else:
-            raise UnknownRelationTypeError(rel.type)
-
-        current_node_id = int(node.element_id)
+        current_node_id = int(node.id)
 
         if current_node_id in visited_node_ids:
             raise CyclicPathError(attr)

@@ -57,7 +57,6 @@ class AliasAggregate(BaseModel):
 
 
 class SimpleFilter(BaseModel):
-    key: str
     alias: str
     operator: Operator
     value: (
@@ -70,7 +69,6 @@ class SimpleFilter(BaseModel):
 
 
 class BooleanFilter(BaseModel):
-    key: str
     operator: BooleanOperator
     values: list[SimpleFilter | BooleanFilter]
 
@@ -82,8 +80,12 @@ class QueryIn(BaseModel):
     name: str = Field(..., min_length=1)
     owner_guid: str
     desc: str | None = None
-    model_version_id: int
+    desc: str | None = None
+    
     filter_type: QueryFilterType
+
+    filters_displayed: str = Field(..., min_length=1)
+    having_displayed: str = Field(..., min_length=1)
 
     tags: list[str] = []
 
@@ -103,6 +105,9 @@ class QueryUpdateIn(BaseModel):
     desc: str | None = None
     model_version_id: int | None = None
     filter_type: QueryFilterType | None = None
+
+    filters_displayed: str | None = None
+    having_displayed: str | None = None
 
     tags: list[str] = []
 

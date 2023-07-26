@@ -3,9 +3,8 @@ from typing import Dict
 # import io
 from starlette import status
 # from starlette.responses import StreamingResponse
-
-
-from app.models.queries import QueryExecution
+from app.crud.crud_queries import set_query_status
+from app.models.queries import QueryExecution, QueryRunningStatus
 from app.dependencies import db_session, get_user
 from sqlalchemy import update, select
 # import pandas as pd
@@ -16,6 +15,7 @@ router = APIRouter(
     prefix='/query_executions',
     tags=['query executions']
 )
+
 
 @router.get('/{guid}', response_model=Dict[str, str])
 async def get_query_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
@@ -29,6 +29,11 @@ async def get_query_execution_by_guid(guid: str, session=Depends(db_session), _=
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     return query_execution.dict()
+
+
+@router.put('/{guid}')
+async def update_query_status(guid: str, status: QueryRunningStatus, session=Depends(db_session)):
+    await set_query_status(guid, status, session)
 
 
 # router.get('/{guid}/download')

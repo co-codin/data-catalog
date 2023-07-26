@@ -41,9 +41,9 @@ async def send_for_synchronization(
     db_source = conn_string.rsplit('/', maxsplit=1)[1]
 
     if object_name:
-        migration_name = f'{datetime.utcnow().strftime("%Y-%m-%d")}.{db_source}.{object_name}'
+        migration_name = f'{datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}.{db_source}.{object_name}'
     else:
-        migration_name = f'{datetime.utcnow().strftime("%Y-%m-%d")}.{db_source}'
+        migration_name = f'{datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}.{db_source}'
 
     params = {
         'name': migration_name,
@@ -175,8 +175,10 @@ async def process_graph_migration_failure(graph_migration: dict):
                 await add_log(session, LogIn(
                     type=LogType.DATA_CATALOG.value,
                     log_name="Добавление объекта",
-                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(graph_migration['object_name'],
-                                                                                       graph_migration['object_guid']),
+                    text="При синхронизации {name} {guid} произошла ошибка".format(
+                        name=graph_migration['object_name'],
+                        guid=graph_migration['object_guid']
+                    ),
                     identity_id=graph_migration['identity_id'],
                     event="Синхронизация объекта через Карточку объекта",
                 ))
@@ -184,8 +186,10 @@ async def process_graph_migration_failure(graph_migration: dict):
                 await add_log(session, LogIn(
                     type=LogType.DATA_CATALOG.value,
                     log_name="Добавление объекта",
-                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(graph_migration['object_name'],
-                                                                                       graph_migration['object_guid']),
+                    text="При синхронизации {name} {guid} произошла ошибка".format(
+                        name=graph_migration['object_name'],
+                        guid=graph_migration['object_guid']
+                    ),
                     identity_id=graph_migration['identity_id'],
                     event="Добавление объекта вручнуя из подключеннного источника",
                 ))
@@ -193,8 +197,9 @@ async def process_graph_migration_failure(graph_migration: dict):
                 await add_log(session, LogIn(
                     type=LogType.SOURCE_REGISTRY.value,
                     log_name="Добавление источника",
-                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(graph_migration['source_registry_name'],
-                                                                                       graph_migration['source_registry_guid']),
+                    text="При синхронизации {name} {guid} произошла ошибка".format(
+                        name=graph_migration['source_registry_name'],
+                        guid=graph_migration['source_registry_guid']),
                     identity_id=graph_migration['identity_id'],
                     event="Синхронизация при добавление источника",
                 ))
@@ -202,9 +207,9 @@ async def process_graph_migration_failure(graph_migration: dict):
                 await add_log(session, LogIn(
                     type=LogType.SOURCE_REGISTRY.value,
                     log_name="Синхронизация источника",
-                    text="При синхронизации {{name}} {{guid}} произошла ошибка".format(
-                        graph_migration['source_registry_name'],
-                        graph_migration['source_registry_guid']),
+                    text="При синхронизации {name} {guid} произошла ошибка".format(
+                        name=graph_migration['source_registry_name'],
+                        guid=graph_migration['source_registry_guid']),
                     identity_id=graph_migration['identity_id'],
                     event="Синхронизация из Реестра источников",
                 ))
@@ -303,7 +308,10 @@ async def create_objects_from_migration_out(
             await add_log(session, LogIn(
                 type=LogType.DATA_CATALOG.value,
                 log_name="Добавление объекта на источник",
-                text="{{name}} {{guid}} был добавлен на {{source_registry_name}} {{source_registry_guid}}".format(table.name, guid, source_registry.name, source_registry.id),
+                text="{name} {guid} был добавлен на {source_registry_name} {source_registry_guid}".format(
+                    name=table.name, guid=guid, source_registry_name=source_registry.name,
+                    source_registry_guid=source_registry.id
+                ),
                 identity_id="Системное событие",
                 event="Объект был добавлен на источник",
             ))
@@ -331,7 +339,10 @@ async def delete_objects(applied_migration: MigrationOut, db_source: str, sessio
             await add_log(session, LogIn(
                 type=LogType.DATA_CATALOG.value,
                 log_name="Удаление объекта на источнике",
-                text="{{name}} {{guid}} был удалён с {{source_registry_name}} {{source_registry_guid}}".format(object.name, object.guid, object.source.name, object.source_registry_guid),
+                text="{name} {guid} был удалён с {source_registry_name} {source_registry_guid}".format(
+                    name=object.name, guid=object.guid, source_registry_name=object.source.name,
+                    source_registry_guid=object.source_registry_guid
+                ),
                 identity_id="Системное событие",
                 event="Объект был удалён с источника",
             ))

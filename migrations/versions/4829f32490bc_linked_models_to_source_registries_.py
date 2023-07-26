@@ -25,7 +25,6 @@ def upgrade() -> None:
     sa.Column('text', sa.Text(), nullable=False),
     sa.Column('identity_id', sa.String(length=36), nullable=False),
     sa.Column('event', sa.String(length=36), nullable=False),
-    sa.Column('description', sa.Text(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('properties', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.PrimaryKeyConstraint('id')

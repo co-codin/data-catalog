@@ -14,13 +14,15 @@ from app.models.models import ModelVersion
 class QueryRunningStatus(Enum):
     CREATED = 'created'
     RUNNING = 'running'
-    RESULT = 'result'
+    DONE = 'done'
     CANCELED = 'canceled'
     ERROR = 'error'
+
 
 class QueryFilterType(Enum):
     CONSTRUCTOR = 'constructor'
     JSON = 'json'
+
 
 class QueryRunningPublishStatus(Enum):
     PUBLISHING = 'publishing'
@@ -68,6 +70,9 @@ class Query(Base):
                         server_onupdate=func.now())
 
     json = Column(JSON, nullable=False)
+
+    filters_displayed = Column(Text, nullable=False)
+    having_displayed = Column(Text, nullable=False)
 
     owner_guid = Column(String(100), nullable=False)
     model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
