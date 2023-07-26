@@ -18,7 +18,7 @@ from app.routers import (
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
-from app.services.synchronizer import update_data_catalog_data, process_graph_migration_failure
+from app.services.synchronizer import update_data_catalog_data, process_graph_migration_success
 
 config_logger()
 
@@ -34,26 +34,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(db_mappings.router)
-app.include_router(discovery.router)
-app.include_router(entities.router)
-app.include_router(sats.router)
-app.include_router(links.router)
-app.include_router(source_registry.router)
-app.include_router(keys.router)
-app.include_router(objects.router)
-app.include_router(model.router)
-app.include_router(model_version.router)
-app.include_router(model_data_type.router)
-app.include_router(model_quality.router)
-app.include_router(fields.router)
-app.include_router(model_relation.router)
-app.include_router(model_resource.router)
-app.include_router(operation.router)
-app.include_router(queries.router)
-app.include_router(log.router)
-app.include_router(pipeline.router)
-app.include_router(query_execution.router)
+routers = (
+    db_mappings.router, discovery.router, source_registry.router, keys.router, objects.router, model.router,
+    model_version.router, model_data_type.router, model_quality.router, fields.router, model_relation.router,
+    model_resource.router, operation.router, queries.router, log.router, pipeline.router, query_execution.router
+)
+
+for router in routers:
+    app.include_router(router)
 
 
 @app.on_event('startup')
@@ -70,7 +58,7 @@ async def on_startup():
         await channel.queue_bind(settings.migrations_result_queue, settings.migration_exchange, 'result')
 
         asyncio.create_task(
-            consume(settings.migrations_result_queue, update_data_catalog_data, process_graph_migration_failure)
+            consume(settings.migrations_result_queue, update_data_catalog_data)
         )
 
 
@@ -105,7 +93,7 @@ def api_exception_handler(request_: Request, exc: APIError) -> JSONResponse:
     )
 
 
-async def consume(query, func: Callable, failure_func: Callable):
+async def consume(query, func: Callable):
     while True:
         try:
             logger.info(f'Starting {query} worker')
@@ -116,9 +104,6 @@ async def consume(query, func: Callable, failure_func: Callable):
                         await channel.basic_ack(delivery_tag)
                     except Exception as e:
                         logger.exception(f'Failed to process message {body}: {e}')
-
-                        if failure_func:
-                            await failure_func(json.loads(body))
         except Exception as e:
             logger.exception(f'Worker {query} failed: {e}')
 

@@ -14,13 +14,15 @@ from app.models.models import ModelVersion
 class QueryRunningStatus(Enum):
     CREATED = 'created'
     RUNNING = 'running'
-    RESULT = 'result'
+    DONE = 'done'
     CANCELED = 'canceled'
     ERROR = 'error'
+
 
 class QueryFilterType(Enum):
     CONSTRUCTOR = 'constructor'
     JSON = 'json'
+
 
 class QueryRunningPublishStatus(Enum):
     PUBLISHING = 'publishing'

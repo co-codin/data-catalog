@@ -35,6 +35,7 @@ class Log(Base):
 
     type = Column(String(36), nullable=False, index=True)
     log_name = Column(String(36), nullable=False, index=True)
+    description = Column(Text, nullable=True)
     text = Column(Text, nullable=False)
     identity_id = Column(String(36), nullable=False, index=True)
     event = Column(String(36), nullable=False)
