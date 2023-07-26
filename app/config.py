@@ -20,7 +20,6 @@ class Settings(BaseSettings):
     db_migration_connection_string: str = "postgresql+psycopg2://postgres:dwh@db.lan:5432/data_catalog"
 
     api_iam: str = 'http://iam.lan:8000'
-    api_graph_db_migrater: str = 'http://graph_db_migrater.lan:8081'
     api_task_broker: str = 'http://task-broker.lan:8000'
     api_query_executor: str = 'http://query-executor.lan:8000'
 
