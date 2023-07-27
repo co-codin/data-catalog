@@ -316,6 +316,7 @@ async def check_on_query_owner(guid: str, identity_guid: str, session: AsyncSess
 async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncSession):
     query = await session.execute(
         select(Query)
+        .options(selectinload(Query.executions))
         .options(selectinload(Query.tags))
         .where(Query.guid == guid)
     )
