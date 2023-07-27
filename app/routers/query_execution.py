@@ -33,7 +33,7 @@ async def get_query_execution_by_guid(guid: str, session=Depends(db_session), us
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Результат запроса получен",
             text="Результат запроса {{{name}}} {{{guid}}} был получен".format(
                 name=query_execution.query.name, 
