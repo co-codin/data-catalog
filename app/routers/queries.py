@@ -84,7 +84,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
         )
 
         await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
                 name=query.name, 
@@ -123,7 +123,7 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
         )
 
         await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
                name=query.name, 
@@ -161,7 +161,7 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
     )
 
     await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
                 name=query_to_run.name, 
@@ -179,7 +179,7 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
     await terminate_query(query_exec.guid)
 
     await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Остановка запроса",
             text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
                 name=query_exec.query.name, 
