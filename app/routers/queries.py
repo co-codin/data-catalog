@@ -84,10 +84,10 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
         )
 
         await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                query.name, query.guid
+                name=query.name, guid=query.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.RUN_QUERY.value
