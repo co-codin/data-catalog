@@ -4,12 +4,15 @@ from typing import Dict
 from starlette import status
 # from starlette.responses import StreamingResponse
 from app.crud.crud_queries import set_query_status
+from app.models.log import LogEvent, LogType
 from app.models.queries import QueryExecution, QueryRunningStatus
 from app.dependencies import db_session, get_user
 from sqlalchemy import update, select
+from app.schemas.log import LogIn
 # import pandas as pd
 
 from app.services.clickhouse import ClickhouseService
+from app.services.log import add_log
 
 router = APIRouter(
     prefix='/query_executions',
@@ -18,15 +21,26 @@ router = APIRouter(
 
 
 @router.get('/{guid}', response_model=Dict[str, str])
-async def get_query_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
+async def get_query_execution_by_guid(guid: str, session=Depends(db_session), user=Depends(get_user)):
     query_execution = await session.execute(
         select(QueryExecution)
+        .join(QueryExecution.query)
         .where(QueryExecution.guid == guid)
     )
     query_execution = query_execution.scalars().first()
 
     if not query_execution:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR,
+            log_name="Результат запроса получен",
+            text="Результат запроса {name} {guid} был получен".format(
+                query_execution.query.name, query_execution.query.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.GET_QUERY_RESULT.value
+        ))
 
     return query_execution.dict()
 

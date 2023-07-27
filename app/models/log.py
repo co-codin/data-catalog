@@ -50,6 +50,11 @@ class LogEvent(Enum):
     CONFIRM_VERSION = 'Утверждение версии'
     DELETE_MODEL = 'Удаление модели'
 
+    RUN_QUERY = 'Запуск запроса'
+    RUN_QUERY_FAILED = 'Ошибка в результате выполнения запроса'
+    STOP_QUERY = 'Остановка запроса'
+    GET_QUERY_RESULT = 'Результат запроса получен'
+
     @classmethod
     def list(cls):
         return list(map(lambda c: c.value, cls))
