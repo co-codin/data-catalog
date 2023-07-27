@@ -87,7 +87,8 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query.name, guid=query.guid
+                name=query.name, 
+                guid=query.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.RUN_QUERY.value
@@ -125,7 +126,8 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query.name, guid=query.guid
+               name=query.name, 
+               guid=query.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.RUN_QUERY.value
@@ -159,10 +161,11 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
     )
 
     await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                query_to_run.name, query_to_run.guid
+                name=query_to_run.name, 
+                guid=query_to_run.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.RUN_QUERY.value
@@ -176,10 +179,11 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
     await terminate_query(query_exec.guid)
 
     await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR,
+            type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Остановка запроса",
             text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
-                query_exec.query.name, query_exec.query.guid
+                name=query_exec.query.name, 
+                guid=query_exec.query.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.STOP_QUERY.value

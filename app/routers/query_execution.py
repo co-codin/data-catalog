@@ -36,7 +36,8 @@ async def get_query_execution_by_guid(guid: str, session=Depends(db_session), us
             type=LogType.QUERY_CONSTRUCTOR,
             log_name="Результат запроса получен",
             text="Результат запроса {{{name}}} {{{guid}}} был получен".format(
-                query_execution.query.name, query_execution.query.guid
+                name=query_execution.query.name, 
+                guid=query_execution.query.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.GET_QUERY_RESULT.value
