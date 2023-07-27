@@ -143,7 +143,11 @@ async def process_graph_migration_success(graph_migration: dict):
                     await add_log(session, LogIn(
                         type=LogType.DATA_CATALOG.value,
                         log_name="Изменение объекта на источнике",
-                        text="{{{name}}} {{{guid}}} был изменён на {{{source_registry_name}}} {{{source_registry_guid}}}".format(object_name, object_.guid, source_registry.name, object_.source_registry_guid),
+                        text="{{{name}}} {{{guid}}} был изменён на {{{source_registry_name}}} {{{source_registry_guid}}}".format(
+                        name=object_name, 
+                        guid=object_.guid, 
+                        source_registry_name=source_registry.name,
+                        source_registry_guid=object_.source_registry_guid),
                         identity_id="Системное событие",
                         event=LogEvent.CHANGE_OBJECT_TO_SOURCE.value,
                     ))
