@@ -106,7 +106,10 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
             type=LogType.MODEL_CATALOG.value,
             log_name="Утверждение версии",
             text="{{{version}}} {{{guid}}} в {{{name}}} {{{model_guid}}} утверждена".format(
-                model_version.version, model_version.guid, model_version.model.name, model_version.model.guid),
+                version=model_version.version, 
+                guid=model_version.guid, 
+                name=model_version.model.name, 
+                model_guid=model_version.model.guid),
             identity_id=identity_id,
             event=LogEvent.CONFIRM_VERSION.value
         ))

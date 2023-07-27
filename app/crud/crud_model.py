@@ -151,7 +151,10 @@ async def delete_by_guid(guid: str, session: AsyncSession, identity_id: str):
     await add_log(session, LogIn(
         type=LogType.MODEL_CATALOG.value,
         log_name="Удаление модели",
-        text="{{{name}}} {{{guid}}} удалена".format(model.name, model.guid),
+        text="{{{name}}} {{{guid}}} удалена".format(
+            name=model.name, 
+            guid=model.guid
+        ),
         identity_id=identity_id,
         event=LogEvent.DELETE_MODEL.value,
     ))
