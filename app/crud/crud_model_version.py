@@ -15,6 +15,7 @@ from app.crud.crud_tag import add_tags, update_tags
 from app.enums.enums import ModelVersionLevel, ModelVersionStatus
 from app.errors.checker import check_model_resources_error
 from app.models import LogType
+from app.models.log import LogEvent
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
     ModelRelation
 from app.schemas.access_label import AccessLabelIn
@@ -104,10 +105,10 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
         await add_log(session, LogIn(
             type=LogType.MODEL_CATALOG.value,
             log_name="Утверждение версии",
-            text="{{version}} {{guid}} в {{name}} {{model_guid}} утверждена".format(
+            text="{{{version}}} {{{guid}}} в {{{name}}} {{{model_guid}}} утверждена".format(
                 model_version.version, model_version.guid, model_version.model.name, model_version.model.guid),
             identity_id=identity_id,
-            event="Утверждение версии модели",
+            event=LogEvent.CONFIRM_VERSION.value
         ))
 
     model_version_update_in_data = {

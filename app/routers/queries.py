@@ -11,12 +11,15 @@ from app.crud.crud_queries import (
     check_on_query_uniqueness, set_query_status, select_running_query_exec, terminate_query, get_query_to_run
 )
 from app.crud.crud_tag import remove_redundant_tags
+from app.models.log import LogEvent, LogType
 from app.models.queries import QueryRunningStatus
+from app.schemas.log import LogIn
 from app.schemas.queries import (
     LinkedResourcesIn, QueryIn, ModelResourceOut, QueryManyOut, QueryExecutionOut,
     FullQueryOut, QueryUpdateIn
 )
 from app.dependencies import db_session, ag_session, get_user, get_token
+from app.services.log import add_log
 
 router = APIRouter(
     prefix='/queries',
@@ -57,7 +60,7 @@ async def read_linked_resources(
 
 
 @router.post('/')
-async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depends(get_token)):
+async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depends(get_token), user=Depends(get_user)):
     """
     1) check attrs for existence in the model version
     2) check owner guid for existence
@@ -79,6 +82,16 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
             query=query_in.dict(include={'aliases', 'filter', 'having'}), conn_string=conn_string,
             run_guid=query_exec_guid, token=token
         )
+
+        await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR.value,
+            log_name="Запуск запроса",
+            text="Запрос {{{name}}} {{{guid}}} был запущен".format(
+                name=query.name, guid=query.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.RUN_QUERY.value
+        ))
 
 
 @router.get('/', response_model=list[QueryManyOut])
@@ -108,6 +121,16 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
             run_guid=query_exec_guid, token=token
         )
 
+        await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR.value,
+            log_name="Запуск запроса",
+            text="Запрос {{{name}}} {{{guid}}} был запущен".format(
+                name=query.name, guid=query.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.RUN_QUERY.value
+        ))
+
 
 @router.get('/{guid}/executions/', response_model=list[QueryExecutionOut])
 async def read_query_running_history(guid: str, session=Depends(db_session), user=Depends(get_user)):
@@ -135,9 +158,29 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
         run_guid=query_exec_guid, token=token
     )
 
+    await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR,
+            log_name="Запуск запроса",
+            text="Запрос {{{name}}} {{{guid}}} был запущен".format(
+                query_to_run.name, query_to_run.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.RUN_QUERY.value
+        ))
+
 
 @router.put('/{guid}/cancel')
 async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_user)):
     await check_on_query_owner(guid, user['identity_id'], session)
     query_exec = await select_running_query_exec(guid, session)
     await terminate_query(query_exec.guid)
+
+    await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR,
+            log_name="Остановка запроса",
+            text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
+                query_exec.query.name, query_exec.query.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.STOP_QUERY.value
+        ))

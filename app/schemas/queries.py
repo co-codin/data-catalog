@@ -80,7 +80,7 @@ class QueryIn(BaseModel):
     name: str = Field(..., min_length=1)
     owner_guid: str
     desc: str | None = None
-    desc: str | None = None
+    model_version_id: int
     
     filter_type: QueryFilterType
 
