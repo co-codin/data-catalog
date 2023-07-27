@@ -310,7 +310,7 @@ async def create_objects_from_migration_out(
                 log_name="Добавление объекта на источник",
                 text="{name} {guid} был добавлен на {source_registry_name} {source_registry_guid}".format(
                     name=table.name, guid=guid, source_registry_name=source_registry.name,
-                    source_registry_guid=source_registry.id
+                    source_registry_guid=source_registry.guid
                 ),
                 identity_id="Системное событие",
                 event="Объект был добавлен на источник",

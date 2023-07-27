@@ -27,6 +27,27 @@ class LogText(Enum):
 class LogEvent(Enum):
     REMOVE = 'Объект был удален с источника'
 
+    CHANGE_OBJECT_TO_SOURCE = 'Изменение объекта на источнике'
+    DELETE_OBJECT_FROM_SOURCE = 'Удаление объекта на источнике'
+    ADD_OBJECT_TO_SOURCE = 'Добавление объекта на источнике'
+
+    ADD_OBJECT = 'Добавление объекта'
+    ADD_OBJECT_FAILED = 'Добавление объекта не удалось'
+
+    SYNC_OBJECT = 'Синхронизация объекта'
+    SYNC_OBJECT_FAILED = 'Синхронизация объекта не удалась'
+
+    ADD_SOURCE = 'Добавление источника'
+    ADD_SOURCE_FAILED = 'Добавление источника не удалось'
+
+    SYNC_SOURCE = 'Синхронизация источника'
+    SYNC_SOURCE_FAILED = 'Синхронизация источника не удалась'
+
+    CONFIRM_VERSION = 'Утверждение версии'
+    DELETE_MODEL = 'Удаление модели'
+
+
+
 
 class Log(Base):
     __tablename__ = 'logs'
