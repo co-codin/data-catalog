@@ -14,10 +14,11 @@ from app.crud.crud_tag import add_tags, update_tags
 
 from app.errors.errors import ModelNameAlreadyExist
 from app.models import LogType
+from app.models.log import LogEvent
 from app.models.models import Model, ModelVersion, ModelRelationOperation, ModelRelation, OperationBody, Operation
 from app.schemas.log import LogIn
 from app.schemas.model import ModelIn, ModelUpdateIn, ModelManyOut, ModelOut
-from app.services.log import log_remove, add_log
+from app.services.log import add_log
 
 
 async def create_model(model_in: ModelIn, session: AsyncSession) -> Model:
@@ -150,9 +151,9 @@ async def delete_by_guid(guid: str, session: AsyncSession, identity_id: str):
     await add_log(session, LogIn(
         type=LogType.MODEL_CATALOG.value,
         log_name="Удаление модели",
-        text="{{name}} {{guid}} удалена".format(model.name, model.guid),
+        text="{{{name}}} {{{guid}}} удалена".format(model.name, model.guid),
         identity_id=identity_id,
-        event="Удаление модели",
+        event=LogEvent.DELETE_MODEL.value,
     ))
 
     await session.execute(

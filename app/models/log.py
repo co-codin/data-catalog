@@ -14,6 +14,10 @@ class LogType(Enum):
     OPERATION_REGISTRY = 'Реестр операций'
     MODEL_CATALOG = 'Каталог моделей'
 
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
+
 
 class LogText(Enum):
     CREATE = '{name} {guid} был добавлен с {source_name} {source_guid}'
@@ -46,7 +50,9 @@ class LogEvent(Enum):
     CONFIRM_VERSION = 'Утверждение версии'
     DELETE_MODEL = 'Удаление модели'
 
-
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
 
 
 class Log(Base):
