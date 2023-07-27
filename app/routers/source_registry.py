@@ -11,6 +11,8 @@ from app.crud.crud_tag import remove_redundant_tags
 from app.crud.crud_comment import create_comment, edit_comment, remove_comment, verify_comment_owner, CommentOwnerTypes
 from app.enums.enums import SyncType
 from app.models import Status
+from app.models.log import LogEvent, LogType
+from app.schemas.log import LogIn
 
 from app.schemas.migration import MigrationPattern
 from app.schemas.model import ModelCommon
@@ -19,6 +21,7 @@ from app.schemas.source_registry import (
 )
 
 from app.dependencies import db_session, get_user, get_token
+from app.services.log import add_log
 
 from app.services.synchronizer import send_for_synchronization
 
@@ -40,6 +43,16 @@ async def add_source_registry(
         migration_pattern=migration_pattern, model_in=model_in, identity_id=user['identity_id'],
         sync_type=SyncType.ADD_SOURCE.value
     )
+    await add_log(session, LogIn(
+        type=LogType.SOURCE_REGISTRY.value,
+        log_name="Добавление источника",
+        text="{{{name}}} {{{guid}}} добавлен".format(
+            name=source_registry.name, 
+            guid=source_registry.guid
+        ),
+        identity_id=user['identity_id'],
+        event=LogEvent.DELETE_MODEL.value,
+    ))
     return {'guid': source_registry_model.guid}
 
 
