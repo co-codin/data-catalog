@@ -14,10 +14,6 @@ class LogType(Enum):
     OPERATION_REGISTRY = 'Реестр операций'
     MODEL_CATALOG = 'Каталог моделей'
 
-    @classmethod
-    def list(cls):
-        return list(map(lambda c: c.value, cls))
-
 
 class LogText(Enum):
     CREATE = '{name} {guid} был добавлен с {source_name} {source_guid}'
@@ -54,10 +50,6 @@ class LogEvent(Enum):
     RUN_QUERY_FAILED = 'Ошибка в результате выполнения запроса'
     STOP_QUERY = 'Остановка запроса'
     GET_QUERY_RESULT = 'Результат запроса получен'
-
-    @classmethod
-    def list(cls):
-        return list(map(lambda c: c.value, cls))
 
 
 class Log(Base):
