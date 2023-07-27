@@ -17,10 +17,10 @@ async def get_all(session=Depends(db_session), _=Depends(get_user), user_filter:
     return await get_all_logs(session)
 
 
-@router.get('/log/enum/events')
+@router.get('/enum/events')
 async def get_log_events():
     return LogEvent.list()
 
-@router.get('/log/enum/types')
+@router.get('/enum/types')
 async def get_log_types():
     return LogType.list()
