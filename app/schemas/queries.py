@@ -206,7 +206,7 @@ class QueryExecutionOut(BaseModel):
 
 
 class LinkedResourcesIn(BaseModel):
-    attribute_id: int = Field(..., gt=0)
+    resource_guid: str
     model_version_id: int = Field(..., gt=0)
 
 

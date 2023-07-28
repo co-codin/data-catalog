@@ -31,11 +31,11 @@ from app.schemas.tag import TagOut
 from app.config import settings
 
 
-async def select_model_resource_attr(attr_id: int, session: AsyncSession) -> ModelResourceAttribute:
+async def select_model_resource(resource_guid: str, session: AsyncSession) -> ModelResource:
     attr = await session.execute(
-        select(ModelResourceAttribute)
-        .options(load_only(ModelResourceAttribute.db_link))
-        .where(ModelResourceAttribute.id == attr_id)
+        select(ModelResource)
+        .options(load_only(ModelResource.db_link))
+        .where(ModelResource.guid == resource_guid)
     )
     attr = attr.scalars().first()
     return attr
