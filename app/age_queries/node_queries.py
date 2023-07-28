@@ -35,8 +35,7 @@ match_connected_tables = """
 """
 
 match_neighbor_tables = """
-    UNWIND {resources} as resource
-    MATCH (t:Table {{ name: resource }})-[]->(t_neighbor:Table)-[]->(t:Table)
+    MATCH (t:Table {name: %s})-[]->(t_neighbor:Table)-[]->(t:Table)
     RETURN t_neighbor
 """
 

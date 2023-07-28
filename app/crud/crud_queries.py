@@ -31,26 +31,24 @@ from app.schemas.tag import TagOut
 from app.config import settings
 
 
-async def select_model_resource_attrs(attr_ids: list[int], session: AsyncSession) -> list[str]:
-    attrs = await session.execute(
+async def select_model_resource_attr(attr_id: int, session: AsyncSession) -> ModelResourceAttribute:
+    attr = await session.execute(
         select(ModelResourceAttribute)
         .options(load_only(ModelResourceAttribute.db_link))
-        .where(ModelResourceAttribute.id.in_(attr_ids))
+        .where(ModelResourceAttribute.id == attr_id)
     )
-    attrs = attrs.scalars().all()
-    return [attr.db_link for attr in attrs]
+    attr = attr.scalars().first()
+    return attr
 
 
-def match_linked_resources(resource_names: set[str], graph_name: str, age_session: Age) -> set[str]:
-    constructed_tables = construct_match_connected_tables(resource_names)
-    constructed_tables = constructed_tables.as_string(age_session.connection)
-
+def match_linked_resources(resource_name: str, graph_name: str, age_session: Age) -> set[str]:
     age_session.setGraph(graph_name)
     cursor = age_session.execCypher(
-        match_neighbor_tables.format(resources=constructed_tables),
-        cols=['t_neighbor']
+        match_neighbor_tables,
+        cols=['t_neighbor'],
+        params=(resource_name,)
     )
-    return {table[0]['name'] for table in cursor} | resource_names
+    return {table[0]['name'] for table in cursor} | {resource_name, }
 
 
 async def filter_connected_resources(
@@ -58,7 +56,7 @@ async def filter_connected_resources(
 ) -> list[ModelResourceOut]:
     model_resources = await session.execute(
         select(ModelResource)
-        .options(load_only(ModelResource.guid, ModelResource.name))
+        .options(load_only(ModelResource.guid, ModelResource.name, ModelResource.db_link))
         .where(
             and_(
                 ModelResource.model_version_id == model_version_id,

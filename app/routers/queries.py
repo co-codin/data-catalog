@@ -4,7 +4,7 @@ import json
 from fastapi import APIRouter, Depends
 
 from app.crud.crud_queries import (
-    select_model_resource_attrs, match_linked_resources, filter_connected_resources, select_all_resources,
+    select_model_resource_attr, match_linked_resources, filter_connected_resources, select_all_resources,
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
     remove_query, check_owner_for_existence, create_query_execution, get_query_running_history,
     check_model_version_for_existence, check_on_query_owner, send_query_to_task_broker, select_conn_string,
@@ -40,17 +40,17 @@ async def read_linked_resources(
     5) match all directly connected tables with the ones from step 3
     6) filter them with model version id and db_link field
     """
-    model_resource_attrs = await select_model_resource_attrs(linked_resources_in.attribute_ids, session)
-    if not model_resource_attrs:
+    model_resource_attr = await select_model_resource_attr(linked_resources_in.attribute_id, session)
+    if not model_resource_attr:
         return await select_all_resources(linked_resources_in.model_version_id, session)
 
-    db, ns, _ = model_resource_attrs[0].split('.', maxsplit=2)
+    db, ns, _ = model_resource_attr.db_link.split('.', maxsplit=2)
     graph_name = f'{db}.{ns}'
 
-    resource_names = {db_link.split('.', maxsplit=3)[2] for db_link in model_resource_attrs}
+    resource_name = model_resource_attr.db_link.split('.', maxsplit=3)[2]
     loop = asyncio.get_running_loop()
     connected_resources = await loop.run_in_executor(
-        None, match_linked_resources, resource_names, graph_name, age_session
+        None, match_linked_resources, resource_name, graph_name, age_session
     )
     connected_db_links = [f'{graph_name}.{connected_resource}' for connected_resource in connected_resources]
     model_resources = await filter_connected_resources(
