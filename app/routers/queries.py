@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends
 
 from app.crud.crud_queries import (
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
-    remove_query, check_owner_for_existence, create_query_execution, get_query_running_history,
+    select_query_to_delete, check_owner_for_existence, create_query_execution, get_query_running_history,
     check_model_version_for_existence, check_on_query_owner, send_query_to_task_broker, select_conn_string,
-    check_on_query_uniqueness, set_query_status, select_running_query_exec, terminate_query, get_query_to_run
+    check_on_query_uniqueness, set_query_status, select_running_query_exec, terminate_query, get_query_to_run,
+    viewer_delete_query, owner_delete_query, is_allowed_to_view
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.models.log import LogEvent, LogType
@@ -105,8 +106,12 @@ async def read_query_running_history(guid: str, session=Depends(db_session), use
 
 
 @router.delete('/{guid}')
-async def delete_query(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    await remove_query(guid, user['identity_id'], session)
+async def delete_query(guid: str, session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
+    query = await select_query_to_delete(guid, session)
+    if await is_allowed_to_view(user['identity_id'], query) and query.owner_guid != user['identity_id']:
+        await viewer_delete_query(query.id, user['identity_id'], session)
+    else:
+        await owner_delete_query(query, user['identity_id'], token, session)
 
 
 @router.put('/execs/{query_exec_guid}')
