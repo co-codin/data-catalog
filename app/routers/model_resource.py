@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.crud.crud_model_resource import (
     read_resources_by_version_id, read_resources_by_guid, create_model_resource,
@@ -136,7 +136,7 @@ async def delete_model_resource_rels(
 
 @router.get('/{guid}/linked_resources', response_model=list[ModelResourceOut])
 async def get_linked_resources(
-        guid: str, model_version_id: int,
+        guid: str, model_version_id: int = Query(gt=0),
         session=Depends(db_session), age_session=Depends(ag_session), _=Depends(get_user)
 ):
     """
