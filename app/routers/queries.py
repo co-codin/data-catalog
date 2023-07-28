@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.crud.crud_queries import (
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
@@ -110,8 +110,10 @@ async def delete_query(guid: str, session=Depends(db_session), user=Depends(get_
     query = await select_query_to_delete(guid, session)
     if await is_allowed_to_view(user['identity_id'], query) and query.owner_guid != user['identity_id']:
         await viewer_delete_query(query.id, user['identity_id'], session)
-    else:
+    elif query.owner_guid == user['identity_id']:
         await owner_delete_query(query, user['identity_id'], token, session)
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
 
 @router.put('/execs/{query_exec_guid}')
