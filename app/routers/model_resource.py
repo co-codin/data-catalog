@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.crud.crud_model_resource import (
     read_resources_by_version_id, read_resources_by_guid, create_model_resource,
@@ -11,11 +11,14 @@ from app.crud.crud_model_resource import (
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.crud.crud_model_version import generate_version_number
+from app.crud.crud_queries import select_model_resource, match_linked_resources, select_all_resources, \
+    filter_connected_resources
 from app.enums.enums import ModelVersionLevel
 from app.schemas.model_resource_rel import ModelResourceRelIn, ModelResourceRelOut
 
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttrOutRelIn
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
+from app.schemas.queries import ModelResourceOut
 from app.schemas.source_registry import CommentIn
 
 from app.dependencies import db_session, get_user, get_token, ag_session
@@ -129,3 +132,34 @@ async def delete_model_resource_rels(
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, remove_model_resource_rel, gid, graph_name, age_session)
     await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.MINOR)
+
+
+@router.get('/{guid}/linked_resources', response_model=list[ModelResourceOut])
+async def get_linked_resources(
+        guid: str, model_version_id: int = Query(gt=0),
+        session=Depends(db_session), age_session=Depends(ag_session), _=Depends(get_user)
+):
+    """
+    1) select model resource attributes db links from db
+    2) take graph_name from db_link field
+    3) take resource names from db_link field
+    4) set required graph
+    5) match all directly connected tables with the ones from step 3
+    6) filter them with model version id and db_link field
+    """
+    model_resource = await select_model_resource(guid, session)
+    if not model_resource:
+        return await select_all_resources(model_version_id, session)
+
+    db, ns, resource_name = model_resource.db_link.split('.')
+    graph_name = f'{db}.{ns}'
+
+    loop = asyncio.get_running_loop()
+    connected_resources = await loop.run_in_executor(
+        None, match_linked_resources, resource_name, graph_name, age_session
+    )
+    connected_db_links = [f'{graph_name}.{connected_resource}' for connected_resource in connected_resources]
+    model_resources = await filter_connected_resources(
+        connected_db_links, model_version_id, session
+    )
+    return model_resources

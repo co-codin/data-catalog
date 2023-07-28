@@ -17,9 +17,11 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids
 from app.errors.query_errors import QueryNameAlreadyExist, QueryIsRunningError, QueryIsNotRunningError
+from app.models import LogType, LogEvent
 from app.models.queries import Query, QueryRunningStatus, QueryExecution, QueryViewer, query_viewers
 from app.models.models import ModelResource, ModelResourceAttribute, ModelVersion
 from app.models.sources import Model, SourceRegister
+from app.schemas.log import LogIn
 from app.services.crypto import decrypt
 from app.schemas.queries import (
     ModelResourceOut, AliasAttr, AliasAggregate, QueryIn, QueryManyOut, QueryOut, QueryModelManyOut,
@@ -29,28 +31,27 @@ from app.age_queries.node_queries import construct_match_connected_tables, match
 from app.schemas.tag import TagOut
 
 from app.config import settings
+from app.services.log import add_log
 
 
-async def select_model_resource_attrs(attr_ids: list[int], session: AsyncSession) -> list[str]:
-    attrs = await session.execute(
-        select(ModelResourceAttribute)
-        .options(load_only(ModelResourceAttribute.db_link))
-        .where(ModelResourceAttribute.id.in_(attr_ids))
+async def select_model_resource(resource_guid: str, session: AsyncSession) -> ModelResource:
+    attr = await session.execute(
+        select(ModelResource)
+        .options(load_only(ModelResource.db_link))
+        .where(ModelResource.guid == resource_guid)
     )
-    attrs = attrs.scalars().all()
-    return [attr.db_link for attr in attrs]
+    attr = attr.scalars().first()
+    return attr
 
 
-def match_linked_resources(resource_names: set[str], graph_name: str, age_session: Age) -> set[str]:
-    constructed_tables = construct_match_connected_tables(resource_names)
-    constructed_tables = constructed_tables.as_string(age_session.connection)
-
+def match_linked_resources(resource_name: str, graph_name: str, age_session: Age) -> set[str]:
     age_session.setGraph(graph_name)
     cursor = age_session.execCypher(
-        match_neighbor_tables.format(resources=constructed_tables),
-        cols=['t_neighbor']
+        match_neighbor_tables,
+        cols=['t_neighbor'],
+        params=(resource_name,)
     )
-    return {table[0]['name'] for table in cursor} | resource_names
+    return {table[0]['name'] for table in cursor} | {resource_name, }
 
 
 async def filter_connected_resources(
@@ -58,7 +59,7 @@ async def filter_connected_resources(
 ) -> list[ModelResourceOut]:
     model_resources = await session.execute(
         select(ModelResource)
-        .options(load_only(ModelResource.guid, ModelResource.name))
+        .options(load_only(ModelResource.guid, ModelResource.name, ModelResource.db_link))
         .where(
             and_(
                 ModelResource.model_version_id == model_version_id,
@@ -361,39 +362,67 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
     return query
 
 
-async def remove_query(guid: str, identity_guid: str, session: AsyncSession):
+async def select_query_to_delete(guid: str, session: AsyncSession) -> Query:
     query = await session.execute(
         select(Query)
-        .options(load_only(Query.owner_guid, Query.id))
+        .options(selectinload(Query.executions).load_only(QueryExecution.guid))
+        .options(load_only(Query.guid, Query.owner_guid, Query.status))
         .where(Query.guid == guid)
     )
     query = query.scalars().first()
 
     if not query:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return query
 
-    if query.owner_guid != identity_guid:
-        query_viewer = await session.execute(
-            select(QueryViewer)
-            .where(QueryViewer.guid == identity_guid)
+
+async def viewer_delete_query(query_id: int, identity_guid: str, session: AsyncSession):
+    query_viewer = await session.execute(
+        select(QueryViewer)
+        .where(QueryViewer.guid == identity_guid)
+    )
+    query_viewer = query_viewer.scalars().first()
+
+    if not query_viewer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    await session.execute(
+        delete(query_viewers)
+        .where(QueryViewer.id == query_viewer.id)
+        .where(Query.id == query_id)
+    )
+
+
+async def owner_delete_query(query: Query, identity_id: str, token: str, session: AsyncSession):
+    if query.status == QueryRunningStatus.RUNNING.value:
+        # cancel query
+        query_exec = await select_running_query_exec(query.guid, session)
+        await terminate_query(query_exec.guid)
+
+        await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR.value,
+            log_name="Остановка запроса",
+            text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
+                name=query_exec.query.name, guid=query_exec.query.guid
+            ),
+            identity_id=identity_id,
+            event=LogEvent.STOP_QUERY.value
+        ))
+
+    # delete from results table in query-executor
+    async with httpx.AsyncClient() as aclient:
+        headers = {'Authorization': f'Bearer {token}'}
+        response = await aclient.post(
+            f'{settings.api_query_executor}/v1/queries/delete-results',
+            headers=headers,
+            json={'guids': [exec.guid for exec in query.executions]}
         )
-        query_viewer = query_viewer.scalars().first()
-
-        if not query_viewer:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-        await session.execute(
-            delete(query_viewers)
-            .where(QueryViewer.id == query_viewer.id)
-            .where(Query.id == query.id)
-        )
-
-    else:
-        await session.execute(
-            delete(Query)
-            .where(Query.guid == guid)
-        )
-    await session.commit()
+        response.raise_for_status()
+    # delete locally
+    await session.execute(
+        delete(Query)
+        .where(Query.guid == query.guid)
+    )
 
 
 async def send_query_to_task_broker(query: dict, conn_string: str, run_guid: str, token: str):

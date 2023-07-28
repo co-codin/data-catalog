@@ -48,7 +48,7 @@ async def add_source_registry(
         log_name="Добавление источника",
         text="{{{name}}} {{{guid}}} добавлен".format(
             name=source_registry.name, 
-            guid=source_registry.guid
+            guid=source_registry_model.guid
         ),
         identity_id=user['identity_id'],
         event=LogEvent.DELETE_MODEL.value,

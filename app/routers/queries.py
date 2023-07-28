@@ -1,62 +1,28 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.crud.crud_queries import (
-    select_model_resource_attrs, match_linked_resources, filter_connected_resources, select_all_resources,
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
-    remove_query, check_owner_for_existence, create_query_execution, get_query_running_history,
+    select_query_to_delete, check_owner_for_existence, create_query_execution, get_query_running_history,
     check_model_version_for_existence, check_on_query_owner, send_query_to_task_broker, select_conn_string,
-    check_on_query_uniqueness, set_query_status, select_running_query_exec, terminate_query, get_query_to_run
+    check_on_query_uniqueness, set_query_status, select_running_query_exec, terminate_query, get_query_to_run,
+    viewer_delete_query, owner_delete_query, is_allowed_to_view
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.models.log import LogEvent, LogType
 from app.models.queries import QueryRunningStatus
 from app.schemas.log import LogIn
-from app.schemas.queries import (
-    LinkedResourcesIn, QueryIn, ModelResourceOut, QueryManyOut, QueryExecutionOut,
-    FullQueryOut, QueryUpdateIn
-)
-from app.dependencies import db_session, ag_session, get_user, get_token
+from app.schemas.queries import QueryIn, QueryManyOut, QueryExecutionOut, FullQueryOut, QueryUpdateIn
+
+from app.dependencies import db_session, get_user, get_token
 from app.services.log import add_log
 
 router = APIRouter(
     prefix='/queries',
     tags=['queries']
 )
-
-
-@router.get('/linked_resources', response_model=list[ModelResourceOut])
-async def read_linked_resources(
-        linked_resources_in: LinkedResourcesIn, session=Depends(db_session), age_session=Depends(ag_session),
-        _=Depends(get_user)
-):
-    """
-    1) select model resource attributes db links from db
-    2) take graph_name from db_link field
-    3) take resource names from db_link field
-    4) set required graph
-    5) match all directly connected tables with the ones from step 3
-    6) filter them with model version id and db_link field
-    """
-    model_resource_attrs = await select_model_resource_attrs(linked_resources_in.attribute_ids, session)
-    if not model_resource_attrs:
-        return await select_all_resources(linked_resources_in.model_version_id, session)
-
-    db, ns, _ = model_resource_attrs[0].split('.', maxsplit=2)
-    graph_name = f'{db}.{ns}'
-
-    resource_names = {db_link.split('.', maxsplit=3)[2] for db_link in model_resource_attrs}
-    loop = asyncio.get_running_loop()
-    connected_resources = await loop.run_in_executor(
-        None, match_linked_resources, resource_names, graph_name, age_session
-    )
-    connected_db_links = [f'{graph_name}.{connected_resource}' for connected_resource in connected_resources]
-    model_resources = await filter_connected_resources(
-        connected_db_links, linked_resources_in.model_version_id, session
-    )
-    return model_resources
 
 
 @router.post('/')
@@ -140,8 +106,14 @@ async def read_query_running_history(guid: str, session=Depends(db_session), use
 
 
 @router.delete('/{guid}')
-async def delete_query(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    await remove_query(guid, user['identity_id'], session)
+async def delete_query(guid: str, session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
+    query = await select_query_to_delete(guid, session)
+    if await is_allowed_to_view(user['identity_id'], query) and query.owner_guid != user['identity_id']:
+        await viewer_delete_query(query.id, user['identity_id'], session)
+    elif query.owner_guid == user['identity_id']:
+        await owner_delete_query(query, user['identity_id'], token, session)
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
 
 @router.put('/execs/{query_exec_guid}')

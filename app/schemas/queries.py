@@ -191,7 +191,6 @@ class FullQueryOut(QueryOut):
     model_version: QueryModelVersionManyOut
 
 
-
 class QueryExecutionOut(BaseModel):
     id: int
     guid: str
@@ -207,14 +206,15 @@ class QueryExecutionOut(BaseModel):
 
 
 class LinkedResourcesIn(BaseModel):
-    attribute_ids: list[int] = []
-    model_version_id: int
+    resource_guid: str
+    model_version_id: int = Field(..., gt=0)
 
 
 class ModelResourceOut(BaseModel):
     id: int
     guid: str
     name: str
+    db_link: str
 
     class Config:
         orm_mode = True

@@ -33,8 +33,8 @@ class QueryRunningPublishStatus(Enum):
 query_viewers = Table(
     'query_query_viewers',
     Base.metadata,
-    Column("query_id", ForeignKey("queries.id"), primary_key=True),
-    Column("viewer_id", ForeignKey("query_viewers.id"), primary_key=True)
+    Column("query_id", ForeignKey("queries.id", ondelete='CASCADE'), primary_key=True),
+    Column("viewer_id", ForeignKey("query_viewers.id", ondelete='CASCADE'), primary_key=True)
 )
 
 query_tags = Table(
