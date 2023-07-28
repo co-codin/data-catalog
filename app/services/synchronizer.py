@@ -337,7 +337,7 @@ async def delete_objects(applied_migration: MigrationOut, db_source: str, sessio
     if tables_to_delete:
         objects = await session.execute(
             select(Object)
-            .selectinload(Object.source)
+            .options(selectinload(Object.source))
             .where(Object.db_path.in_(tables_to_delete))
         )
         objects = objects.scalars().all()
