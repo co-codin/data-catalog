@@ -25,7 +25,8 @@ from app.schemas.log import LogIn
 from app.services.crypto import decrypt
 from app.schemas.queries import (
     ModelResourceOut, AliasAttr, AliasAggregate, QueryIn, QueryManyOut, QueryOut, QueryModelManyOut,
-    QueryModelVersionManyOut, FullQueryOut, QueryModelResourceAttributeOut, QueryExecutionOut, QueryUpdateIn
+    QueryModelVersionManyOut, FullQueryOut, QueryModelResourceAttributeOut, QueryExecutionOut, QueryUpdateIn,
+QueryModelResourceManyOut,
 )
 from app.age_queries.node_queries import construct_match_connected_tables, match_neighbor_tables
 from app.schemas.tag import TagOut
@@ -229,6 +230,9 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
             joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version)
         )
         .options(
+            joinedload(Query.model_resource, innerjoin=True).load_only(ModelResource.guid, ModelResource.name)
+        )
+        .options(
             joinedload(Query.model_version, innerjoin=True)
             .joinedload(ModelVersion.model, innerjoin=True)
             .joinedload(Query.model_resource).joinedload(ModelResource.attributes)
@@ -247,7 +251,7 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
 
     loop = asyncio.get_running_loop()
 
-    identities = await loop.run_in_executor(None, get_authors_data_by_guids, (query.owner_guid,), token)
+    identities = await loop.run_in_executor(None, get_authors_data_by_guids, (query.owner_guid), token)
     identity = identities[query.owner_guid]
     owner_info = [
         identity[key]
@@ -256,6 +260,7 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
     ]
 
     model_version_out = QueryModelVersionManyOut.from_orm(query.model_version)
+    model_resource_out = QueryModelResourceManyOut.from_orm(query.model_resource)
     model_out = QueryModelManyOut.from_orm(query.model_version.model)
     query_out = QueryOut.from_orm(query)
 
@@ -290,6 +295,7 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
         json=query_out.json_,
         model=model_out.dict(),
         model_version=model_version_out.dict(),
+        model_resource=model_resource_out.dict(),
         attrs=[attr for attr in attrs]
     )
 
