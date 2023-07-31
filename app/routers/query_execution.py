@@ -51,26 +51,6 @@ async def update_query_status(guid: str, status: QueryRunningStatus, session=Dep
     await set_query_status(guid, status, session)
 
 
-# router.get('/{guid}/download')
-# async def download_uery_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
-#     query_execution = await session.execute(
-#         select(QueryExecution)
-#         .where(QueryExecution.guid == guid)
-#     )
-#     query_execution = query_execution.scalars().first()
-
-#     if not query_execution:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    
-#     df = pd.DataFrame([query_execution.dict()])
-#     stream = io.StringIO()
-#     df.to_csv(stream, index=False)
-
-#     response = StreamingResponse(
-#         iter([stream.getvalue()]), media_type="text/csv")
-#     response.headers["Content-Disposition"] = "attachment; filename=export.csv"
-#     return response
-
 
 @router.put('/{guid}/publish', response_model=Dict[str, str])
 async def publish_query_execution(
