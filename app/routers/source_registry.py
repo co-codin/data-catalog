@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Dict, Set
 
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, HTTPException, status
 
 from app.crud.crud_source_registry import (
     check_on_uniqueness, create_source_registry, read_all, read_by_guid, edit_source_registry,
@@ -59,10 +59,23 @@ async def add_source_registry(
 @router.post('/{guid}/synchronize')
 async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session), user=Depends(get_user)):
     source_registry_synch = await read_source_registry_by_guid(guid, session)
-    await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern,
-                                   identity_id=user['identity_id'],  sync_type=SyncType.SYNC_SOURCE.value)
-    return {'msg': 'source registry has been sent to synchronize'}
+    try:
+        await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern,
+                                    identity_id=user['identity_id'],  sync_type=SyncType.SYNC_SOURCE.value)
+        return {'msg': 'source registry has been sent to synchronize'}
+    except:
+        await add_log(session, LogIn(
+            type=LogType.SOURCE_REGISTRY.value,
+            log_name="Синхронизация источника",
+            text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
+                guid=source_registry_synch.source_registry_guid,
+                name=source_registry_synch.source_registry_name,
+                identity_id=user['identity_id'],
+                event=LogEvent.SYNC_SOURCE.value,
+        )))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
+    
 
 @router.put('/{guid}', response_model=Dict[str, str])
 async def update_source_registry(
