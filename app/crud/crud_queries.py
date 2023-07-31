@@ -77,6 +77,7 @@ async def select_all_resources(model_version_id: int, session: AsyncSession) -> 
     model_resources = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.guid, ModelResource.name))
+        .options(selectinload(ModelResource.attributes))
         .where(ModelResource.model_version_id == model_version_id)
     )
     model_resources = model_resources.scalars().all()
