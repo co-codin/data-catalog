@@ -318,8 +318,10 @@ async def delete_children(parent_id: int, session: AsyncSession):
         .filter(ModelResourceAttribute.parent_id == parent_id)
     )
     children_model_resource_attributes = children_model_resource_attributes.scalars().all()
-    for children_model_resource_attribute in children_model_resource_attributes:
-        await delete_children(children_model_resource_attribute.id, session)
+
+    if len(children_model_resource_attributes) > 0:
+        for children_model_resource_attribute in children_model_resource_attributes:
+            await delete_children(children_model_resource_attribute.id, session)
 
     await session.execute(
         delete(ModelResourceAttribute)
@@ -341,7 +343,7 @@ async def remove_attribute(guid: str, session: AsyncSession):
         .where(ModelResource.id == model_resource_attribute.resource_id)
     )
     model_resource = model_resource.scalars().first()
-    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.CRITICAL)
+    await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.CRITICAL.value)
 
     await session.execute(
         delete(ModelResourceAttribute)
