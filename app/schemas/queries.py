@@ -81,6 +81,7 @@ class QueryIn(BaseModel):
     owner_guid: str
     desc: str | None = None
     model_version_id: int
+    model_resource_id: int
     
     filter_type: QueryFilterType
 
@@ -104,6 +105,7 @@ class QueryUpdateIn(BaseModel):
     owner_guid: str | None = None
     desc: str | None = None
     model_version_id: int | None = None
+    model_resource_id: int | None = None
     filter_type: QueryFilterType | None = None
 
     filters_displayed: str | None = None

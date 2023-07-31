@@ -38,6 +38,7 @@ async def select_model_resource(resource_guid: str, session: AsyncSession) -> Mo
     attr = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.db_link))
+        .options(selectinload(ModelResource.attributes))
         .where(ModelResource.guid == resource_guid)
     )
     attr = attr.scalars().first()
@@ -122,6 +123,7 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
             'name', 'desc', 'model_version_id',
             'owner_guid', 'filter_type',
             'filters_displayed', 'having_displayed',
+            'model_resource_id',
             }),
         json=json.dumps(query_json)
     )
@@ -214,8 +216,9 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
             joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version)
         )
         .options(
-            joinedload(Query.model_version, innerjoin=True).joinedload(ModelVersion.model, innerjoin=True)
-            .load_only(Model.guid, Model.name)
+            joinedload(Query.model_version, innerjoin=True)
+            .joinedload(ModelVersion.model, innerjoin=True)
+            .joinedload(Query.model_resource).joinedload(ModelResource.attributes)
         )
         .options(selectinload(Query.viewers))
         .options(selectinload(Query.tags))
