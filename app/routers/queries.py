@@ -60,6 +60,8 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
             event=LogEvent.RUN_QUERY.value
         ))
 
+    return query
+
 
 @router.get('/', response_model=list[QueryManyOut])
 async def read_queries(session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
