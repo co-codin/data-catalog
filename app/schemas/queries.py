@@ -91,7 +91,7 @@ class QueryIn(BaseModel):
     tags: list[str] = []
 
     aliases: dict[str, AliasAttr | AliasAggregate]
-    filter: SimpleFilter | BooleanFilter 
+    filter: SimpleFilter | BooleanFilter | None = None
     having: SimpleFilter | BooleanFilter | None = None
 
     run_immediately: bool
