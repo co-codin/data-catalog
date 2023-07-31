@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import db_session, get_user, get_token
 from app.crud.crud_model_quality import (
-    read_all, create, update_by_guid, read_by_guid, delete_by_guid, check_on_model_quality_uniqueness
+    create, update_by_guid, read_by_guid, delete_by_guid, check_on_model_quality_uniqueness
 )
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.schemas.model_quality import ModelQualityIn, ModelQualityUpdateIn
@@ -12,12 +12,6 @@ router = APIRouter(
     prefix="/model_qualities",
     tags=['model qualities']
 )
-
-
-# @router.get('/{model_version_id}')
-# async def get_all(model_version_id: str, session=Depends(db_session), user=Depends(get_user)):
-#     return await read_all(model_version_id, session)
-
 
 @router.post('/')
 async def create_model_quality(model_quality_in: ModelQualityIn, session=Depends(db_session), _=Depends(get_user)):

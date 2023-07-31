@@ -54,9 +54,21 @@ async def add_object(object_in: ObjectIn, migration_pattern: MigrationPattern, s
 async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session),
                       user=Depends(get_user)):
     object_synch = await read_object_by_guid(guid, session)
-    await send_for_synchronization(**object_synch.dict(), migration_pattern=migration_pattern,
-                                   identity_id=user['identity_id'],  sync_type=SyncType.SYNC_OBJECT.value)
-    return {'msg': 'object has been sent to synchronize'}
+    try:
+        await send_for_synchronization(**object_synch.dict(), migration_pattern=migration_pattern,
+                                identity_id=user['identity_id'],  sync_type=SyncType.SYNC_OBJECT.value)
+        return {'msg': 'object has been sent to synchronize'}
+    except:
+        await add_log(session, LogIn(
+            type=LogType.DATA_CATALOG.value,
+            log_name="Добавление объекта",
+            text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
+                guid=object_synch.object_guid,
+                name=object_synch.object_name,
+                identity_id=user['identity_id'],
+                event=LogEvent.ADD_OBJECT.value,
+        )))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
 
 @router.get('/', response_model=List[ObjectManyOut])
