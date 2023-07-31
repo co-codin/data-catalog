@@ -38,6 +38,7 @@ async def select_model_resource(resource_guid: str, session: AsyncSession) -> Mo
     attr = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.db_link))
+        .options(selectinload(ModelResource.attributes))
         .where(ModelResource.guid == resource_guid)
     )
     attr = attr.scalars().first()
@@ -122,6 +123,7 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
             'name', 'desc', 'model_version_id',
             'owner_guid', 'filter_type',
             'filters_displayed', 'having_displayed',
+            'model_resource_id',
             }),
         json=json.dumps(query_json)
     )
@@ -178,7 +180,7 @@ async def is_allowed_to_view(identity_guid: str, query: Query) -> int | None:
             return query.id
 
 
-async def get_identity_queries(identity_guid: str, session: AsyncSession) -> list[QueryManyOut]:
+async def get_identity_queries(identity_guid: str, token: str, session: AsyncSession) -> list[QueryManyOut]:
     queries = await session.execute(
         select(Query)
         .options(joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.id))
@@ -195,11 +197,24 @@ async def get_identity_queries(identity_guid: str, session: AsyncSession) -> lis
         await is_allowed_to_view(identity_guid, query): query
         for query in queries
     }
+    author_guids = {query.owner_guid for query in queries}
+
+    authors_data = await asyncio.get_running_loop().run_in_executor(
+        None, get_authors_data_by_guids, author_guids, token
+    )
+
+    for query in queries:
+        query.author_first_name = authors_data[query.owner_guid]['first_name']
+        query.author_last_name = authors_data[query.owner_guid]['last_name']
+        query.author_middle_name = authors_data[query.owner_guid]['middle_name']
+        query.author_email = authors_data[query.owner_guid]['email']
 
     return [
         QueryManyOut(
             id=query.id, guid=query.guid, name=query.name, model_name=query.model_version.model.name,
             updated_at=query.updated_at, status=query.status, desc=query.desc,
+            author_first_name=query.author_first_name, author_last_name=query.author_last_name,
+            author_middle_name=query.author_middle_name, author_email=query.author_email,
             tags=[TagOut.from_orm(tag) for tag in query.tags]
         )
         for is_allowed_to_see, query in is_allowed_to_see_to_queries.items()
@@ -214,8 +229,9 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
             joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version)
         )
         .options(
-            joinedload(Query.model_version, innerjoin=True).joinedload(ModelVersion.model, innerjoin=True)
-            .load_only(Model.guid, Model.name)
+            joinedload(Query.model_version, innerjoin=True)
+            .joinedload(ModelVersion.model, innerjoin=True)
+            .joinedload(Query.model_resource).joinedload(ModelResource.attributes)
         )
         .options(selectinload(Query.viewers))
         .options(selectinload(Query.tags))

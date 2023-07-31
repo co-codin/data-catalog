@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
-from app.models.models import ModelVersion
+from app.models.models import ModelResource, ModelVersion
 
 
 class QueryRunningStatus(Enum):
@@ -75,10 +75,13 @@ class Query(Base):
     having_displayed = Column(Text, nullable=False)
 
     owner_guid = Column(String(100), nullable=False)
+
+    model_resource_id = Column(BigInteger, ForeignKey(ModelResource.id))
     model_version_id = Column(BigInteger, ForeignKey(ModelVersion.id))
 
     viewers = relationship('QueryViewer', secondary=query_viewers)
     model_version = relationship('ModelVersion')
+    model_resource = relationship('ModelResource')
     tags = relationship('Tag', secondary=query_tags)
     executions = relationship('QueryExecution')
 
