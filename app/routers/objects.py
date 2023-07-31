@@ -29,8 +29,8 @@ router = APIRouter(
 @router.post('/')
 async def add_object(object_in: ObjectIn, migration_pattern: MigrationPattern, session=Depends(db_session),
                      user=Depends(get_user)):
+    object_to_synch = await create_object(object_in, session)
     try:
-        object_to_synch = await create_object(object_in, session)
         await send_for_synchronization(**object_to_synch.dict(), migration_pattern=migration_pattern,
                                 identity_id=user['identity_id'],  sync_type=SyncType.ADD_SOURCE.value)
         return {'guid': object_to_synch.object_guid}
