@@ -14,6 +14,7 @@ from app.crud.crud_model_version import generate_version_number
 from app.crud.crud_queries import select_model_resource, match_linked_resources, select_all_resources, \
     filter_connected_resources
 from app.enums.enums import ModelVersionLevel
+from app.errors.errors import ModelResourceHasAttributesError
 from app.schemas.model_resource_rel import ModelResourceRelIn, ModelResourceRelOut
 
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttrOutRelIn
@@ -54,7 +55,10 @@ async def update(guid: str, resource_update_in: ModelResourceUpdateIn, session=D
 
 @router.delete('/{guid}')
 async def delete(guid: str, session=Depends(db_session), _=Depends(get_user)):
-    return await delete_model_resource(guid, session)
+    try:
+        return await delete_model_resource(guid, session)
+    except:
+        raise ModelResourceHasAttributesError()
 
 
 @router.post('/{guid}/comments')
