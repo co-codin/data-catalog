@@ -57,7 +57,7 @@ class AliasAggregate(BaseModel):
 
 
 class SimpleFilter(BaseModel):
-    alias: str
+    alias: str = Field(..., min_length=1)
     operator: Operator
     value: (
             int | float | str | bool | datetime
@@ -91,7 +91,7 @@ class QueryIn(BaseModel):
     tags: list[str] = []
 
     aliases: dict[str, AliasAttr | AliasAggregate]
-    filter: SimpleFilter | BooleanFilter | None = None
+    filter: SimpleFilter | BooleanFilter 
     having: SimpleFilter | BooleanFilter | None = None
 
     run_immediately: bool
@@ -160,6 +160,13 @@ class QueryModelVersionManyOut(BaseModel):
     class Config:
         orm_mode = True
 
+class QueryModelResourceManyOut(BaseModel):
+    id: str
+    guid: str
+    name: str
+
+    class Config:
+        orm_mode = True
 
 class QueryModelResourceAttributeOut(BaseModel):
     id: int
@@ -180,6 +187,9 @@ class QueryOut(BaseModel):
     name: str
     desc: str | None = None
 
+    filters_displayed: str | None = None
+    having_displayed: str | None = None
+
     created_at: datetime
     updated_at: datetime
 
@@ -196,6 +206,7 @@ class FullQueryOut(QueryOut):
     attrs: list[QueryModelResourceAttributeOut]
     model: QueryModelManyOut
     model_version: QueryModelVersionManyOut
+    model_resource: QueryModelResourceManyOut
 
 
 class QueryExecutionOut(BaseModel):
