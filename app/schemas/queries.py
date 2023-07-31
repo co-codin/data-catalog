@@ -57,7 +57,7 @@ class AliasAggregate(BaseModel):
 
 
 class SimpleFilter(BaseModel):
-    alias: str
+    alias: str = Field(..., min_length=1)
     operator: Operator
     value: (
             int | float | str | bool | datetime
@@ -91,7 +91,7 @@ class QueryIn(BaseModel):
     tags: list[str] = []
 
     aliases: dict[str, AliasAttr | AliasAggregate]
-    filter: SimpleFilter | BooleanFilter | None = None
+    filter: SimpleFilter | BooleanFilter 
     having: SimpleFilter | BooleanFilter | None = None
 
     run_immediately: bool
