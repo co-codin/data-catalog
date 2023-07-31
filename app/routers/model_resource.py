@@ -138,6 +138,8 @@ async def delete_model_resource_rels(
     await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.MINOR)
 
 
+
+
 @router.get('/{guid}/linked_resources', response_model=list[ModelResourceOut])
 async def get_linked_resources(
         guid: str, model_version_id: int = Query(gt=0),

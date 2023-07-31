@@ -38,6 +38,7 @@ async def select_model_resource(resource_guid: str, session: AsyncSession) -> Mo
     attr = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.db_link))
+        .options(selectinload(ModelResource.attributes))
         .where(ModelResource.guid == resource_guid)
     )
     attr = attr.scalars().first()
