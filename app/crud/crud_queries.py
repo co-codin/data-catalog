@@ -123,6 +123,7 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
             'name', 'desc', 'model_version_id',
             'owner_guid', 'filter_type',
             'filters_displayed', 'having_displayed',
+            'model_resource_id',
             }),
         json=json.dumps(query_json)
     )
