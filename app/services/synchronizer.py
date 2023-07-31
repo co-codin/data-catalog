@@ -315,7 +315,9 @@ async def create_objects_from_migration_out(
                 type=LogType.DATA_CATALOG.value,
                 log_name="Добавление объекта на источник",
                 text="{{{name}}} {{{guid}}} был добавлен на {{{source_registry_name}}} {{{source_registry_guid}}}".format(
-                    name=table.name, guid=guid, source_registry_name=source_registry.name,
+                    name=table.name,
+                    guid=guid,
+                    source_registry_name=source_registry.name,
                     source_registry_guid=source_registry.guid
                 ),
                 identity_id="Системное событие",

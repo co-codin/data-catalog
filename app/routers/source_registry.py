@@ -38,22 +38,34 @@ async def add_source_registry(
 ):
     await check_on_uniqueness(name=source_registry.name, conn_string=source_registry.conn_string, session=session)
     source_registry_model = await create_source_registry(source_registry, session)
-    await send_for_synchronization(
-        source_registry_guid=source_registry_model.guid, conn_string=source_registry.conn_string,
-        migration_pattern=migration_pattern, model_in=model_in, identity_id=user['identity_id'],
-        sync_type=SyncType.ADD_SOURCE.value
-    )
-    await add_log(session, LogIn(
-        type=LogType.SOURCE_REGISTRY.value,
-        log_name="Добавление источника",
-        text="{{{name}}} {{{guid}}} добавлен".format(
-            name=source_registry.name, 
-            guid=source_registry_model.guid
-        ),
-        identity_id=user['identity_id'],
-        event=LogEvent.DELETE_MODEL.value,
-    ))
-    return {'guid': source_registry_model.guid}
+    try:
+        await send_for_synchronization(
+            source_registry_guid=source_registry_model.guid, conn_string=source_registry.conn_string,
+            migration_pattern=migration_pattern, model_in=model_in, identity_id=user['identity_id'],
+            sync_type=SyncType.ADD_SOURCE.value
+        )
+        await add_log(session, LogIn(
+            type=LogType.SOURCE_REGISTRY.value,
+            log_name="Добавление источника",
+            text="{{{name}}} {{{guid}}} добавлен".format(
+                name=source_registry.name, 
+                guid=source_registry_model.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.DELETE_MODEL.value,
+        ))
+        return {'guid': source_registry_model.guid}
+    except:
+        await add_log(session, LogIn(
+            type=LogType.SOURCE_REGISTRY.value,
+            log_name="Синхронизация источника",
+            text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
+                guid=source_registry_model.guid,
+                name=source_registry_model.guid,
+                identity_id=user['identity_id'],
+                event=LogEvent.SYNC_SOURCE.value,
+        )))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
 
 @router.post('/{guid}/synchronize')
