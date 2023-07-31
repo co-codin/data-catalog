@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 
 from app.crud.crud_object import (
@@ -30,9 +30,12 @@ router = APIRouter(
 async def add_object(object_in: ObjectIn, migration_pattern: MigrationPattern, session=Depends(db_session),
                      user=Depends(get_user)):
     object_to_synch = await create_object(object_in, session)
-    await send_for_synchronization(**object_to_synch.dict(), migration_pattern=migration_pattern,
-                                   identity_id=user['identity_id'],  sync_type=SyncType.ADD_SOURCE.value)
-    return {'guid': object_to_synch.object_guid}
+    try:
+        await send_for_synchronization(**object_to_synch.dict(), migration_pattern=migration_pattern,
+                                identity_id=user['identity_id'],  sync_type=SyncType.ADD_SOURCE.value)
+        return {'guid': object_to_synch.object_guid}
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
 
 @router.post('/{guid}/synchronize')
