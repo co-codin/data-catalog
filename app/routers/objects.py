@@ -1,5 +1,8 @@
 import asyncio
 from typing import Dict, List
+from app.models.log import LogEvent, LogType
+from app.schemas.log import LogIn
+from app.services.log import add_log
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -35,6 +38,15 @@ async def add_object(object_in: ObjectIn, migration_pattern: MigrationPattern, s
                                 identity_id=user['identity_id'],  sync_type=SyncType.ADD_SOURCE.value)
         return {'guid': object_to_synch.object_guid}
     except:
+        await add_log(session, LogIn(
+            type=LogType.DATA_CATALOG.value,
+            log_name="Добавление объекта",
+            text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
+                guid=object_to_synch.object_guid,
+                name=object_to_synch.object_name,
+                identity_id=user['identity_id'],
+                event=LogEvent.ADD_OBJECT.value,
+        )))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
 
