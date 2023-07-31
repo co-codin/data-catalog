@@ -134,6 +134,11 @@ class QueryManyOut(BaseModel):
     status: QueryRunningStatus
     tags: list[TagOut] = []
 
+    author_first_name: str | None = None
+    author_last_name: str | None = None
+    author_middle_name: str | None = None
+    author_email: str | None = None
+
     class Config:
         orm_mode = True
 
