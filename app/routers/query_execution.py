@@ -1,15 +1,16 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict
-# import io
 from starlette import status
-# from starlette.responses import StreamingResponse
 from app.crud.crud_queries import set_query_status
 from app.models.log import LogEvent, LogType
-from app.models.queries import QueryExecution, QueryRunningStatus
-from app.dependencies import db_session, get_user
+from app.models.queries import QueryExecution, QueryRunningPublishStatus, QueryRunningStatus
+from app.dependencies import db_session, get_user, get_token
 from sqlalchemy import update, select
 from app.schemas.log import LogIn
-# import pandas as pd
+import requests
+from app.config import settings
+
 
 from app.services.clickhouse import ClickhouseService
 from app.services.log import add_log
@@ -51,85 +52,89 @@ async def update_query_status(guid: str, status: QueryRunningStatus, session=Dep
     await set_query_status(guid, status, session)
 
 
-# router.get('/{guid}/download')
-# async def download_uery_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
-#     query_execution = await session.execute(
-#         select(QueryExecution)
-#         .where(QueryExecution.guid == guid)
-#     )
-#     query_execution = query_execution.scalars().first()
-
-#     if not query_execution:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    
-#     df = pd.DataFrame([query_execution.dict()])
-#     stream = io.StringIO()
-#     df.to_csv(stream, index=False)
-
-#     response = StreamingResponse(
-#         iter([stream.getvalue()]), media_type="text/csv")
-#     response.headers["Content-Disposition"] = "attachment; filename=export.csv"
-#     return response
-
 
 @router.put('/{guid}/publish', response_model=Dict[str, str])
 async def publish_query_execution(
-        guid: str, publish_name: str, publish_status: str, force: bool = True, session=Depends(db_session), _=Depends(get_user)
+        guid: str, publish_name: str, force: bool = True, session=Depends(db_session), token=Depends(get_token)
 ):
-    query_execution = await session.execute(
-        select(QueryExecution)
-        .where(QueryExecution.guid == guid)
-    )
-    query_execution = query_execution.scalars().first()
-
-    if not query_execution:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
     clickhouseService = ClickhouseService()
     clickhouseService.connect()
     clickhouseService.createPublishTable(guid)
     search_result = clickhouseService.getByName(guid, publish_name)
+
     if force:
         if len(search_result.result_set):
             await session.execute(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_name=publish_name
+                    publish_name=publish_name,
+                    publish_status=QueryRunningPublishStatus.PUBLISHING.value,
                 )
             )
-            await clickhouseService.dropPublishTable(guid)
-            clickhouseService.createPublishTable(guid)
-            clickhouseService.insert(
-                guid=guid,
-                query_id=query_execution.query_id,
-                published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
-                publish_name=publish_name,
-                publish_status=publish_status,
-                status=publish_status,
-                finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
+            success = await asyncio.get_running_loop().run_in_executor(
+                None, send_publish, guid, force, token
+            )
+            publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
+            await session.execute(
+                update(QueryExecution)
+                .where(QueryExecution.guid == guid)
+                .values(
+                    publish_status=publish_status,
+                )
             )
         else:
-            clickhouseService.insert(
-                guid=guid,
-                query_id=query_execution.query_id,
-                published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
-                publish_name=publish_name,
-                publish_status=publish_status,
-                status=publish_status,
-                finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
+
+            await session.execute(
+                update(QueryExecution)
+                .where(QueryExecution.guid == guid)
+                .values(
+                    publish_status=QueryRunningPublishStatus.PUBLISHING.value,
+                )
+            )
+            success = await asyncio.get_running_loop().run_in_executor(
+                None, send_publish, guid, force, token
+            )
+            publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
+            await session.execute(
+                update(QueryExecution)
+                .where(QueryExecution.guid == guid)
+                .values(
+                    publish_status=publish_status,
+                )
             )
     else:
         if len(search_result.result_set):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Publish name exists. Try change it')
         else:
-            clickhouseService.insert(
-                guid=guid,
-                query_id=query_execution.query_id,
-                published_at=query_execution.started_at.strftime("%m/%d/%Y, %H:%M:%S"),
-                publish_name=publish_name,
-                publish_status=publish_status,
-                status=publish_status,
-                finished_at=query_execution.finished_at.strftime("%m/%d/%Y, %H:%M:%S")
+            await session.execute(
+                update(QueryExecution)
+                .where(QueryExecution.guid == guid)
+                .values(
+                    publish_status=QueryRunningPublishStatus.PUBLISHING.value,
+                )
             )
+            success = await asyncio.get_running_loop().run_in_executor(
+                None, send_publish, guid, force, token
+            )
+            publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
+            await session.execute(
+                update(QueryExecution)
+                .where(QueryExecution.guid == guid)
+                .values(
+                    publish_status=publish_status,
+                )
+            )
+
+
     return {"publish_name": publish_name, "publish_status": publish_name}
+
+
+async def send_publish(guid: str, force: bool, token: str) -> dict[str, dict[str, str]]:
+    response = requests.post(
+        f'{settings.api_query_executor}/{guid}/publish',
+        json={'force': force},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    status = int(response.status_code())
+    return status == 200
