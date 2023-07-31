@@ -160,6 +160,13 @@ class QueryModelVersionManyOut(BaseModel):
     class Config:
         orm_mode = True
 
+class QueryModelResourceManyOut(BaseModel):
+    id: str
+    guid: str
+    name: str
+
+    class Config:
+        orm_mode = True
 
 class QueryModelResourceAttributeOut(BaseModel):
     id: int
@@ -180,6 +187,9 @@ class QueryOut(BaseModel):
     name: str
     desc: str | None = None
 
+    filters_displayed: str | None = None
+    having_displayed: str | None = None
+
     created_at: datetime
     updated_at: datetime
 
@@ -196,6 +206,7 @@ class FullQueryOut(QueryOut):
     attrs: list[QueryModelResourceAttributeOut]
     model: QueryModelManyOut
     model_version: QueryModelVersionManyOut
+    model_resource: QueryModelResourceManyOut
 
 
 class QueryExecutionOut(BaseModel):
