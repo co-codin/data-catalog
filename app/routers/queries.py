@@ -62,8 +62,8 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
 
 
 @router.get('/', response_model=list[QueryManyOut])
-async def read_queries(session=Depends(db_session), user=Depends(get_user)):
-    return await get_identity_queries(user['identity_id'], session)
+async def read_queries(session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
+    return await get_identity_queries(user['identity_id'], token, session)
 
 
 @router.get('/{guid}', response_model=FullQueryOut)
