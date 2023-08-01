@@ -39,7 +39,9 @@ async def select_model_resource(resource_guid: str, session: AsyncSession) -> Mo
     attr = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.db_link))
-        .options(selectinload(ModelResource.attributes))
+        .options(
+            selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types)
+        )
         .where(ModelResource.guid == resource_guid)
     )
     attr = attr.scalars().first()
@@ -62,6 +64,7 @@ async def filter_connected_resources(
     model_resources = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.guid, ModelResource.name, ModelResource.db_link))
+        .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .where(
             and_(
                 ModelResource.model_version_id == model_version_id,
@@ -70,14 +73,14 @@ async def filter_connected_resources(
         )
     )
     model_resources = model_resources.scalars().all()
-    return [ModelResourceOut.from_orm(model_resource) for model_resource in model_resources]
+    return model_resources
 
 
 async def select_all_resources(model_version_id: int, session: AsyncSession) -> list[ModelResourceOut]:
     model_resources = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.guid, ModelResource.name))
-        .options(selectinload(ModelResource.attributes))
+        .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .where(ModelResource.model_version_id == model_version_id)
     )
     model_resources = model_resources.scalars().all()
@@ -228,15 +231,12 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
     query = await session.execute(
         select(Query)
         .options(
-            joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version)
-        )
-        .options(
+            joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version),
             joinedload(Query.model_resource, innerjoin=True).load_only(ModelResource.guid, ModelResource.name)
         )
         .options(
             joinedload(Query.model_version, innerjoin=True)
             .joinedload(ModelVersion.model, innerjoin=True)
-            .joinedload(Query.model_resource).joinedload(ModelResource.attributes)
         )
         .options(selectinload(Query.viewers))
         .options(selectinload(Query.tags))

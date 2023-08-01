@@ -140,7 +140,7 @@ async def delete_model_resource_rels(
 
 
 
-@router.get('/{guid}/linked_resources', response_model=list[ModelResourceOut])
+@router.get('/{guid}/linked_resources')
 async def get_linked_resources(
         guid: str, model_version_id: int = Query(gt=0),
         session=Depends(db_session), age_session=Depends(ag_session), _=Depends(get_user)
