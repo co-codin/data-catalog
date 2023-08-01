@@ -71,7 +71,7 @@ async def filter_connected_resources(
         )
     )
     model_resources = model_resources.scalars().all()
-    return [ModelResourceOut.from_orm(model_resource) for model_resource in model_resources]
+    return model_resources
 
 
 async def select_all_resources(model_version_id: int, session: AsyncSession) -> list[ModelResourceOut]:
