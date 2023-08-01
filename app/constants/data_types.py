@@ -8,7 +8,10 @@ SYS_DATA_TYPE_TO_ID = {
     'datetime': 7,
     'code': 8,
     'b64binary': 9,
-    'resource': 10
+    'resource': 10,
+    'json': 11,
+    'xml': 12,
+    'list': 13
 }
 
 ID_TO_SYS_DATA_TYPE = {
@@ -21,5 +24,8 @@ ID_TO_SYS_DATA_TYPE = {
     7: 'Дата и время',
     8: 'Код',
     9: 'b64binary',
-    10: 'Ресурс'
+    10: 'Ресурс',
+    11: 'JSON',
+    12: 'XML',
+    13: 'Массив'
 }
