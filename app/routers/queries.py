@@ -35,7 +35,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
     5) send query to task broker
     """
     await check_on_query_uniqueness(name=query_in.name, session=session)
-    await check_alias_attrs_for_existence(query_in.aliases, session)
+    # await check_alias_attrs_for_existence(query_in.aliases, session)
     await check_owner_for_existence(query_in.owner_guid, token)
     await check_model_version_for_existence(query_in.model_version_id, session)
 
@@ -45,7 +45,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
         query_exec_guid = await create_query_execution(query, session)
         conn_string = await select_conn_string(query.model_version_id, session)
         await send_query_to_task_broker(
-            query=query_in.dict(include={'aliases', 'filter', 'having'}), conn_string=conn_string,
+            query=query_in.dict(include={'aliases', 'filter', 'having', 'distinct'}), conn_string=conn_string,
             run_guid=query_exec_guid, token=token
         )
 
