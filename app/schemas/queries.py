@@ -95,7 +95,7 @@ class QueryIn(BaseModel):
     having: SimpleFilter | BooleanFilter | None = None
 
     run_immediately: bool
-    distinct: bool = Field(..., alias='unique_only')
+    distinct: bool = Field(..., alias='unique_only', default=False)
 
     class Config:
         use_enum_values = True
