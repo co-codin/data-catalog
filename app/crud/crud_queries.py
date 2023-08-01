@@ -39,7 +39,9 @@ async def select_model_resource(resource_guid: str, session: AsyncSession) -> Mo
     attr = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.db_link))
-        .options(selectinload(ModelResource.attributes))
+        .options(
+            selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types)
+        )
         .where(ModelResource.guid == resource_guid)
     )
     attr = attr.scalars().first()
@@ -62,7 +64,7 @@ async def filter_connected_resources(
     model_resources = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.guid, ModelResource.name, ModelResource.db_link))
-        .options(selectinload(ModelResource.attributes))
+        .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .where(
             and_(
                 ModelResource.model_version_id == model_version_id,
@@ -78,7 +80,7 @@ async def select_all_resources(model_version_id: int, session: AsyncSession) -> 
     model_resources = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.guid, ModelResource.name))
-        .options(selectinload(ModelResource.attributes))
+        .options(selectinload(ModelResource.attributes).selectinload(ModelResourceAttribute.model_data_types))
         .where(ModelResource.model_version_id == model_version_id)
     )
     model_resources = model_resources.scalars().all()
