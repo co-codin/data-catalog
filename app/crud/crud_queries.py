@@ -237,7 +237,7 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
         .options(
             joinedload(Query.model_version, innerjoin=True)
             .joinedload(ModelVersion.model, innerjoin=True)
-            .joinedload(Query.model_resource).joinedload(ModelResource.attributes)
+            .joinedload(Query.model_resource, innerjoin=True)
         )
         .options(selectinload(Query.viewers))
         .options(selectinload(Query.tags))
