@@ -229,15 +229,12 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
     query = await session.execute(
         select(Query)
         .options(
-            joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version)
-        )
-        .options(
+            joinedload(Query.model_version, innerjoin=True).load_only(ModelVersion.guid, ModelVersion.version),
             joinedload(Query.model_resource, innerjoin=True).load_only(ModelResource.guid, ModelResource.name)
         )
         .options(
             joinedload(Query.model_version, innerjoin=True)
             .joinedload(ModelVersion.model, innerjoin=True)
-            .joinedload(Query.model_resource, innerjoin=True)
         )
         .options(selectinload(Query.viewers))
         .options(selectinload(Query.tags))
