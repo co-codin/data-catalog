@@ -475,6 +475,7 @@ async def set_query_status(query_exec_guid: str, running_status: QueryRunningSta
 
     query_exec.status = running_status.value
     query_exec.query.status = running_status.value
+    query_exec.finished_at = datetime.utcnow()
 
     session.add(query_exec)
     session.add(query_exec.query)
