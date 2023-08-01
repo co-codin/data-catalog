@@ -62,6 +62,7 @@ async def filter_connected_resources(
     model_resources = await session.execute(
         select(ModelResource)
         .options(load_only(ModelResource.guid, ModelResource.name, ModelResource.db_link))
+        .options(selectinload(ModelResource.attributes))
         .where(
             and_(
                 ModelResource.model_version_id == model_version_id,
