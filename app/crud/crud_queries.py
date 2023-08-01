@@ -252,7 +252,7 @@ async def get_query(guid: str, session: AsyncSession, identity_guid: str, token:
 
     loop = asyncio.get_running_loop()
 
-    identities = await loop.run_in_executor(None, get_authors_data_by_guids, (query.owner_guid), token)
+    identities = await loop.run_in_executor(None, get_authors_data_by_guids, (query.owner_guid,), token)
     identity = identities[query.owner_guid]
     owner_info = [
         identity[key]

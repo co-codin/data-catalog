@@ -160,6 +160,7 @@ class QueryModelVersionManyOut(BaseModel):
     class Config:
         orm_mode = True
 
+
 class QueryModelResourceManyOut(BaseModel):
     id: str
     guid: str
@@ -167,6 +168,7 @@ class QueryModelResourceManyOut(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class QueryModelResourceAttributeOut(BaseModel):
     id: int

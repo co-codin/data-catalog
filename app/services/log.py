@@ -14,23 +14,24 @@ async def get_all_logs(session: AsyncSession, token: str):
     if not logs:
         return logs
     
-    author_guids = {log.identity_id  for log in logs}
+    author_guids = {log.identity_id for log in logs}
     
     authors_data = await asyncio.get_running_loop().run_in_executor(
         None, get_authors_data_by_guids, author_guids, token
     )
 
-    set_log_author_data(logs, authors_data)
+    logs = await set_log_author_data(logs, authors_data)
 
     return logs
 
-async def set_log_author_data(logs: list, authors_data: dict[str, dict[str, str]]):
+async def set_log_author_data(logs, authors_data: dict[str, dict[str, str]]):
     for log in logs:
         if log.identity_id != 'Системное событие':
             log.author_first_name = authors_data[log.identity_id]['first_name']
             log.author_last_name = authors_data[log.identity_id]['last_name']
             log.author_middle_name = authors_data[log.identity_id]['middle_name']
             log.author_email = authors_data[log.identity_id]['email']
+    return logs
 
 async def add_log(session: AsyncSession, log_in: LogIn):
     log = Log(
