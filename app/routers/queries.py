@@ -45,7 +45,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
         query_exec_guid = await create_query_execution(query, session)
         conn_string = await select_conn_string(query.model_version_id, session)
         await send_query_to_task_broker(
-            query=query_in.dict(include={'aliases', 'filter', 'having'}), conn_string=conn_string,
+            query=query_in.dict(include={'aliases', 'filter', 'having', 'distinct'}), conn_string=conn_string,
             run_guid=query_exec_guid, token=token
         )
 

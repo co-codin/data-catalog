@@ -120,7 +120,7 @@ async def check_on_query_uniqueness(name: str, session: AsyncSession, guid: Opti
 
 
 async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
-    query_json = query_in.dict(include={'aliases', 'filter', 'having'})
+    query_json = query_in.dict(include={'aliases', 'filter', 'having', 'distinct'})
     query = Query(
         guid=str(uuid.uuid4()),
         status=QueryRunningStatus.CREATED.value,
