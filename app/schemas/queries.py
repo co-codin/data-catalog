@@ -193,6 +193,8 @@ class QueryOut(BaseModel):
     filters_displayed: str | None = None
     having_displayed: str | None = None
 
+    filter_type: str | None = None
+
     created_at: datetime
     updated_at: datetime
 
