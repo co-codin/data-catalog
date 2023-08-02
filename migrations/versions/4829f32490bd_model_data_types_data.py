@@ -110,6 +110,27 @@ def upgrade() -> None:
             json=json.loads('{}'),
             xml='<xml>'
         ),
+        dict(
+            id=11,
+            name='JSON',
+            desc='Тип данных, предназначенный для хранения данных JSON',
+            json=json.loads('{}'),
+            xml='<xml>'
+        ),
+        dict(
+            id=12,
+            name='XML',
+            desc='Тип данных, предназначенный для хранения XML-данных',
+            json=json.loads('{}'),
+            xml='<xml>'
+        ),
+        dict(
+            id=13,
+            name='Массив',
+            desc='Тип данных, предназначенный для хранения массива элементов',
+            json=json.loads('{}'),
+            xml='<xml>'
+        )
     ]
 
     for data in dataset:
