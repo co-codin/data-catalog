@@ -11,6 +11,7 @@ from app.crud.crud_queries import (
     viewer_delete_query, owner_delete_query, is_allowed_to_view
 )
 from app.crud.crud_tag import remove_redundant_tags
+from app.errors.query_errors import QueryNameAlreadyExist
 from app.models.log import LogEvent, LogType
 from app.models.queries import Query, QueryRunningStatus
 from app.schemas.log import LogIn
@@ -34,8 +35,12 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
     4) create json query for task broker using aliases, filter and having
     5) send query to task broker
     """
-    await check_on_query_uniqueness(name=query_in.name, session=session)
+    try:
+        await check_on_query_uniqueness(name=query_in.name, session=session)
+    except:
+        raise QueryNameAlreadyExist(name)
     # await check_alias_attrs_for_existence(query_in.aliases, session)
+    
     await check_owner_for_existence(query_in.owner_guid, token)
     await check_model_version_for_existence(query_in.model_version_id, session)
 
