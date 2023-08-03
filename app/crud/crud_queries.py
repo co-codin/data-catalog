@@ -368,7 +368,7 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
 
     tags = query_update_in_data['tags']
 
-    for key in ['aliases', 'filter', 'having', 'run_immediately', 'tags']:
+    for key in ['aliases', 'filter', 'having', 'run_immediately', 'tags', 'distinct']:
         if key in query_update_in_data:
             del query_update_in_data[key]
 
