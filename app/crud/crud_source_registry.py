@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, or_
-from sqlalchemy.orm import selectinload, load_only
+from sqlalchemy.orm import selectinload, load_only, joinedload
 
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
@@ -117,8 +117,7 @@ async def read_all(session: AsyncSession) -> List[SourceRegistryManyOut]:
     if not source_registries:
         return source_registries
 
-    source_registries_out = [SourceRegistryManyOut.from_orm(source_registry) for source_registry in source_registries]
-    return source_registries_out
+    return source_registries
 
 
 async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRegistryOut:
@@ -126,6 +125,7 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         select(SourceRegister)
         .options(selectinload(SourceRegister.tags))
         .options(selectinload(SourceRegister.comments))
+        .options(joinedload(SourceRegister.models))
         .filter(SourceRegister.guid == guid)
     )
 
@@ -134,17 +134,17 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
-    source_registry_out = SourceRegistryOut.from_orm(source_registry)
-    source_registry_out.conn_string = decrypted_conn_string
 
-    if source_registry_out.comments:
+    source_registry.conn_string = decrypted_conn_string
+
+    if source_registry.comments:
         author_guids = {comment.author_guid for comment in source_registry.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
             None, get_authors_data_by_guids, author_guids, token
         )
-        set_author_data(source_registry_out.comments, authors_data)
+        set_author_data(source_registry.comments, authors_data)
 
-    return source_registry_out
+    return source_registry
 
 
 async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> SourceRegistrySynch:

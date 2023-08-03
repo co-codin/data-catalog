@@ -2,7 +2,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
-
+from sqlalchemy import update
 from app.crud.crud_queries import (
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
     select_query_to_delete, check_owner_for_existence, create_query_execution, get_query_running_history,
@@ -12,7 +12,7 @@ from app.crud.crud_queries import (
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.models.log import LogEvent, LogType
-from app.models.queries import QueryRunningStatus
+from app.models.queries import Query, QueryRunningStatus
 from app.schemas.log import LogIn
 from app.schemas.queries import QueryIn, QueryManyOut, QueryExecutionOut, FullQueryOut, QueryUpdateIn
 
@@ -72,6 +72,16 @@ async def read_queries(session=Depends(db_session), user=Depends(get_user), toke
 async def read_query(guid: str, session=Depends(db_session), token=Depends(get_token), user=Depends(get_user)):
     return await get_query(guid, session, user['identity_id'], token)
 
+
+@router.put('/internal/mark-error/{guid}')
+async def update_query(guid: str, session=Depends(db_session)):
+   await session.execute(
+        update(Query)
+        .where(Query.guid == guid)
+        .values(
+           status="error"
+        )
+    )
 
 @router.put('/{guid}')
 async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
