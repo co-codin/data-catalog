@@ -119,6 +119,7 @@ class QueryUpdateIn(BaseModel):
     having: SimpleFilter | BooleanFilter | None = None
 
     run_immediately: bool | None = None
+    distinct: bool | None = Field(False, alias='unique_only')
 
     class Config:
         use_enum_values = True
