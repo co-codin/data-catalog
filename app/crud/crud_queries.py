@@ -363,6 +363,9 @@ async def alter_query(guid: str, query_update_in: QueryUpdateIn, session: AsyncS
     if 'having' in query_update_in_data:
         query_json['having'] = query_update_in_data['having']
 
+    if 'distinct' in query_update_in_data:
+        query_json['distinct'] = query_update_in_data['distinct']
+
     tags = query_update_in_data['tags']
 
     for key in ['aliases', 'filter', 'having', 'run_immediately', 'tags']:
