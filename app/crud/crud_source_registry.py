@@ -111,7 +111,6 @@ async def read_all(session: AsyncSession) -> List[SourceRegistryManyOut]:
         select(SourceRegister)
         .options(selectinload(SourceRegister.tags))
         .options(selectinload(SourceRegister.comments))
-        .options(joinedload(SourceRegister.models))
         .order_by(SourceRegister.created_at)
     )
     source_registries = source_registries.scalars().all()
