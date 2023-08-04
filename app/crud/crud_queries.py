@@ -423,7 +423,7 @@ async def owner_delete_query(query: Query, identity_id: str, token: str, session
     if query.status == QueryRunningStatus.RUNNING.value:
         # cancel query
         query_exec = await select_running_query_exec(query.guid, session)
-        await terminate_query(query_exec.guid)
+        # await terminate_query(query_exec.guid)
 
         await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
