@@ -165,6 +165,14 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
 async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_user)):
     await check_on_query_owner(guid, user['identity_id'], session)
     query_exec = await select_running_query_exec(guid, session)
+
+    await session.execute(
+        update(Query)
+        .where(Query.guid == guid)
+        .values(
+            status=QueryRunningStatus.CANCELED.value
+        )
+    )
     await terminate_query(query_exec.guid)
 
     await add_log(session, LogIn(
