@@ -10,6 +10,7 @@ from sqlalchemy import update, select
 from app.schemas.log import LogIn
 import requests
 from app.config import settings
+from app.schemas.queries import PublishIn
 
 
 from app.services.clickhouse import ClickhouseService
@@ -55,25 +56,25 @@ async def update_query_status(guid: str, status: QueryRunningStatus, session=Dep
 
 @router.put('/{guid}/publish', response_model=Dict[str, str])
 async def publish_query_execution(
-        guid: str, publish_name: str, force: bool = True, session=Depends(db_session), token=Depends(get_token)
+        guid: str, publish_in: PublishIn, session=Depends(db_session), token=Depends(get_token)
 ):
     clickhouseService = ClickhouseService()
     clickhouseService.connect()
     clickhouseService.createPublishTable(guid)
-    search_result = clickhouseService.getByName(guid, publish_name)
+    search_result = clickhouseService.getByName(guid, publish_in.publish_name)
 
-    if force:
+    if publish_in.force:
         if len(search_result.result_set):
             await session.execute(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_name=publish_name,
+                    publish_name=publish_in.publish_name,
                     publish_status=QueryRunningPublishStatus.PUBLISHING.value,
                 )
             )
             success = await asyncio.get_running_loop().run_in_executor(
-                None, send_publish, guid, force, token
+                None, send_publish, guid, publish_in.force, token
             )
             publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
             await session.execute(
@@ -93,7 +94,7 @@ async def publish_query_execution(
                 )
             )
             success = await asyncio.get_running_loop().run_in_executor(
-                None, send_publish, guid, force, token
+                None, send_publish, guid, publish_in.force, token
             )
             publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
             await session.execute(
@@ -115,7 +116,7 @@ async def publish_query_execution(
                 )
             )
             success = await asyncio.get_running_loop().run_in_executor(
-                None, send_publish, guid, force, token
+                None, send_publish, guid, publish_in.force, token
             )
             publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
             await session.execute(
@@ -127,7 +128,7 @@ async def publish_query_execution(
             )
 
 
-    return {"publish_name": publish_name, "publish_status": publish_name}
+    return {"publish_name": publish_in.publish_name, "publish_status": publish_status}
 
 
 async def send_publish(guid: str, force: bool, token: str) -> dict[str, dict[str, str]]:
