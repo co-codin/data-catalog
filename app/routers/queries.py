@@ -145,12 +145,12 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
     query_exec_guid = await create_query_execution(query_to_run, session)
     conn_string = await select_conn_string(query_to_run.model_version_id, session)
    
-    await send_query_to_task_broker(
-        query=json.loads(query_to_run.json), conn_string=conn_string,
-        run_guid=query_exec_guid, token=token
-    )
-
-    await add_log(session, LogIn(
+    try:
+        await send_query_to_task_broker(
+            query=json.loads(query_to_run.json), conn_string=conn_string,
+            run_guid=query_exec_guid, token=token
+        )
+        await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
@@ -160,6 +160,18 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
             identity_id=user['identity_id'],
             event=LogEvent.RUN_QUERY.value
         ))
+    except:
+        await add_log(session, LogIn(
+            type=LogType.QUERY_CONSTRUCTOR.value,
+            log_name="Ошибка в результате запуска запроса",
+            text="Запрос {{{name}}} {{{guid}}} был завершен с ошибкой".format(
+                name=query_to_run.name,
+                guid=query_to_run.guid
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.RUN_QUERY_FAILED.value
+        ))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Запрос не может быть запущен")
 
 
 @router.put('/{guid}/cancel')
