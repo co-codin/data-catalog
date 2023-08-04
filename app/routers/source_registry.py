@@ -52,7 +52,7 @@ async def add_source_registry(
                 guid=source_registry_model.guid
             ),
             identity_id=user['identity_id'],
-            event=LogEvent.DELETE_MODEL.value,
+            event=LogEvent.ADD_SOURCE.value,
         ))
         return {'guid': source_registry_model.guid}
     except:
@@ -63,7 +63,7 @@ async def add_source_registry(
                 guid=source_registry_model.guid,
                 name=source_registry_model.guid,
                 identity_id=user['identity_id'],
-                event=LogEvent.SYNC_SOURCE.value,
+                event=LogEvent.SYNC_SOURCE_FAILED.value,
         )))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 

@@ -144,6 +144,7 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
     query_to_run = await get_query_to_run(guid, session)
     query_exec_guid = await create_query_execution(query_to_run, session)
     conn_string = await select_conn_string(query_to_run.model_version_id, session)
+   
     await send_query_to_task_broker(
         query=json.loads(query_to_run.json), conn_string=conn_string,
         run_guid=query_exec_guid, token=token
@@ -173,7 +174,7 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
             status=QueryRunningStatus.CANCELED.value
         )
     )
-    await terminate_query(query_exec.guid)
+    # await terminate_query(query_exec.guid)
 
     await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
