@@ -101,6 +101,10 @@ class QueryIn(BaseModel):
         use_enum_values = True
 
 
+class PublishIn(BaseModel):
+    publish_name: str
+    force: bool
+
 class QueryUpdateIn(BaseModel):
     name: str | None = None
     owner_guid: str | None = None
