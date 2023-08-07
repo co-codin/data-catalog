@@ -125,7 +125,6 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         select(SourceRegister)
         .options(selectinload(SourceRegister.tags))
         .options(selectinload(SourceRegister.comments))
-        .options(joinedload(SourceRegister.models))
         .filter(SourceRegister.guid == guid)
     )
 
@@ -134,17 +133,18 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    source_registry_out = SourceRegistryOut.from_orm(source_registry)
+    source_registry_out.conn_string = decrypted_conn_string
 
-    source_registry.conn_string = decrypted_conn_string
-
-    if source_registry.comments:
+    if source_registry_out.comments:
         author_guids = {comment.author_guid for comment in source_registry.comments}
         authors_data = await asyncio.get_running_loop().run_in_executor(
             None, get_authors_data_by_guids, author_guids, token
         )
-        set_author_data(source_registry.comments, authors_data)
+        set_author_data(source_registry_out.comments, authors_data)
 
-    return source_registry
+    return source_registry_out
+
 
 
 async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> SourceRegistrySynch:
