@@ -33,12 +33,12 @@ logger = logging.getLogger(__name__)
 async def create_source_registry(source_registry_in: SourceRegistryIn, session: AsyncSession) -> SourceRegister:
     guid = str(uuid.uuid4())
     driver = source_registry_in.conn_string.split('://', maxsplit=1)[0]
-    encrypted_conn_string = encrypt(settings.encryption_key, source_registry_in.conn_string)
+    # encrypted_conn_string = encrypt(settings.encryption_key, source_registry_in.conn_string)
     source_registry_model = SourceRegister(
         **source_registry_in.dict(exclude={'tags', 'conn_string'}),
         guid=guid,
         type=driver,
-        conn_string=encrypted_conn_string
+        conn_string=source_registry_in.conn_string
     )
     await add_tags(source_registry_model, source_registry_in.tags, session)
 
@@ -133,9 +133,9 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
     if not source_registry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    # decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
 
-    source_registry.conn_string = decrypted_conn_string
+    # source_registry.conn_string = decrypted_conn_string
 
     if source_registry.comments:
         author_guids = {comment.author_guid for comment in source_registry.comments}
@@ -162,10 +162,10 @@ async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> Sour
     source_registry.status = Status.SYNCHRONIZING
     session.add(source_registry)
 
-    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    # decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
     source_registry_synch = SourceRegistrySynch(
         source_registry_guid=source_registry.guid, 
-        conn_string=decrypted_conn_string, 
+        conn_string=source_registry.conn_string, 
         source_registry_name=source_registry.name
     )
     return source_registry_synch
