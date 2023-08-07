@@ -337,23 +337,23 @@ async def delete_objects(applied_migration: MigrationOut, db_source: str, sessio
         for table in schema.tables_to_delete
     ]
     if tables_to_delete:
-        objects = await session.execute(
-            select(Object)
-            .options(selectinload(Object.source))
-            .where(Object.db_path.in_(tables_to_delete))
-        )
-        objects = objects.scalars().all()
-        for object in objects:
-            await add_log(session, LogIn(
-                type=LogType.DATA_CATALOG.value,
-                log_name="Удаление объекта на источнике",
-                text="{{{name}}} {{{guid}}} был удалён с {{{source_registry_name}}} {{{source_registry_guid}}}".format(
-                    name=object.name, guid=object.guid, source_registry_name=object.source.name,
-                    source_registry_guid=object.source_registry_guid
-                ),
-                identity_id="Системное событие",
-                event=LogEvent.DELETE_OBJECT_FROM_SOURCE.value,
-            ))
+        # objects = await session.execute(
+        #     select(Object)
+        #     .options(selectinload(Object.source))
+        #     .where(Object.db_path.in_(tables_to_delete))
+        # )
+        # objects = objects.scalars().all()
+        # for object in objects:
+        #     await add_log(session, LogIn(
+        #         type=LogType.DATA_CATALOG.value,
+        #         log_name="Удаление объекта на источнике",
+        #         text="{{{name}}} {{{guid}}} был удалён с {{{source_registry_name}}} {{{source_registry_guid}}}".format(
+        #             name=object.name, guid=object.guid, source_registry_name=object.source.name,
+        #             source_registry_guid=object.source_registry_guid
+        #         ),
+        #         identity_id="Системное событие",
+        #         event=LogEvent.DELETE_OBJECT_FROM_SOURCE.value,
+        #     ))
 
         await session.execute(
             delete(Object)
