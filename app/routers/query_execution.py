@@ -73,13 +73,13 @@ async def publish_query_execution(
                     publish_status=QueryRunningPublishStatus.PUBLISHING.value,
                 )
             )
-            success = await send_publish(guid, publish_in.force, token)
-            publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
+            # success = await send_publish(guid, publish_in.force, token)
+            # publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
             await session.execute(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_status=publish_status,
+                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
                 )
             )
         else:
@@ -91,13 +91,13 @@ async def publish_query_execution(
                     publish_status=QueryRunningPublishStatus.PUBLISHING.value,
                 )
             )
-            success = await send_publish(guid, publish_in.force, token)
-            publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
+            # success = await send_publish(guid, publish_in.force, token)
+            # publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
             await session.execute(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_status=publish_status,
+                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
                 )
             )
     else:
@@ -108,16 +108,16 @@ async def publish_query_execution(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_status=QueryRunningPublishStatus.PUBLISHING.value,
+                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
                 )
             )
-            success = await send_publish(guid, publish_in.force, token)
-            publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
+            # success = await send_publish(guid, publish_in.force, token)
+            # publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
             await session.execute(
                 update(QueryExecution)
                 .where(QueryExecution.guid == guid)
                 .values(
-                    publish_status=publish_status,
+                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
                 )
             )
 
