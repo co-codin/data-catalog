@@ -122,8 +122,6 @@ async def publish_query_execution(
             )
 
 
-    return {"publish_name": publish_in.publish_name, "publish_status": publish_status}
-
 
 async def send_publish(guid: str, force: bool, token: str) -> dict[str, dict[str, str]]:
     response = requests.post(

@@ -186,7 +186,11 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
             status=QueryRunningStatus.CANCELED.value
         )
     )
-    # await terminate_query(query_exec.guid)
+
+    try:
+        await terminate_query(query_exec.guid)
+    except:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='запрос уже выполнен')
 
     await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
