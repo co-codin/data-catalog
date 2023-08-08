@@ -11,7 +11,7 @@ from app.crud.crud_queries import (
     viewer_delete_query, owner_delete_query, is_allowed_to_view
 )
 from app.crud.crud_tag import remove_redundant_tags
-from app.errors.query_errors import QueryNameAlreadyExist
+from app.errors.query_errors import QueryIsNotRunningError, QueryNameAlreadyExist
 from app.models.log import LogEvent, LogType
 from app.models.queries import Query, QueryRunningStatus
 from app.schemas.log import LogIn
@@ -176,23 +176,15 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
 
 @router.put('/{guid}/cancel')
 async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_user)):
+    
     await check_on_query_owner(guid, user['identity_id'], session)
-    query_exec = await select_running_query_exec(guid, session)
-
-    await session.execute(
-        update(Query)
-        .where(Query.guid == guid)
-        .values(
-            status=QueryRunningStatus.CANCELED.value
-        )
-    )
-
+    
     try:
+        query_exec = await select_running_query_exec(guid, session)
+        
         await terminate_query(query_exec.guid)
-    except:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='запрос уже выполнен')
 
-    await add_log(session, LogIn(
+        await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Остановка запроса",
             text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
@@ -202,3 +194,13 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
             identity_id=user['identity_id'],
             event=LogEvent.STOP_QUERY.value
         ))
+
+        await session.execute(
+        update(Query)
+        .where(Query.guid == guid)
+        .values(
+            status=QueryRunningStatus.CANCELED.value
+        )
+    )
+    except:
+        raise QueryIsNotRunningError()
