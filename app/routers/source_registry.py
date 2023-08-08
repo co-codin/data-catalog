@@ -74,6 +74,15 @@ async def synchronize(guid: str, migration_pattern: MigrationPattern, session=De
     try:
         await send_for_synchronization(**source_registry_synch.dict(), migration_pattern=migration_pattern,
                                     identity_id=user['identity_id'],  sync_type=SyncType.SYNC_SOURCE.value)
+        await add_log(session, LogIn(
+            type=LogType.SOURCE_REGISTRY.value,
+            log_name="Синхронизация источника",
+            text="Синхронизация источника {{name}} {{guid}} успешно завершена.".format(
+                guid=source_registry_synch.source_registry_guid,
+                name=source_registry_synch.source_registry_name,
+                identity_id=user['identity_id'],
+                event=LogEvent.SYNC_SOURCE.value,
+        )))
         return {'msg': 'source registry has been sent to synchronize'}
     except:
         await add_log(session, LogIn(
@@ -83,7 +92,7 @@ async def synchronize(guid: str, migration_pattern: MigrationPattern, session=De
                 guid=source_registry_synch.source_registry_guid,
                 name=source_registry_synch.source_registry_name,
                 identity_id=user['identity_id'],
-                event=LogEvent.SYNC_SOURCE.value,
+                event=LogEvent.SYNC_SOURCE_FAILED.value,
         )))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
