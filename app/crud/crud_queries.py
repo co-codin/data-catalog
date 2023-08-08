@@ -420,20 +420,11 @@ async def viewer_delete_query(query_id: int, identity_guid: str, session: AsyncS
 
 
 async def owner_delete_query(query: Query, identity_id: str, token: str, session: AsyncSession):
-    if query.status == QueryRunningStatus.RUNNING.value:
+    # if query.status == QueryRunningStatus.RUNNING.value:
         # cancel query
-        query_exec = await select_running_query_exec(query.guid, session)
+        # query_exec = await select_running_query_exec(query.guid, session)
         # await terminate_query(query_exec.guid)
 
-        await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Остановка запроса",
-            text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
-                name=query_exec.query.name, guid=query_exec.query.guid
-            ),
-            identity_id=identity_id,
-            event=LogEvent.STOP_QUERY.value
-        ))
 
     # delete from results table in query-executor
     async with httpx.AsyncClient() as aclient:
