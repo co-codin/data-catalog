@@ -130,7 +130,7 @@ async def create_query(query_in: QueryIn, session: AsyncSession) -> Query:
             'filters_displayed', 'having_displayed',
             'model_resource_id',
             }),
-        json=json.dumps(query_json)
+        json=json.dumps(query_json, ensure_ascii=False)
     )
 
     await add_tags(query, query_in.tags, session)
