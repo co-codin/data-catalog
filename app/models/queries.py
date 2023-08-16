@@ -3,7 +3,8 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, BigInteger, String, Text, DateTime, JSON, ForeignKey, Table
+from sqlalchemy import Column, BigInteger, String, Text, DateTime, ForeignKey, Table
+from sqlalchemy.dialects.postgresql.json import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -69,7 +70,7 @@ class Query(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow,
                         server_onupdate=func.now())
 
-    json = Column(JSON, nullable=False)
+    json = Column(JSONB, nullable=False)
 
     filters_displayed = Column(Text, nullable=False)
     having_displayed = Column(Text, nullable=False)
