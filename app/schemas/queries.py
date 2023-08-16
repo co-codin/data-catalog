@@ -61,8 +61,8 @@ class SimpleFilter(BaseModel):
     operator: Operator
     value: (
             int | float | str | bool | datetime
-            | list[int] | list[float] | list[str] | list[bool] | list[datetime]
-    )
+            | list[int] | list[float] | list[str] | list[bool] | list[datetime] | None
+    ) = None
 
     class Config:
         use_enum_values = True
