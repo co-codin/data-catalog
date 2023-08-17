@@ -13,9 +13,6 @@ image:
 ciEnv: ""
 
 secrets:
-  neo4j_connection_string: ""
-  neo4j_connection_user: "neo4j"
-  neo4j_connection_password: "password"
   db_connection_string: ""
   db_migration_connection_string: ""
   age_connection_string: ""

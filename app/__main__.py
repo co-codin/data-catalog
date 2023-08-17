@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.logger_config import config_logger
 from app.mq import create_channel
 from app.routers import (
-    db_mappings, discovery, entities, model, model_version, sats, links, source_registry, keys, objects,
+    db_mappings, model, model_version, source_registry, keys, objects,
     model_data_type, model_quality, fields, model_relation, model_resource,
     operation, queries, log, pipeline, query_execution
 )
@@ -35,7 +35,7 @@ app.add_middleware(
 )
 
 routers = (
-    db_mappings.router, discovery.router, source_registry.router, keys.router, objects.router, model.router,
+    db_mappings.router, source_registry.router, keys.router, objects.router, model.router,
     model_version.router, model_data_type.router, model_quality.router, fields.router, model_relation.router,
     model_resource.router, operation.router, queries.router, log.router, pipeline.router, query_execution.router
 )
