@@ -28,8 +28,6 @@ spec:
 
       containers:
       - env:
-        - name: dwh_data_catalog_neo4j_connection_string
-          value: neo4j://neo-release.dwh-uat.svc.cluster.local:7687
         - name: LOG_DIR
           value: /var/log/n3dwh/
         image: 10.50.4.110:5000/data-catalog:dev

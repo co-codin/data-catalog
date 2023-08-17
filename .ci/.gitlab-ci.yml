@@ -57,9 +57,6 @@ deploy:
       helm upgrade --install -n smartdwh --timeout 1m 
       --set-string ciEnv="$CI_ENVIRONMENT_NAME" 
       --set-string secrets.encryption_key="$DWH_DATA_CATALOG_ENCRYPTION_KEY_STRING"
-      --set-string secrets.neo4j_connection_string="$NEO4J_CONNECTION_STRING" 
-      --set-string secrets.neo4j_connection_user="$NEO4J_CONNECTION_USER" 
-      --set-string secrets.neo4j_connection_password="$NEO4J_CONNECTION_PASSWORD"
       --set-string secrets.db_connection_string="$DB_CONNECTION_STRING/$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME"
       --set-string secrets.db_migration_connection_string="$DB_MIGRATION_CONNECTION_STRING/$CI_PROJECT_NAME-$CI_ENVIRONMENT_NAME"
       --set-string secrets.mq_connection_string="$MQ_CONN_STRING"
