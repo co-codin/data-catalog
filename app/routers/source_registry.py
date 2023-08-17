@@ -90,13 +90,13 @@ async def synchronize(guid: str, migration_pattern: MigrationPattern, session=De
             log_name="Синхронизация источника",
             text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
                 guid=source_registry_synch.source_registry_guid,
-                name=source_registry_synch.source_registry_name,
-                identity_id=user['identity_id'],
-                event=LogEvent.SYNC_SOURCE_FAILED.value,
-        )))
+                name=source_registry_synch.source_registry_name
+            ),
+            identity_id=user['identity_id'],
+            event=LogEvent.SYNC_SOURCE_FAILED.value
+        ))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
 
-    
 
 @router.put('/{guid}', response_model=Dict[str, str])
 async def update_source_registry(

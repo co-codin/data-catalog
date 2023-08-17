@@ -24,8 +24,6 @@ spec:
     spec:
       containers:
       - env:
-        - name: dwh_data_catalog_neo4j_connection_string
-          value: neo4j://10.50.4.110:7687
         - name: LOG_DIR
           value: /var/logs
         image: 10.50.4.110:5000/data-catalog:dev
