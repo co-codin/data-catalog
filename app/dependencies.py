@@ -6,7 +6,6 @@ from fastapi.security import HTTPBearer
 from app.database import db_session as _db_session
 from app.database import ag_session as _ag_session
 
-from app.config import settings
 from app.services.auth import decode_jwt
 
 bearer = HTTPBearer()
