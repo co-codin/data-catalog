@@ -2,7 +2,8 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import update
+from sqlalchemy import select, update
+from sqlalchemy.orm import contains_eager, load_only
 from app.crud.crud_queries import (
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
     select_query_to_delete, check_owner_for_existence, create_query_execution, get_query_running_history,
@@ -13,7 +14,7 @@ from app.crud.crud_queries import (
 from app.crud.crud_tag import remove_redundant_tags
 from app.errors.query_errors import QueryIsNotRunningError, QueryNameAlreadyExist
 from app.models.log import LogEvent, LogType
-from app.models.queries import Query, QueryRunningStatus
+from app.models.queries import Query, QueryRunningStatus, QueryExecution
 from app.schemas.log import LogIn
 from app.schemas.queries import QueryIn, QueryManyOut, QueryExecutionOut, FullQueryOut, QueryUpdateIn
 
@@ -58,7 +59,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query.name, 
+                name=query.name,
                 guid=query.guid
             ),
             identity_id=user['identity_id'],
@@ -80,16 +81,23 @@ async def read_query(guid: str, session=Depends(db_session), token=Depends(get_t
 
 @router.put('/internal/mark-error/{guid}')
 async def update_query(guid: str, session=Depends(db_session)):
-   await session.execute(
-        update(Query)
-        .where(Query.guid == guid)
-        .values(
-           status="error"
-        )
+    query_exec = await session.execute(
+        select(QueryExecution).with_for_update(nowait=True)
+        .join(QueryExecution.query)
+        .options(load_only(QueryExecution.guid, QueryExecution.status))
+        .options(contains_eager(QueryExecution.query))
+        .where(QueryExecution.guid == guid)
     )
+    query_exec = query_exec.scalars().first()
+
+    query_exec.status = QueryRunningStatus.ERROR.value
+    query_exec.query.status = QueryRunningStatus.ERROR.value
+    session.add(query_exec)
+
 
 @router.put('/{guid}')
-async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depends(db_session), user=Depends(get_user), token=Depends(get_token)):
+async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depends(db_session), user=Depends(get_user),
+                       token=Depends(get_token)):
     await check_owner_for_existence(query_update_in.owner_guid, token)
     await check_model_version_for_existence(query_update_in.model_version_id, session)
     await check_on_query_owner(guid, user['identity_id'], session)
@@ -101,7 +109,7 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
         query_exec_guid = await create_query_execution(query, session)
         conn_string = await select_conn_string(query.model_version_id, session)
         await send_query_to_task_broker(
-            query=query_update_in.dict(include={'aliases', 'filter', 'having'}), conn_string=conn_string,
+            query=query_update_in.dict(include={'aliases', 'filter', 'having', 'distinct'}), conn_string=conn_string,
             run_guid=query_exec_guid, token=token
         )
 
@@ -109,8 +117,8 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-               name=query.name, 
-               guid=query.guid
+                name=query.name,
+                guid=query.guid
             ),
             identity_id=user['identity_id'],
             event=LogEvent.RUN_QUERY.value
@@ -144,7 +152,7 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
     query_to_run = await get_query_to_run(guid, session)
     query_exec_guid = await create_query_execution(query_to_run, session)
     conn_string = await select_conn_string(query_to_run.model_version_id, session)
-   
+
     try:
         await send_query_to_task_broker(
             query=json.loads(query_to_run.json), conn_string=conn_string,
@@ -154,7 +162,7 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Запуск запроса",
             text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query_to_run.name, 
+                name=query_to_run.name,
                 guid=query_to_run.guid
             ),
             identity_id=user['identity_id'],
@@ -176,19 +184,18 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
 
 @router.put('/{guid}/cancel')
 async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_user)):
-    
     await check_on_query_owner(guid, user['identity_id'], session)
-    
+
     try:
         query_exec = await select_running_query_exec(guid, session)
-        
+
         await terminate_query(query_exec.guid)
 
         await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
             log_name="Остановка запроса",
             text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
-                name=query_exec.query.name, 
+                name=query_exec.query.name,
                 guid=query_exec.query.guid
             ),
             identity_id=user['identity_id'],
@@ -196,11 +203,11 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
         ))
 
         await session.execute(
-        update(Query)
-        .where(Query.guid == guid)
-        .values(
-            status=QueryRunningStatus.CANCELED.value
+            update(Query)
+            .where(Query.guid == guid)
+            .values(
+                status=QueryRunningStatus.CANCELED.value
+            )
         )
-    )
     except:
         raise QueryIsNotRunningError()
