@@ -40,7 +40,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
         await check_on_query_uniqueness(name=query_in.name, session=session)
     except:
         raise QueryNameAlreadyExist(query_in.name)
-    # await check_alias_attrs_for_existence(query_in.aliases, session)
+    await check_alias_attrs_for_existence(query_in.aliases, session)
 
     await check_owner_for_existence(query_in.owner_guid, token)
     await check_model_version_for_existence(query_in.model_version_id, session)
