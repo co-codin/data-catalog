@@ -58,7 +58,7 @@ service:
   port: 8000
 
 ingress:
-  enabled: екгу
+  enabled: true
   className: ""
   labels:
     openapi: "true"
