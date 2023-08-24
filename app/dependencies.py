@@ -1,10 +1,9 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer
 
-
-
 from app.database import db_session as _db_session
 from app.database import ag_session as _ag_session
+from app.mq import PikaChannel, create_channel
 
 from app.services.auth import decode_jwt
 
@@ -30,3 +29,8 @@ async def get_token(token=Depends(bearer), _=Depends(get_user)) -> str:
 def ag_session():
     with _ag_session() as session:
         yield session
+
+
+async def mq_channel() -> PikaChannel:
+    async with create_channel() as channel:
+        yield channel

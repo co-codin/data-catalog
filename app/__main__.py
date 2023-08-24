@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 
 from typing import Callable
@@ -18,7 +17,8 @@ from app.routers import (
 from app.errors import APIError
 from app.config import settings
 from app.services.auth import load_jwks
-from app.services.synchronizer import update_data_catalog_data, process_graph_migration_success
+from app.services.publish_request_lifespan import set_query_exec_status
+from app.services.synchronizer import update_data_catalog_data
 
 config_logger()
 
@@ -57,9 +57,16 @@ async def on_startup():
         await channel.queue_declare(settings.migrations_result_queue)
         await channel.queue_bind(settings.migrations_result_queue, settings.migration_exchange, 'result')
 
-        asyncio.create_task(
-            consume(settings.migrations_result_queue, update_data_catalog_data)
-        )
+        await channel.exchange_declare(settings.publish_exchange, 'direct')
+
+        await channel.queue_declare(settings.publish_request_queue)
+        await channel.queue_bind(settings.publish_request_queue, settings.publish_exchange, 'task')
+
+        await channel.queue_declare(settings.publish_result_queue)
+        await channel.queue_bind(settings.publish_result_queue, settings.publish_exchange, 'result')
+
+        asyncio.create_task(consume(settings.migrations_result_queue, update_data_catalog_data))
+        asyncio.create_task(consume(settings.publish_result_queue, set_query_exec_status))
 
 
 @app.middleware("http")
