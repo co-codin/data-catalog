@@ -1,19 +1,30 @@
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict
-from starlette import status
-from app.crud.crud_queries import set_query_status
-from app.models.log import LogEvent, LogType
-from app.models.queries import QueryExecution, QueryRunningPublishStatus, QueryRunningStatus
-from app.dependencies import db_session, get_user, get_token
+import json
+import logging
+
+import httpx
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from sqlalchemy import update, select
+from sqlalchemy.orm import contains_eager
+
+from psycopg import sql
+
+from app.crud.crud_queries import set_query_status
+from app.errors.query_exec_errors import QueryExecPublishNameAlreadyExist
+
+from app.models.log import LogEvent, LogType
+from app.models.queries import QueryExecution, QueryRunningStatus, QueryRunningPublishStatus
+from app.mq import create_channel
+
 from app.schemas.log import LogIn
-import requests
+from app.schemas.queries import PublishIn, QueryExecutionOut
+
+from app.dependencies import db_session, get_user, get_token
 from app.config import settings
-from app.schemas.queries import PublishIn
 
 
-from app.services.clickhouse import ClickhouseService
 from app.services.log import add_log
 
 router = APIRouter(
@@ -21,12 +32,15 @@ router = APIRouter(
     tags=['query executions']
 )
 
+logger = logging.getLogger(__name__)
 
-@router.get('/{guid}', response_model=Dict[str, str])
+
+@router.get('/{guid}', response_model=QueryExecutionOut)
 async def get_query_execution_by_guid(guid: str, session=Depends(db_session), user=Depends(get_user)):
     query_execution = await session.execute(
         select(QueryExecution)
         .join(QueryExecution.query)
+        .options(contains_eager(QueryExecution.query))
         .where(QueryExecution.guid == guid)
     )
     query_execution = query_execution.scalars().first()
@@ -45,7 +59,7 @@ async def get_query_execution_by_guid(guid: str, session=Depends(db_session), us
             event=LogEvent.GET_QUERY_RESULT.value
         ))
 
-    return query_execution.dict()
+    return QueryExecutionOut.from_orm(query_execution)
 
 
 @router.put('/{guid}')
@@ -53,81 +67,38 @@ async def update_query_status(guid: str, status: QueryRunningStatus, session=Dep
     await set_query_status(guid, status, session)
 
 
-
-@router.put('/{guid}/publish', response_model=Dict[str, str])
+@router.put('/{guid}/publish')
 async def publish_query_execution(
-        guid: str, publish_in: PublishIn, session=Depends(db_session), token=Depends(get_token)
+        guid: str,
+        publish_in: PublishIn,
+        session=Depends(db_session),
+        token=Depends(get_token),
+        user=Depends(get_user)
 ):
-    clickhouseService = ClickhouseService()
-    clickhouseService.connect()
-    clickhouseService.createPublishTable(guid)
-    search_result = clickhouseService.getByName(guid, publish_in.publish_name)
+    if not publish_in.force:
+        if await check_if_publish_table_exits(publish_in.publish_name, token):
+            raise QueryExecPublishNameAlreadyExist(publish_in.publish_name)
 
-    if publish_in.force:
-        if len(search_result.result_set):
-            await session.execute(
-                update(QueryExecution)
-                .where(QueryExecution.guid == guid)
-                .values(
-                    publish_name=publish_in.publish_name,
-                    publish_status=QueryRunningPublishStatus.PUBLISHING.value,
-                )
-            )
-            # success = await send_publish(guid, publish_in.force, token)
-            # publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
-            await session.execute(
-                update(QueryExecution)
-                .where(QueryExecution.guid == guid)
-                .values(
-                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
-                )
-            )
-        else:
-
-            await session.execute(
-                update(QueryExecution)
-                .where(QueryExecution.guid == guid)
-                .values(
-                    publish_status=QueryRunningPublishStatus.PUBLISHING.value,
-                )
-            )
-            # success = await send_publish(guid, publish_in.force, token)
-            # publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
-            await session.execute(
-                update(QueryExecution)
-                .where(QueryExecution.guid == guid)
-                .values(
-                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
-                )
-            )
-    else:
-        if len(search_result.result_set):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Publish name exists. Try change it')
-        else:
-            await session.execute(
-                update(QueryExecution)
-                .where(QueryExecution.guid == guid)
-                .values(
-                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
-                )
-            )
-            # success = await send_publish(guid, publish_in.force, token)
-            # publish_status = QueryRunningPublishStatus.PUBLISHED.value if success else QueryRunningPublishStatus.ERROR.value
-            await session.execute(
-                update(QueryExecution)
-                .where(QueryExecution.guid == guid)
-                .values(
-                    publish_status=QueryRunningPublishStatus.PUBLISHED.value,
-                )
-            )
-
-
-
-async def send_publish(guid: str, force: bool, token: str) -> dict[str, dict[str, str]]:
-    response = requests.post(
-        f'{settings.api_query_executor}/{guid}/publish',
-        json={'force': force},
-        headers={"Authorization": f"Bearer {token}"}
+    asyncio.create_task(send_to_publish(guid, publish_in.publish_name, user['identity_id']))
+    await session.execute(
+        update(QueryExecution)
+        .where(QueryExecution.guid == guid)
+        .values(publish_name=publish_in.publish_name, publish_status=QueryRunningPublishStatus.PUBLISHING.value)
     )
-    status = int(response.status_code())
-    return status == 200
+
+
+async def check_if_publish_table_exits(publish_name: str, token: str) -> bool:
+    async with httpx.AsyncClient() as aclient:
+        headers = {'Authorization': f'Bearer {token}'}
+        response = await aclient.get(
+            f'{settings.api_query_executor}/v1/publications/?publish_name={publish_name}',
+            headers=headers,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def send_to_publish(guid: str, publish_name: str, identity_id: str):
+    data_to_send = {'publish_name': publish_name, 'identity_id': identity_id, 'guid': guid}
+    async with create_channel() as channel:
+        await channel.basic_publish(settings.publish_exchange, 'task', json.dumps(data_to_send))

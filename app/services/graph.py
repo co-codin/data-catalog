@@ -53,9 +53,12 @@ async def get_attr_db_info(session: Age, attr: str):
             params=(current_node_id,)
         )
         by_name = {node['name']: (node, rel, obj) for node, rel, obj in result}
-        if field not in by_name:
+        LOG.debug(f'BY NAME: {by_name}')
+
+        try:
+            node, rel, obj = by_name[field]
+        except KeyError:
             raise NoNodeNameError('Field', field)
-        node, rel, obj = by_name[field]
 
         match rel.label:
             case 'ATTR':
