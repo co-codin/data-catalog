@@ -29,9 +29,14 @@ class Settings(BaseSettings):
     age_connection_string: str = 'postgresql://postgres:dwh@graphdb.lan:5432/postgres'
 
     mq_connection_string: str = 'amqp://dwh:dwh@rabbit.lan:5672'
+
     migration_exchange: str = 'graph_migration'
     migration_request_queue: str = 'migration_requests'
     migrations_result_queue: str = 'migration_results'
+
+    publish_exchange: str = 'publish_exchange'
+    publish_request_queue: str = 'publish_requests'
+    publish_result_queue: str = 'publish_results'
 
     class Config:
         env_prefix = "dwh_data_catalog_"
