@@ -98,20 +98,20 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
 
     if not model_version.status == ModelVersionStatus.DRAFT.value:
         model_version_update_in.status = model_version.status
-    elif model_version.status == ModelVersionStatus.DRAFT.value and approved_model_version \
-            and model_version_update_in.status == ModelVersionStatus.APPROVED.value:
-        approved_model_version.status = ModelVersionStatus.ARCHIVE.value
-        model_version.confirmed_at = datetime.now()
+    elif model_version.status == ModelVersionStatus.DRAFT.value and model_version_update_in.status == ModelVersionStatus.APPROVED.value:
+        if approved_model_version:
+            approved_model_version.status = ModelVersionStatus.ARCHIVE.value
+
         await add_log(session, LogIn(
             type=LogType.MODEL_CATALOG.value,
-            log_name="Утверждение версии",
-            text="{{{version}}} {{{guid}}} в {{{name}}} {{{model_guid}}} утверждена".format(
-                version=model_version.version if (model_version.version is not None) else '0.0.0',
-                guid=model_version.guid, 
-                name=model_version.model.name, 
-                model_guid=model_version.model.guid),
-            identity_id=identity_id,
-            event=LogEvent.CONFIRM_VERSION.value
+                log_name="Утверждение версии",
+                text="{{{version}}} {{{guid}}} в {{{name}}} {{{model_guid}}} утверждена".format(
+                    version=model_version.version if (model_version.version is not None) else '0.0.0',
+                    guid=model_version.guid, 
+                    name=model_version.model.name, 
+                    model_guid=model_version.model.guid),
+                identity_id=identity_id,
+                event=LogEvent.CONFIRM_VERSION.value
         ))
 
     model_version_update_in_data = {
