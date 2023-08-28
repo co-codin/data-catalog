@@ -13,6 +13,7 @@ router = APIRouter(
     tags=['model qualities']
 )
 
+
 @router.post('/')
 async def create_model_quality(model_quality_in: ModelQualityIn, session=Depends(db_session), _=Depends(get_user)):
     await check_on_model_quality_uniqueness(

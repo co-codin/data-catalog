@@ -1,10 +1,6 @@
 import asyncio
-from typing import Dict, List
-from app.models.log import LogEvent, LogType
-from app.schemas.log import LogIn
-from app.services.log import add_log
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 
 from app.crud.crud_object import (
@@ -33,45 +29,25 @@ router = APIRouter(
 async def add_object(object_in: ObjectIn, migration_pattern: MigrationPattern, session=Depends(db_session),
                      user=Depends(get_user)):
     object_to_synch = await create_object(object_in, session)
-    try:
-        await send_for_synchronization(**object_to_synch.dict(), migration_pattern=migration_pattern,
-                                identity_id=user['identity_id'],  sync_type=SyncType.ADD_SOURCE.value)
-        return {'guid': object_to_synch.object_guid}
-    except:
-        await add_log(session, LogIn(
-            type=LogType.DATA_CATALOG.value,
-            log_name="Добавление объекта",
-            text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
-                guid=object_to_synch.object_guid,
-                name=object_to_synch.object_name,
-                identity_id=user['identity_id'],
-                event=LogEvent.ADD_OBJECT.value,
-        )))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
+    await send_for_synchronization(
+        **object_to_synch.dict(), migration_pattern=migration_pattern,
+        identity_id=user['identity_id'],  sync_type=SyncType.ADD_OBJECT.value
+    )
+    return {'guid': object_to_synch.object_guid}
 
 
 @router.post('/{guid}/synchronize')
 async def synchronize(guid: str, migration_pattern: MigrationPattern, session=Depends(db_session),
                       user=Depends(get_user)):
     object_synch = await read_object_by_guid(guid, session)
-    try:
-        await send_for_synchronization(**object_synch.dict(), migration_pattern=migration_pattern,
-                                identity_id=user['identity_id'],  sync_type=SyncType.SYNC_OBJECT.value)
-        return {'msg': 'object has been sent to synchronize'}
-    except:
-        await add_log(session, LogIn(
-            type=LogType.DATA_CATALOG.value,
-            log_name="Добавление объекта",
-            text="При синхронизации {{{name}}} {{{guid}}} произошла ошибка.".format(
-                guid=object_synch.object_guid,
-                name=object_synch.object_name,
-                identity_id=user['identity_id'],
-                event=LogEvent.ADD_OBJECT.value,
-        )))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={'msg': "При синхронизации произошла ошибка, обратитесь к администратору"})
+    await send_for_synchronization(
+        **object_synch.dict(), migration_pattern=migration_pattern,
+        identity_id=user['identity_id'],  sync_type=SyncType.SYNC_OBJECT.value
+    )
+    return {'msg': 'object has been sent to synchronize'}
 
 
-@router.get('/', response_model=List[ObjectManyOut])
+@router.get('/', response_model=list[ObjectManyOut])
 async def get_all(session=Depends(db_session), _=Depends(get_user)):
     return await read_all(session)
 
@@ -81,7 +57,7 @@ async def get_by_guid(guid: str, session=Depends(db_session), token=Depends(get_
     return await read_by_guid(guid, token, session)
 
 
-@router.put('/{guid}', response_model=Dict[str, str])
+@router.put('/{guid}', response_model=dict[str, str])
 async def update_object(
         guid: str, object_update_in: ObjectUpdateIn, session=Depends(db_session), _=Depends(get_user)
 ):
@@ -96,20 +72,20 @@ async def set_is_synchronizing(guid: str, is_synchronizing: bool, session=Depend
     return {'msg': 'is_synchronized field has been set'}
 
 
-@router.post('/{guid}/comments', response_model=Dict[str, int])
+@router.post('/{guid}/comments', response_model=dict[str, int])
 async def add_comment(guid: str, comment: CommentIn, session=Depends(db_session), user=Depends(get_user)):
     comment_id = await create_comment(guid, user['identity_id'], comment, CommentOwnerTypes.object_, session)
     return {'id': comment_id}
 
 
-@router.put('/comments/{id_}', response_model=Dict[str, str])
+@router.put('/comments/{id_}', response_model=dict[str, str])
 async def update_comment(id_: int, comment: CommentIn, session=Depends(db_session), user=Depends(get_user)):
     await verify_comment_owner(id_, user['identity_id'], session)
     await edit_comment(id_, comment, session)
     return {'msg': 'comment has been updated'}
 
 
-@router.delete('/comments/{id_}', response_model=Dict[str, str])
+@router.delete('/comments/{id_}', response_model=dict[str, str])
 async def delete_comment(id_: int, session=Depends(db_session), user=Depends(get_user)):
     await verify_comment_owner(id_, user['identity_id'], session)
     await remove_comment(id_, session)

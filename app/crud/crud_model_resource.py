@@ -21,8 +21,10 @@ from app.errors.errors import (
     AttributeRelationError, ModelAttitudeAttributesError
 )
 
-from app.models.models import ModelResource, ModelResourceAttribute, ModelRelationOperationParameter, \
-    ModelRelationOperation, OperationBody
+from app.models.models import (
+    ModelResource, ModelResourceAttribute, ModelRelationOperationParameter, ModelRelationOperation,
+    OperationBody
+)
 from app.schemas.model_resource_rel import ModelResourceRelOut, ModelResourceRelIn
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttributeOut
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn

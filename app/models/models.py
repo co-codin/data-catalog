@@ -5,7 +5,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.database import Base
+from app.database.sqlalchemy import Base
 from app.enums.enums import ModelVersionStatus, PipelineStatus
 from app.models.sources import Model
 

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,15 +9,15 @@ from app.schemas.comment import CommentIn, CommentOut
 
 class ObjectCommon(BaseModel):
     owner: str = Field(..., max_length=36*4)
-    short_desc: Optional[str] = None
-    business_desc: Optional[str] = None
+    short_desc: str | None = None
+    business_desc: str | None = None
 
 
 class ObjectIn(ObjectCommon):
     name: str
     source_registry_guid: str
 
-    tags: Optional[List[str]] = []
+    tags: list[str] | None = []
 
 
 class SourceManyOut(BaseModel):
@@ -86,7 +85,7 @@ class ObjectManyOut(ObjectCommon):
 class SourceOut(SourceManyOut):
     guid: str
     owner: str
-    synchronized_at: Optional[datetime] = None
+    synchronized_at: datetime | None = None
 
     class Config:
         orm_mode = True
@@ -113,12 +112,12 @@ class ObjectOut(ObjectCommon):
 
 
 class ObjectUpdateIn(ObjectCommon):
-    tags: Optional[List[str]] = []
+    tags: list[str] | None = []
 
 
 class ObjectSynch(BaseModel):
     object_name: str
     object_db_path: str | None = None
     conn_string: str
-    source_registry_guid: str
+    source_guid: str
     object_guid: str

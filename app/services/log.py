@@ -1,9 +1,10 @@
+import asyncio
+
 from app.crud.crud_author import get_authors_data_by_guids
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.log import Log, LogType, LogText, LogEvent
 from app.schemas.log import LogIn
-import asyncio
 
 
 async def get_all_logs(session: AsyncSession, token: str):
@@ -24,6 +25,7 @@ async def get_all_logs(session: AsyncSession, token: str):
 
     return logs
 
+
 async def set_log_author_data(logs, authors_data: dict[str, dict[str, str]]):
     for log in logs:
         if log.identity_id != 'Системное событие':
@@ -33,11 +35,9 @@ async def set_log_author_data(logs, authors_data: dict[str, dict[str, str]]):
             log.author_email = authors_data[log.identity_id]['email']
     return logs
 
-async def add_log(session: AsyncSession, log_in: LogIn):
-    log = Log(
-        **log_in.dict()
-    )
 
+async def add_log(session: AsyncSession, log_in: LogIn):
+    log = Log(**log_in.dict())
     session.add(log)
     return log
 

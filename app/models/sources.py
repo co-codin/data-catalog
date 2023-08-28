@@ -6,7 +6,7 @@ from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, T
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.database.sqlalchemy import Base
 
 
 class Origin(enum.Enum):

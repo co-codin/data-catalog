@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
 
-from app.database import Base
+from app.database.sqlalchemy import Base
 from app.models.sources import SourceRegister, Object, Field
 from app.models.models import Model, ModelVersion, ModelResource, ModelQuality, Pipeline
 

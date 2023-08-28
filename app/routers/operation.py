@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
 
-from app.crud.crud_operation import read_all, read_by_guid, check_on_operation_name_uniqueness, \
-    create_operation, edit_operation, delete_by_guid, read_versions_list, create_operation_version, \
+from app.crud.crud_operation import (
+    read_all, read_by_guid, check_on_operation_name_uniqueness,
+    create_operation, edit_operation, delete_by_guid, read_versions_list, create_operation_version,
     edit_operation_version, delete_operation_version
+)
 from app.dependencies import db_session, get_user
 from app.schemas.operation import OperationIn, OperationBodyIn, OperationBodyUpdateIn, ConfirmIn
 

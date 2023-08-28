@@ -1,11 +1,11 @@
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
-from app.crud.crud_model_version import create_model_version, delete_model_version, read_by_guid, update_model_version, \
-    read_resources
+from app.crud.crud_model_version import (
+    create_model_version, delete_model_version, read_by_guid, update_model_version, read_resources
+)
 from app.dependencies import db_session, get_token, get_user
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.errors import APIError
 from app.schemas.model_resource import ModelResourceOutRelIn
 from app.schemas.model_version import ModelVersionIn, ModelVersionUpdateIn
 from app.schemas.source_registry import CommentIn
@@ -14,10 +14,6 @@ router = APIRouter(
     prefix="/model_versions",
     tags=['model versions']
 )
-
-# @router.get('/{model_id}')
-# async def read_model_version(model_id: str, session=Depends(db_session), user=Depends(get_user)):
-#     return await read_all(model_id, session)
 
 
 @router.get('/{guid}')
@@ -41,7 +37,7 @@ async def update(guid: str, model_version_update_in: ModelVersionUpdateIn, sessi
 async def delete(guid: str, session=Depends(db_session)):
     try:
         await delete_model_version(guid, session)
-    except:
+    except Exception:
         raise HTTPException(status_code=403, detail='Можно удалить только черновика')
 
 

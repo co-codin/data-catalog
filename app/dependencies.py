@@ -1,8 +1,8 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer
 
-from app.database import db_session as _db_session
-from app.database import ag_session as _ag_session
+from app.database.sqlalchemy import db_session as _db_session
+from app.database.apache_age import ag_session as _ag_session
 from app.mq import PikaChannel, create_channel
 
 from app.services.auth import decode_jwt

@@ -1,6 +1,4 @@
-from typing import Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class LogIn(BaseModel):
@@ -9,4 +7,4 @@ class LogIn(BaseModel):
     text: str
     identity_id: str
     event: str
-    properties: Optional[str] = Field(None)
+    properties: str | None = None

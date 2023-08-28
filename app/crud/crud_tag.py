@@ -10,7 +10,7 @@ from app.models.models import (
 from app.models.queries import Query
 from app.models.sources import SourceRegister, Object, Field, Model
 from app.models.tags import Tag
-from app.database import db_session
+from app.database.sqlalchemy import db_session
 
 
 async def add_tags(
