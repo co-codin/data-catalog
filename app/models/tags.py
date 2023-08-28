@@ -7,7 +7,7 @@ from app.models.models import (
     model_version_tags, operation_tags, model_resource_tags, model_quality_tags, model_relation_tags,
     model_resource_attribute_tags, pipeline_tags, operation_body_tags
 )
-from app.database import Base
+from app.database.sqlalchemy import Base
 
 
 class Tag(Base):

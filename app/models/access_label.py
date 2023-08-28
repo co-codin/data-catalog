@@ -1,9 +1,11 @@
-from sqlalchemy import Column, BigInteger, Boolean, ForeignKey, String
+from sqlalchemy import Column, BigInteger, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from app.database import Base
-from app.models import model_resource_attribute_access_labels, model_resource_access_labels, \
-    model_version_access_labels, model_access_labels, OperationBody
+from app.database.sqlalchemy import Base
+from app.models import (
+    model_resource_attribute_access_labels, model_resource_access_labels, model_version_access_labels,
+    model_access_labels, OperationBody
+)
 
 
 class AccessLabel(Base):

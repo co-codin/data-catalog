@@ -7,14 +7,18 @@ from fastapi import HTTPException, status
 
 from app.crud.crud_model_version import generate_version_number
 from app.enums.enums import ModelVersionLevel, ModelVersionStatus
-from app.errors.errors import OperationParameterNotExistError, OperationParameterNotConfiguredError, \
-    OperationParameterOutputError
+from app.errors.errors import (
+    OperationParameterNotExistError, OperationParameterNotConfiguredError, OperationParameterOutputError
+)
 from app.errors.model_version import ModelVersionNotDraftError
-from app.models.models import ModelRelation, ModelVersion, OperationBody, Operation, \
-    ModelRelationOperation, ModelRelationOperationParameter
-from app.schemas.model_relation import ModelRelationIn, ModelRelationUpdateIn, ModelRelationOperationIn, \
-    ModelRelationOperationUpdateIn, \
+from app.models.models import (
+    ModelRelation, ModelVersion, OperationBody, Operation, ModelRelationOperation,
+    ModelRelationOperationParameter
+)
+from app.schemas.model_relation import (
+    ModelRelationIn, ModelRelationUpdateIn, ModelRelationOperationIn, ModelRelationOperationUpdateIn,
     ModelRelationOperationParameterIn, ModelRelationOperationParameterUpdateIn
+)
 from app.crud.crud_source_registry import add_tags, update_tags
 
 

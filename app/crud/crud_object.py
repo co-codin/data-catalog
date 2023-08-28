@@ -44,7 +44,7 @@ async def create_object(object_in: ObjectIn, session: AsyncSession) -> ObjectSyn
     conn_string_decrypted = decrypt(settings.encryption_key, source.conn_string)
     return ObjectSynch(
         object_name=object_model.name, conn_string=conn_string_decrypted,
-        source_registry_guid=object_in.source_registry_guid, object_guid=guid
+        source_guid=object_in.source_registry_guid, object_guid=guid
     )
 
 
@@ -170,6 +170,6 @@ async def read_object_by_guid(guid: str, session: AsyncSession) -> ObjectSynch:
     decrypted_conn_string = decrypt(settings.encryption_key, object_.source.conn_string)
     object_sync = ObjectSynch(
         object_name=object_.name, object_db_path=object_.db_path,
-        conn_string=decrypted_conn_string, source_registry_guid=object_.source.guid, object_guid=object_.guid
+        conn_string=decrypted_conn_string, source_guid=object_.source.guid, object_guid=object_.guid
     )
     return object_sync

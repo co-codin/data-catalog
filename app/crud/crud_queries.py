@@ -4,7 +4,6 @@ import uuid
 import httpx
 
 from datetime import datetime
-from typing import Optional
 
 from age import Age
 
@@ -17,7 +16,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids
 from app.errors.query_errors import QueryNameAlreadyExist, QueryIsRunningError, QueryIsNotRunningError
-from app.models import LogType, LogEvent
+from app.models import LogType, LogText, LogEvent, LogName
 from app.models.queries import Query, QueryRunningStatus, QueryExecution, QueryViewer, query_viewers
 from app.models.models import ModelResource, ModelResourceAttribute, ModelVersion
 from app.models.sources import Model, SourceRegister
@@ -26,9 +25,9 @@ from app.services.crypto import decrypt
 from app.schemas.queries import (
     ModelResourceOut, AliasAttr, AliasAggregate, QueryIn, QueryManyOut, QueryOut, QueryModelManyOut,
     QueryModelVersionManyOut, FullQueryOut, QueryModelResourceAttributeOut, QueryExecutionOut, QueryUpdateIn,
-QueryModelResourceManyOut,
+    QueryModelResourceManyOut,
 )
-from app.age_queries.node_queries import construct_match_connected_tables, match_neighbor_tables
+from app.age_queries.node_queries import match_neighbor_tables
 from app.schemas.tag import TagOut
 
 from app.config import settings
@@ -108,7 +107,7 @@ async def check_alias_attrs_for_existence(aliases: dict[str, AliasAttr | AliasAg
         )
 
 
-async def check_on_query_uniqueness(name: str, session: AsyncSession, guid: Optional[str] = None):
+async def check_on_query_uniqueness(name: str, session: AsyncSession, guid: str | None = None):
     queries = await session.execute(
         select(Query)
         .where(Query.name.ilike(name))
@@ -473,6 +472,38 @@ async def set_query_status(query_exec_guid: str, running_status: QueryRunningSta
 
     session.add(query_exec)
     session.add(query_exec.query)
+
+    await log_query_execution(running_status=running_status, query_exec=query_exec, session=session)
+
+
+async def log_query_execution(running_status: QueryRunningStatus, query_exec: QueryExecution, session: AsyncSession):
+    log_name, text, log_event = None, None, None
+    match running_status:
+        case QueryRunningStatus.DONE:
+            log_name = LogName.QUERY_RESULT.value
+            text = LogText.QUERY_RUN_SUCCESS.value.format(name=query_exec.query.name)
+            log_event = LogEvent.RUN_QUERY_SUCCESS.value
+        case QueryRunningStatus.ERROR:
+            log_name = LogName.QUERY_ERROR.value
+            text = LogText.QUERY_RUN_ERROR.value.format(name=query_exec.query.name)
+            log_event = LogEvent.RUN_QUERY_FAILED.value
+        case QueryRunningStatus.CANCELED:
+            log_name = LogName.QUERY_CANCEL.value
+            text = LogText.QUERY_RUN_CANCEL.value.format(name=query_exec.query.name)
+            log_event = LogEvent.RUN_QUERY_CANCEL.value
+
+    if log_name and text and log_event:
+        await add_log(
+            session,
+            LogIn(
+                type=LogType.QUERY_CONSTRUCTOR.value,
+                log_name=log_name,
+                text=text,
+                event=log_event,
+                identity_id=query_exec.query.owner_guid,
+                properties=json.dumps({'query_guid': query_exec.query.guid})
+            )
+        )
 
 
 async def select_conn_string(model_version_id: int, session: AsyncSession) -> str:

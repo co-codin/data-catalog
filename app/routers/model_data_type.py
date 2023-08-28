@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends
 
 from app.dependencies import db_session, get_user
@@ -11,10 +10,10 @@ router = APIRouter(
 
 
 @router.get('/')
-async def get_all(session=Depends(db_session), user=Depends(get_user)):
+async def get_all(session=Depends(db_session), _=Depends(get_user)):
     return await read_all(session)
 
 
 @router.get('/{id}')
-async def get_model_data_type(id: int, session=Depends(db_session), user=Depends(get_user)):
+async def get_model_data_type(id: int, session=Depends(db_session), _=Depends(get_user)):
     return await read_by_id(id, session)

@@ -1,8 +1,7 @@
 import os
 
-from collections import namedtuple
-
 from pydantic import BaseSettings
+
 
 class Settings(BaseSettings):
     port: int = 8000

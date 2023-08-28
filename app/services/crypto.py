@@ -2,7 +2,6 @@ import os
 import base64
 import logging
 
-from typing import Optional
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
@@ -18,7 +17,7 @@ def encrypt(key: str, data: str) -> str:
     return base64.b64encode(encrypted).hex()
 
 
-def decrypt(key: str, data: str) -> Optional[str]:
+def decrypt(key: str, data: str) -> str | None:
     key = bytes.fromhex(key)
     data = bytes.fromhex(data)
     data = base64.b64decode(data)

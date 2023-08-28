@@ -60,6 +60,6 @@ class SourceRegistryManyOut(SourceRegistryOutCommon, SourceRegistryCommon):
 
 
 class SourceRegistrySynch(BaseModel):
-    source_registry_guid: str
+    source_guid: str
     conn_string: str
-    source_registry_name: str
+    source_name: str

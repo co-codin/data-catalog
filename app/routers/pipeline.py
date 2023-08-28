@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 
 from app.crud.crud_comment import create_comment, CommentOwnerTypes, verify_comment_owner, edit_comment, remove_comment
-from app.crud.crud_pipeline import create_pipeline, read_all, read_by_guid, update_pipeline, delete_pipeline, \
-    generate_pipeline
+from app.crud.crud_pipeline import (
+    create_pipeline, read_all, read_by_guid, update_pipeline, delete_pipeline, generate_pipeline
+)
 from app.dependencies import db_session, get_user, get_token
 from app.schemas.comment import CommentIn
 from app.schemas.pipeline import PipelineIn, PipelineUpdateIn

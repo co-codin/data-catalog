@@ -11,15 +11,14 @@ from app.crud.crud_model_resource import (
 
 from app.crud.crud_comment import CommentOwnerTypes, create_comment, edit_comment, remove_comment, verify_comment_owner
 from app.crud.crud_model_version import generate_version_number
-from app.crud.crud_queries import select_model_resource, match_linked_resources, select_all_resources, \
-    filter_connected_resources
+from app.crud.crud_queries import (
+    select_model_resource, match_linked_resources, select_all_resources, filter_connected_resources)
 from app.enums.enums import ModelVersionLevel
 from app.errors.errors import ModelResourceHasAttributesError
 from app.schemas.model_resource_rel import ModelResourceRelIn, ModelResourceRelOut
 
 from app.schemas.model_attribute import ResourceAttributeIn, ResourceAttributeUpdateIn, ModelResourceAttrOutRelIn
 from app.schemas.model_resource import ModelResourceIn, ModelResourceUpdateIn
-from app.schemas.queries import ModelResourceOut
 from app.schemas.source_registry import CommentIn
 
 from app.dependencies import db_session, get_user, get_token, ag_session
@@ -57,7 +56,7 @@ async def update(guid: str, resource_update_in: ModelResourceUpdateIn, session=D
 async def delete(guid: str, session=Depends(db_session), _=Depends(get_user)):
     try:
         return await delete_model_resource(guid, session)
-    except:
+    except Exception:
         raise ModelResourceHasAttributesError()
 
 
@@ -136,8 +135,6 @@ async def delete_model_resource_rels(
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, remove_model_resource_rel, gid, graph_name, age_session)
     await generate_version_number(id=model_resource.model_version_id, session=session, level=ModelVersionLevel.MINOR)
-
-
 
 
 @router.get('/{guid}/linked_resources')

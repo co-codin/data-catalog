@@ -2,7 +2,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import contains_eager, load_only
 from app.crud.crud_queries import (
     check_alias_attrs_for_existence, create_query, get_query, get_identity_queries, alter_query,
@@ -13,8 +13,8 @@ from app.crud.crud_queries import (
 )
 from app.crud.crud_tag import remove_redundant_tags
 from app.errors.query_errors import QueryIsNotRunningError, QueryNameAlreadyExist
-from app.models.log import LogEvent, LogType
-from app.models.queries import Query, QueryRunningStatus, QueryExecution
+from app.models.log import LogEvent, LogType, LogName, LogText
+from app.models.queries import QueryRunningStatus, QueryExecution
 from app.schemas.log import LogIn
 from app.schemas.queries import QueryIn, QueryManyOut, QueryExecutionOut, FullQueryOut, QueryUpdateIn
 
@@ -38,7 +38,7 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
     """
     try:
         await check_on_query_uniqueness(name=query_in.name, session=session)
-    except:
+    except Exception:
         raise QueryNameAlreadyExist(query_in.name)
     await check_alias_attrs_for_existence(query_in.aliases, session)
 
@@ -57,13 +57,11 @@ async def add_query(query_in: QueryIn, session=Depends(db_session), token=Depend
 
         await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Запуск запроса",
-            text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query.name,
-                guid=query.guid
-            ),
+            log_name=LogName.QUERY_RUN.value,
+            text=LogText.QUERY_RUN.value.format(name=query.name),
             identity_id=user['identity_id'],
-            event=LogEvent.RUN_QUERY.value
+            event=LogEvent.RUN_QUERY_REQUEST.value,
+            properties=json.dumps({'query_guid': query.guid})
         ))
 
     return query
@@ -115,13 +113,11 @@ async def update_query(guid: str, query_update_in: QueryUpdateIn, session=Depend
 
         await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Запуск запроса",
-            text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query.name,
-                guid=query.guid
-            ),
+            log_name=LogName.QUERY_RUN.value,
+            text=LogText.QUERY_RUN.value.format(name=query.name),
             identity_id=user['identity_id'],
-            event=LogEvent.RUN_QUERY.value
+            event=LogEvent.RUN_QUERY_SUCCESS.value,
+            properties=json.dumps({'query_guid': query.guid})
         ))
 
 
@@ -160,24 +156,20 @@ async def run_query(guid: str, session=Depends(db_session), token=Depends(get_to
         )
         await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Запуск запроса",
-            text="Запрос {{{name}}} {{{guid}}} был запущен".format(
-                name=query_to_run.name,
-                guid=query_to_run.guid
-            ),
+            log_name=LogName.QUERY_RUN.value,
+            text=LogText.QUERY_RUN.value.format(name=query_to_run.name),
             identity_id=user['identity_id'],
-            event=LogEvent.RUN_QUERY.value
+            event=LogEvent.RUN_QUERY_SUCCESS.value,
+            properties=json.dumps({'query_guid': query_to_run.guid})
         ))
-    except:
+    except Exception:
         await add_log(session, LogIn(
             type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Ошибка в результате запуска запроса",
-            text="Запрос {{{name}}} {{{guid}}} был завершен с ошибкой".format(
-                name=query_to_run.name,
-                guid=query_to_run.guid
-            ),
+            log_name=LogName.QUERY_ERROR.value,
+            text=LogText.QUERY_RUN_ERROR.value.format(name=query_to_run.name),
             identity_id=user['identity_id'],
-            event=LogEvent.RUN_QUERY_FAILED.value
+            event=LogEvent.RUN_QUERY_FAILED.value,
+            properties=json.dumps({'query_guid': query_to_run.guid})
         ))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Запрос не может быть запущен")
 
@@ -188,26 +180,6 @@ async def cancel_query(guid: str, session=Depends(db_session), user=Depends(get_
 
     try:
         query_exec = await select_running_query_exec(guid, session)
-
         await terminate_query(query_exec.guid)
-
-        await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Остановка запроса",
-            text="Запрос {{{name}}} {{{guid}}} был остановлен".format(
-                name=query_exec.query.name,
-                guid=query_exec.query.guid
-            ),
-            identity_id=user['identity_id'],
-            event=LogEvent.STOP_QUERY.value
-        ))
-
-        await session.execute(
-            update(Query)
-            .where(Query.guid == guid)
-            .values(
-                status=QueryRunningStatus.CANCELED.value
-            )
-        )
-    except:
+    except Exception:
         raise QueryIsNotRunningError()
