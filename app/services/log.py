@@ -1,13 +1,14 @@
 import asyncio
 
-from app.crud.crud_author import get_authors_data_by_guids
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.log import Log, LogType, LogText, LogEvent
-from app.schemas.log import LogIn
+from app.crud.crud_author import get_authors_data_by_guids
+from app.schemas.log import LogIn, LogOut
 
 
-async def get_all_logs(session: AsyncSession, token: str):
+async def get_all_logs(session: AsyncSession, token: str) -> list[LogOut]:
     logs = await session.execute(
         select(Log).order_by(Log.id.desc())
     )
@@ -23,7 +24,7 @@ async def get_all_logs(session: AsyncSession, token: str):
 
     logs = await set_log_author_data(logs, authors_data)
 
-    return logs
+    return [LogOut.from_orm(log) for log in logs]
 
 
 async def set_log_author_data(logs, authors_data: dict[str, dict[str, str]]):
