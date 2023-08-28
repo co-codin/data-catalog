@@ -388,7 +388,7 @@ async def clone_qualities(old_version_id: int, new_version_id: int, session: Asy
 async def create_model_version(model_version_in: ModelVersionIn, session: AsyncSession) -> ModelVersion:
     guid = str(uuid.uuid4())
     model_version = ModelVersion(
-        **model_version_in.dict(exclude={'tags', 'access_label'}),
+        **model_version_in.dict(exclude={'tags', 'access_label', 'should_be_cloned'}),
         guid=guid
     )
 

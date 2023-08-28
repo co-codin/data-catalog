@@ -15,7 +15,7 @@ class ModelVersionIn(BaseModel):
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = []
     access_label: Optional[AccessLabelIn] = None
-    should_be_cloned: bool
+    should_be_cloned: bool = False
 
 
 class ModelVersionUpdateIn(BaseModel):
