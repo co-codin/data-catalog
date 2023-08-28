@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from app.models.mixins.soft_delete import SoftDeleteMixin
 
 from app.database import Base
 
@@ -154,7 +155,7 @@ class Field(Base):
     comments = relationship('Comment', order_by='Comment.id')
 
 
-class Model(Base):
+class Model(Base, SoftDeleteMixin):
     __tablename__ = 'models'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
