@@ -5,7 +5,6 @@ from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, Enum, Table, Text, Boolean, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.models.mixins.soft_delete import SoftDeleteMixin
 
 from app.database import Base
 
@@ -155,7 +154,7 @@ class Field(Base):
     comments = relationship('Comment', order_by='Comment.id')
 
 
-class Model(Base, SoftDeleteMixin):
+class Model(Base):
     __tablename__ = 'models'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, nullable=False)
@@ -175,3 +174,4 @@ class Model(Base, SoftDeleteMixin):
     access_label = relationship('AccessLabel', secondary=model_access_labels, order_by='AccessLabel.id')
     model_versions = relationship('ModelVersion', back_populates='model')
     comments = relationship('Comment', order_by='Comment.id')
+    deleted_at = Column(DateTime, nullable=True)

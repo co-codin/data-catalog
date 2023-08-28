@@ -1,10 +1,11 @@
+from datetime import datetime
 import uuid
 import asyncio
 
 from typing import Optional
 from fastapi import HTTPException, status
 
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, and_
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +53,7 @@ async def read_all(session: AsyncSession) -> list[ModelManyOut]:
         .options(selectinload(Model.tags))
         .options(selectinload(Model.comments))
         .options(selectinload(Model.access_label))
+        .filter(Model.deleted_at == None)
         .order_by(Model.created_at)
     )
     models = models.scalars().all()
@@ -65,7 +67,12 @@ async def get_models_by_operation(guid: str, session: AsyncSession) -> list[Mode
         .options(selectinload(Model.tags))
         .options(selectinload(Model.comments))
         .options(selectinload(Model.access_label))
-        .filter(Operation.guid == guid)
+        .filter(
+            and_(
+                Operation.guid == guid,
+                Model.deleted_at == None
+            )
+        )
     )
 
     models = models.scalars().all()
@@ -81,7 +88,12 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> ModelOut
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.tags))
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.comments))
         .options(joinedload(Model.model_versions).selectinload(ModelVersion.access_label))
-        .filter(Model.guid == guid)
+        .filter(
+            and_(
+                Model.deleted_at == None,
+                Model.guid == guid
+            )
+        )
     )
 
     model = model.scalars().first()
@@ -116,6 +128,21 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
         if value is not None
     }
 
+    model = await session.execute(
+        select(Model)
+        .options(selectinload(Model.tags))
+        .options(selectinload(Model.access_label))
+        .filter(
+        and_(
+            Model.deleted_at == None,
+            Model.guid == guid
+            )
+        )
+    )
+    model = model.scalars().first()
+    if not model:
+        return
+
     await session.execute(
         update(Model)
         .where(Model.guid == guid)
@@ -144,9 +171,16 @@ async def edit_model(guid: str, model_update_in: ModelUpdateIn, session: AsyncSe
 async def delete_by_guid(guid: str, session: AsyncSession, identity_id: str):
     model = await session.execute(
         select(Model)
-        .where(Model.guid == guid)
+        .filter(
+            and_(
+                Model.deleted_at == None,
+                Model.guid == guid)
+        )
     )
     model = model.scalars().first()
+
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     await add_log(session, LogIn(
         type=LogType.MODEL_CATALOG.value,
@@ -160,7 +194,10 @@ async def delete_by_guid(guid: str, session: AsyncSession, identity_id: str):
     ))
 
     await session.execute(
-        delete(Model)
+        update(Model)
         .where(Model.guid == guid)
+        .values(
+            deleted_at=datetime.utcnow(),
+        )
     )
     await session.commit()
