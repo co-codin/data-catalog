@@ -397,7 +397,9 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
     session.add(model_version)
     await session.commit()
 
-    await clone_model_version(model_version=model_version, model_version_in=model_version_in, session=session)
+    if model_version_in.should_be_cloned:
+        await clone_model_version(model_version=model_version, model_version_in=model_version_in, session=session)
+    
     return model_version
 
 
