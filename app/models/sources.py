@@ -174,3 +174,4 @@ class Model(Base):
     access_label = relationship('AccessLabel', secondary=model_access_labels, order_by='AccessLabel.id')
     model_versions = relationship('ModelVersion', back_populates='model')
     comments = relationship('Comment', order_by='Comment.id')
+    deleted_at = Column(DateTime, nullable=True)
