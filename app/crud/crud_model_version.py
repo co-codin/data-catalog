@@ -1,7 +1,6 @@
 import asyncio
+import json
 import uuid
-
-from datetime import datetime
 
 from fastapi import HTTPException, status
 
@@ -13,9 +12,8 @@ from app.crud.crud_access_label import add_access_label, update_access_label
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
 from app.crud.crud_tag import add_tags, update_tags
 from app.enums.enums import ModelVersionLevel, ModelVersionStatus
-from app.errors.checker import check_model_resources_error
 from app.models import LogType
-from app.models.log import LogEvent
+from app.models.log import LogEvent, LogName, LogText
 from app.models.models import ModelVersion, ModelQuality, ModelAttitude, ModelResource, ModelResourceAttribute, \
     ModelRelation
 from app.schemas.access_label import AccessLabelIn
@@ -76,7 +74,8 @@ async def read_all(model_id: str, session: AsyncSession):
     return model_versions
 
 
-async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession, identity_id: str):
+async def update_model_version(guid: str, model_version_update_in: ModelVersionUpdateIn, session: AsyncSession,
+                               identity_id: str):
     model_version = await session.execute(
         select(ModelVersion)
         .options(selectinload(ModelVersion.tags))
@@ -104,14 +103,14 @@ async def update_model_version(guid: str, model_version_update_in: ModelVersionU
 
         await add_log(session, LogIn(
             type=LogType.MODEL_CATALOG.value,
-                log_name="Утверждение версии",
-                text="{{{version}}} {{{guid}}} в {{{name}}} {{{model_guid}}} утверждена".format(
-                    version=model_version.version if (model_version.version is not None) else '0.0.0',
-                    guid=model_version.guid, 
-                    name=model_version.model.name, 
-                    model_guid=model_version.model.guid),
-                identity_id=identity_id,
-                event=LogEvent.CONFIRM_VERSION.value
+            log_name=LogName.MODEL_VERSION_CONFIRM.value,
+            text=LogText.MODEL_VERSION_CONFIRM.value.format(
+                model_version=model_version.version if (model_version.version is not None) else '0.0.0',
+                model_name=model_version.model.name
+            ),
+            identity_id=identity_id,
+            event=LogEvent.CONFIRM_VERSION.value,
+            properties=json.dumps({'model_guid': model_version.model.guid, 'model_version_guid': model_version.guid})
         ))
 
     model_version_update_in_data = {
@@ -399,7 +398,7 @@ async def create_model_version(model_version_in: ModelVersionIn, session: AsyncS
 
     if model_version_in.should_be_cloned:
         await clone_model_version(model_version=model_version, model_version_in=model_version_in, session=session)
-    
+
     return model_version
 
 

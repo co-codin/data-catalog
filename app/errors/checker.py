@@ -2,8 +2,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.errors.model_version import ModelVersionDBLinkError, ModelVersionDataTypeError, \
-    ModelVersionNestedAttributeDataTypeError, ModelVersionEmptyResourceError, ModelVersionAttributeDBLinkError
+from app.errors.model_version import (
+    ModelVersionDBLinkError, ModelVersionDataTypeError, ModelVersionNestedAttributeDataTypeError,
+    ModelVersionEmptyResourceError, ModelVersionAttributeDBLinkError
+)
 from app.models import Object, Field
 from app.models.models import ModelVersion, ModelResource, ModelResourceAttribute
 

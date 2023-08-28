@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, or_
-from sqlalchemy.orm import selectinload, load_only, joinedload
+from sqlalchemy.orm import selectinload, load_only
 
 from app.crud.crud_tag import add_tags, update_tags
 from app.crud.crud_author import get_authors_data_by_guids, set_author_data
@@ -146,27 +146,26 @@ async def read_by_guid(guid: str, token: str, session: AsyncSession) -> SourceRe
     return source_registry_out
 
 
-
 async def read_source_registry_by_guid(guid: str, session: AsyncSession) -> SourceRegistrySynch:
-    source_registry = await session.execute(
+    source = await session.execute(
         select(SourceRegister)
         .where(SourceRegister.guid == guid)
     )
 
-    source_registry = source_registry.scalars().first()
-    if not source_registry:
+    source = source.scalars().first()
+    if not source:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    elif source_registry.status != Status.ON:
-        raise SourceRegistryIsNotOnError(source_registry.status)
+    elif source.status != Status.ON:
+        raise SourceRegistryIsNotOnError(source.status)
 
-    source_registry.status = Status.SYNCHRONIZING
-    session.add(source_registry)
+    source.status = Status.SYNCHRONIZING
+    session.add(source)
 
-    decrypted_conn_string = decrypt(settings.encryption_key, source_registry.conn_string)
+    decrypted_conn_string = decrypt(settings.encryption_key, source.conn_string)
     source_registry_synch = SourceRegistrySynch(
-        source_registry_guid=source_registry.guid, 
+        source_guid=source.guid,
         conn_string=decrypted_conn_string, 
-        source_registry_name=source_registry.name
+        source_name=source.name
     )
     return source_registry_synch
 

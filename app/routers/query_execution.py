@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-
 import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,23 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import update, select
 from sqlalchemy.orm import contains_eager
 
-from psycopg import sql
-
 from app.crud.crud_queries import set_query_status
 from app.errors.query_exec_errors import QueryExecPublishNameAlreadyExist
 
-from app.models.log import LogEvent, LogType
 from app.models.queries import QueryExecution, QueryRunningStatus, QueryRunningPublishStatus
 from app.mq import create_channel
 
-from app.schemas.log import LogIn
 from app.schemas.queries import PublishIn, QueryExecutionOut
 
 from app.dependencies import db_session, get_user, get_token
 from app.config import settings
 
-
-from app.services.log import add_log
 
 router = APIRouter(
     prefix='/query_executions',
@@ -36,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get('/{guid}', response_model=QueryExecutionOut)
-async def get_query_execution_by_guid(guid: str, session=Depends(db_session), user=Depends(get_user)):
+async def get_query_execution_by_guid(guid: str, session=Depends(db_session), _=Depends(get_user)):
     query_execution = await session.execute(
         select(QueryExecution)
         .join(QueryExecution.query)
@@ -47,17 +40,6 @@ async def get_query_execution_by_guid(guid: str, session=Depends(db_session), us
 
     if not query_execution:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-
-    await add_log(session, LogIn(
-            type=LogType.QUERY_CONSTRUCTOR.value,
-            log_name="Результат запроса получен",
-            text="Результат запроса {{{name}}} {{{guid}}} был получен".format(
-                name=query_execution.query.name, 
-                guid=query_execution.query.guid
-            ),
-            identity_id=user['identity_id'],
-            event=LogEvent.GET_QUERY_RESULT.value
-        ))
 
     return QueryExecutionOut.from_orm(query_execution)
 
