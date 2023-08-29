@@ -206,6 +206,7 @@ class ModelQuality(Base):
     comments = relationship('Comment', order_by='Comment.id')
 
 
+# набор связей 
 class ModelRelation(Base):
     __tablename__ = 'model_relations'
 
@@ -323,6 +324,7 @@ class ModelResourceAttribute(Base):
                                                        back_populates='model_resource_attributes')
 
 
+# набор отношений
 class ModelAttitude(Base):
     __tablename__ = 'model_attitudes'
 
