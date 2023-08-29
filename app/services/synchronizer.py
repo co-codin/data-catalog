@@ -249,7 +249,7 @@ async def log_graph_migration_failure(
                 log_name=LogName.SOURCE_SYNC.value,
                 text=LogText.SYNC_ERROR.value.format(name=source_name),
                 identity_id=identity_id,
-                event=LogEvent.SYNC_SOURCE_AUTO.value,
+                event=LogEvent.SYNC_SOURCE_MANUAL.value,
                 properties=json.dumps({'source_guid': source_guid})
             ))
         case SyncType.ADD_SOURCE.value:
