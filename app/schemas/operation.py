@@ -12,8 +12,8 @@ class OperationParameterIn(BaseModel):
 
 
 class OperationIn(BaseModel):
-    name: str = Field(..., max_length=200)
-    owner: str = Field(..., max_length=36 * 4)
+    name: str
+    owner: str
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
 
