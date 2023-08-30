@@ -59,7 +59,6 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
 async def read_versions_list(guid: str, session: AsyncSession) -> [OperationBodyOut]:
     operation = await session.execute(
         select(Operation)
-        .options(selectinload(Operation.tags))
         .filter(Operation.guid == guid)
     )
     operation = operation.scalars().first()
@@ -68,6 +67,7 @@ async def read_versions_list(guid: str, session: AsyncSession) -> [OperationBody
 
     operation_versions = await session.execute(
         select(OperationBody)
+        .options(selectinload(OperationBody.tags))
         .filter(OperationBody.operation_id == operation.operation_id)
     )
     operation_versions = operation_versions.scalars().all()

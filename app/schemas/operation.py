@@ -44,6 +44,7 @@ class OperationBodyOut(BaseModel):
     version: int
     owner: str
     desc: str
+    tags: Optional[List[str]] = None
 
     created_at: datetime
     updated_at: datetime
