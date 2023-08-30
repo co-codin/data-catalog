@@ -9,7 +9,7 @@ from app.dependencies import db_session, get_user
 from app.schemas.operation import OperationIn, OperationBodyIn, OperationBodyUpdateIn, ConfirmIn
 
 router = APIRouter(
-    prefix="/operation",
+    prefix="/operations",
     tags=['operation']
 )
 
