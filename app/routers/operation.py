@@ -9,7 +9,7 @@ from app.dependencies import db_session, get_user
 from app.schemas.operation import OperationIn, OperationBodyIn, OperationBodyUpdateIn, ConfirmIn
 
 router = APIRouter(
-    prefix="/operation",
+    prefix="/operations",
     tags=['operation']
 )
 
@@ -31,7 +31,7 @@ async def get_operation(guid: str, session=Depends(db_session), _=Depends(get_us
     return await read_by_guid(guid, session)
 
 
-@router.get('/{guid}/version')
+@router.get('/{guid}/versions')
 async def get_operation_versions(guid: str, session=Depends(db_session), _=Depends(get_user)):
     return await read_versions_list(guid, session)
 

@@ -30,6 +30,7 @@ async def get_last_version(operation_id: int, session: AsyncSession):
         .filter(OperationBody.operation_id == operation_id)
         .order_by(OperationBody.version.desc())
     )
+
     return last_version.scalars().first()
 
 async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
@@ -45,10 +46,12 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
 
     operation_out = OperationOut.from_orm(operation)
     last_version = await get_last_version(operation.operation_id, session)
-    operation_out.last_version = OperationBodyInfoOut(
-        guid=last_version.guid,
-        version=last_version.version
-    )
+
+    if last_version:
+        operation_out.last_version = OperationBodyInfoOut(
+            guid=last_version.guid,
+            version=last_version.version
+        )
 
     return operation_out
 
@@ -56,7 +59,6 @@ async def read_by_guid(guid: str, session: AsyncSession) -> OperationOut:
 async def read_versions_list(guid: str, session: AsyncSession) -> [OperationBodyOut]:
     operation = await session.execute(
         select(Operation)
-        .options(selectinload(Operation.tags))
         .filter(Operation.guid == guid)
     )
     operation = operation.scalars().first()
@@ -65,6 +67,7 @@ async def read_versions_list(guid: str, session: AsyncSession) -> [OperationBody
 
     operation_versions = await session.execute(
         select(OperationBody)
+        .options(selectinload(OperationBody.tags))
         .filter(OperationBody.operation_id == operation.operation_id)
     )
     operation_versions = operation_versions.scalars().all()
