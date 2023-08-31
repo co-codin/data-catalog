@@ -8,7 +8,7 @@ from app.schemas.tag import TagOut
 class OperationParameterIn(BaseModel):
     name: str = Field(..., min_length=1)
     display_name: str = Field(..., min_length=1)
-    model_data_type_id: int
+    model_data_type_id: int = Field(..., ge=1)
 
 
 class OperationIn(BaseModel):
