@@ -6,14 +6,14 @@ from app.schemas.tag import TagOut
 
 
 class OperationParameterIn(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     display_name: str
     model_data_type_id: int
 
 
 class OperationIn(BaseModel):
-    name: str
-    owner: str
+    name: str = Field(..., min_length=1)
+    owner: str = Field(..., min_length=1)
     desc: Optional[str] = Field(None, max_length=1000)
     tags: Optional[List[str]] = None
 
@@ -44,7 +44,7 @@ class OperationBodyOut(BaseModel):
     version: int
     owner: str
     desc: str
-    tags: Optional[List[str]] = None
+    tags: Optional[List[str]] = []
 
     created_at: datetime
     updated_at: datetime

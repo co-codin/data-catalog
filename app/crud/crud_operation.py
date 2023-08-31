@@ -71,7 +71,7 @@ async def read_versions_list(guid: str, session: AsyncSession) -> [OperationBody
         .filter(OperationBody.operation_id == operation.operation_id)
     )
     operation_versions = operation_versions.scalars().all()
-    return [OperationBodyOut.from_orm(operation_version) for operation_version in operation_versions]
+    return operation_versions
 
 
 async def create_parameter(body_id: int, data_in: OperationParameterIn, session: AsyncSession, flag: bool):
