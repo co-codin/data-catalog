@@ -7,7 +7,7 @@ from app.schemas.tag import TagOut
 
 class OperationParameterIn(BaseModel):
     name: str = Field(..., min_length=1)
-    display_name: str
+    display_name: str = Field(..., min_length=1)
     model_data_type_id: int
 
 
@@ -24,7 +24,7 @@ class OperationBodyIn(BaseModel):
     tags: Optional[List[str]] = None
     input: List[OperationParameterIn]
     output: OperationParameterIn
-    code: str = Field(None, max_length=10 ** 8)
+    code: str = Field(..., min_length=1, max_length=10 ** 8)
 
 
 class OperationBodyUpdateIn(OperationBodyIn):
