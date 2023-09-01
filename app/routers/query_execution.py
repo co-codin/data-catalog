@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import update, select
 from sqlalchemy.orm import contains_eager
 
-from app.crud.crud_queries import set_query_status
+from app.crud.crud_queries import set_query_status, check_if_query_exec_exist
 from app.errors.query_exec_errors import QueryExecPublishNameAlreadyExist
 
 from app.models.queries import QueryExecution, QueryRunningStatus, QueryRunningPublishStatus
@@ -57,6 +57,7 @@ async def publish_query_execution(
         token=Depends(get_token),
         user=Depends(get_user)
 ):
+    await check_if_query_exec_exist(guid, session)
     if not publish_in.force:
         if await check_if_publish_table_exits(publish_in.publish_name, token):
             raise QueryExecPublishNameAlreadyExist(publish_in.publish_name)

@@ -563,3 +563,13 @@ async def get_query_to_run(query_guid: str, session: AsyncSession) -> Query:
     if query.status == QueryRunningStatus.RUNNING.value:
         raise QueryIsRunningError()
     return query
+
+
+async def check_if_query_exec_exist(guid: str, session: AsyncSession):
+    query_exec = await session.execute(
+        select(func.count(QueryExecution.id))
+        .where(QueryExecution.guid == guid)
+    )
+    query_exec = query_exec.scalars().first()
+    if query_exec == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='query execution is not found')
