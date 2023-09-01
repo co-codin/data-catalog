@@ -37,14 +37,14 @@ class LogText(Enum):
     CREATE = '{name} был добавлен с {source_name} {source_guid}'
     ALTER = '{name} был изменён на {new_name}'
     REMOVE = '{name} {guid} был удалён с {source_name} {source_guid}'
-    SYNC_ERROR = 'При синхронизации {{{{name}}}} произошла ошибка'
+    SYNC_ERROR = 'При синхронизации {{{{{name}}}}} произошла ошибка'
     SYNC_SUCCESS = "Синхронизация {{{{{name}}}}} успешно завершена. Добавлено - {added} объектов. Изменено - {altered}. Удалено - {deleted}. Объектов без изменений - {not_changed}"
 
     MODEL_VERSION_CONFIRM = '{{{{{model_version}}}}} в {{{{{model_name}}}}} утверждена'
 
     QUERY_RUN = "Запрос {{{{{name}}}}} был запущен"
     QUERY_RUN_SUCCESS = "Результат запроса {{{{{name}}}}} получен"
-    QUERY_RUN_ERROR = "Запуск запроса {{{{name}}}}} был завершен с ошибкой"
+    QUERY_RUN_ERROR = "Запуск запроса {{{{{name}}}}} был завершен с ошибкой"
     QUERY_RUN_CANCEL = "Запрос {{{{{name}}}}} был остановлен"
 
 
