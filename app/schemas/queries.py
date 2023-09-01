@@ -102,7 +102,7 @@ class QueryIn(BaseModel):
 
 
 class PublishIn(BaseModel):
-    publish_name: str
+    publish_name: str = Field(..., regex='^[a-zA-Z_][0-9a-zA-Z_]*$')
     force: bool
 
 
